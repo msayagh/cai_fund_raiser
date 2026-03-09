@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 
 const LANGUAGES = {
   en: "English",
@@ -144,11 +144,81 @@ function QRCode({ color, alt }) {
 }
 
 const TIER_CONFIG = {
-  foundation: { key: "foundation", funded: 87, total: 320, amount: 500, color: "#C8935A" },
-  walls: { key: "walls", funded: 142, total: 320, amount: 1000, color: "#7EB8A0" },
-  arches: { key: "arches", funded: 61, total: 320, amount: 1500, color: "#8AAED4" },
-  dome: { key: "dome", funded: 23, total: 320, amount: 2000, color: "#D4A96E" },
+  foundation: { key: "foundation", funded: 0, total: 320, amount: 500, color: "#C8935A" },
+  walls: { key: "walls", funded: 0, total: 320, amount: 1000, color: "#7EB8A0" },
+  arches: { key: "arches", funded: 0, total: 320, amount: 1500, color: "#8AAED4" },
+  dome: { key: "dome", funded: 0, total: 320, amount: 2000, color: "#D4A96E" },
 };
+
+/** Google Apps Script Web App URL (from env). Returns JSON: { foundation, walls, arches, dome } with funded counts. */
+function getGoogleSheetAppUrl() {
+  return typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_GOOGLE_SHEET_APP_URL;
+}
+
+const TIER_KEYS = ["foundation", "walls", "arches", "dome"];
+
+function convertCsvToJson(csv) {
+  const lines = csv.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return [];
+  const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
+  const data = lines.slice(1).map((line) => {
+    const values = line.split(',').map((v) => v.trim());
+    return headers.reduce((acc, header, index) => {
+      acc[header] = values[index] ?? "";
+      return acc;
+    }, {});
+  });
+  return data;
+}
+
+/** Parse a value to a non‑negative integer for the funded column. */
+function parseFundedValue(value) {
+  if (value == null || value === "") return 0;
+  const str = String(value).trim().replace(/\s/g, "").replace('"', "");
+  const n = parseInt(str, 10);
+  return Number.isNaN(n) ? 0 : Math.max(0, Math.floor(n));
+}
+
+/**
+ * Reduces CSV rows to { foundation, walls, arches, dome } with cleaned, integer funded values.
+ * Expects rows with a tier identifier (column "tier", "key", or first column) and "funded" column.
+ */
+function cleanAndParseFundedRows(rows) {
+  const out = { foundation: 0, walls: 0, arches: 0, dome: 0 };
+  const tierKeysSet = new Set(TIER_KEYS);
+  for (const row of rows) {
+    const keys = Object.keys(row);
+    const tierCol = keys.find((k) => /^(tier|key|name)$/i.test(k)) || keys[0];
+    const fundedCol = keys.find((k) => /^funded$/i.test(k)) || keys[1] || keys[0];
+    const tierRaw = row[tierCol];
+    const fundedRaw = row[fundedCol];
+    const tier = tierRaw != null ? String(tierRaw).trim().toLowerCase() : "";
+    if (!tier || !tierKeysSet.has(tier)) continue;
+    out[tier] = parseFundedValue(fundedRaw);
+  }
+  return out;
+}
+
+/**
+ * Fetches funded counts per tier from a private Google Sheet (CSV export).
+ * Returns { foundation, walls, arches, dome } with cleaned integer values.
+ * @returns {Promise<{ foundation: number, walls: number, arches: number, dome: number } | null>}
+ */
+async function fetchFundedFromSheet() {
+  const url = getGoogleSheetAppUrl();
+  const exportUrl = url ? url.replace(/\/edit.*$/, "/export?format=csv") : null;
+  if (!exportUrl) return null;
+  try {
+    const res = await fetch(exportUrl, { method: "GET", cache: "no-store" });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const rows = convertCsvToJson(text);
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    return cleanAndParseFundedRows(rows);
+  } catch {
+    return null;
+  }
+}
 
 const INITIAL_TIERS = [
   { id: 0, ...TIER_CONFIG.foundation },
@@ -517,6 +587,22 @@ export default function MosqueDonation() {
   const [tiers, setTiers] = useState(INITIAL_TIERS);
   const [selectedTier, setSelectedTier] = useState(0);
 
+  useEffect(() => {
+    const applyFunded = (funded) => {
+      if (!funded) return;
+      setTiers((prev) =>
+        prev.map((tier) => ({
+          ...tier,
+          funded: Math.min(tier.total, funded[tier.key] ?? tier.funded),
+        }))
+      );
+    };
+    const poll = () => fetchFundedFromSheet().then(applyFunded);
+    poll();
+    const intervalId = setInterval(poll, 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const t = TRANSLATIONS[language];
   const isRTL = language === "ar";
   const localizedTiers = tiers.map((tier) => ({
@@ -572,23 +658,35 @@ export default function MosqueDonation() {
           flexWrap: "wrap",
         }}
       >
-        <div>
-          <div
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <img
+            src="/logo-ccai.png"
+            alt="CCAI logo, stylized geometric calligraphy"
             style={{
-              fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
-              fontSize: "14px",
-              fontWeight: 700,
-              letterSpacing: isRTL ? "0.04em" : "0.2em",
-              color: "#D4A96E",
-              marginBottom: "4px",
-              textTransform: isRTL ? "none" : "uppercase",
+              width: "56px",
+              height: "56px",
+              objectFit: "contain",
+              flexShrink: 0,
             }}
-          >
-            {t.centerName}
+          />
+          <div>
+            <div
+              style={{
+                fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
+                fontSize: "14px",
+                fontWeight: 700,
+                letterSpacing: isRTL ? "0.04em" : "0.2em",
+                color: "#D4A96E",
+                marginBottom: "4px",
+                textTransform: isRTL ? "none" : "uppercase",
+              }}
+            >
+              {t.centerName}
+            </div>
+            <h1 style={{ fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif", fontSize: "26px", fontWeight: 600, letterSpacing: isRTL ? "0" : "0.06em", color: "#ffffff" }}>
+              {t.title}
+            </h1>
           </div>
-          <h1 style={{ fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif", fontSize: "26px", fontWeight: 600, letterSpacing: isRTL ? "0" : "0.06em", color: "#ffffff" }}>
-            {t.title}
-          </h1>
         </div>
 
         <div style={{ textAlign: isRTL ? "left" : "right", display: "flex", flexDirection: "column", alignItems: isRTL ? "flex-start" : "flex-end", gap: "10px" }}>
@@ -870,21 +968,29 @@ export default function MosqueDonation() {
             flexWrap: "wrap",
           }}
         >
-          <div style={{ flex: "2 1 520px" }}>
-            <div
-              style={{
-                fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
-                fontSize: "14px",
-                fontWeight: 700,
-                letterSpacing: isRTL ? "0" : "0.14em",
-                textTransform: isRTL ? "none" : "uppercase",
-                color: "#D4A96E",
-                marginBottom: "8px",
-              }}
-            >
-              {t.aboutCampaign}
+          <div style={{ flex: "2 1 520px", display: "flex", alignItems: "flex-start", gap: "16px" }}>
+            <img
+              src="/logo-ccai.png"
+              alt=""
+              aria-hidden="true"
+              style={{ width: "40px", height: "40px", objectFit: "contain", flexShrink: 0, marginTop: "2px" }}
+            />
+            <div>
+              <div
+                style={{
+                  fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  letterSpacing: isRTL ? "0" : "0.14em",
+                  textTransform: isRTL ? "none" : "uppercase",
+                  color: "#D4A96E",
+                  marginBottom: "8px",
+                }}
+              >
+                {t.aboutCampaign}
+              </div>
+              <p style={{ fontSize: "15px", lineHeight: 1.7, margin: 0, color: "#d7d1c4" }}>{t.aboutCampaignText}</p>
             </div>
-            <p style={{ fontSize: "15px", lineHeight: 1.7, margin: 0, color: "#d7d1c4" }}>{t.aboutCampaignText}</p>
           </div>
 
           <div style={{ flex: "1 1 280px" }}>
