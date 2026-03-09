@@ -4,7 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mosque-app</title>
+    <title>🕌 Mosque Donation Tracker</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #090c18;
+        color: #f0e8d8;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      #root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      /* Override browser default button hover border */
+      button:focus-visible { outline: 2px solid #D4A96E; outline-offset: 2px; }
+      button:hover { border-color: inherit; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

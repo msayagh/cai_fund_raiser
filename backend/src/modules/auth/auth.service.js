@@ -1,0 +1,307 @@
+'use strict';
+
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const prisma = require('../../db/client');
+const AppError = require('../../utils/AppError');
+const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../../utils/jwt');
+const { generateOtp, hashOtp, verifyOtp, otpExpiresAt } = require('../../utils/otp');
+const { sendOtpEmail } = require('../../utils/email');
+const { createLog } = require('../logs/logs.service');
+
+const BCRYPT_ROUNDS = 12;
+
+// ─── Token Helpers ───────────────────────────────────────────────────────────
+
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const storeRefreshToken = async (token, userType, userId) => {
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash,
+      userType,
+      donorId: userType === 'donor' ? userId : null,
+      adminId: userType === 'admin' ? userId : null,
+      expiresAt,
+    },
+  });
+};
+
+const buildTokenPair = (userId, type) => ({
+  accessToken: signAccessToken({ sub: userId, type }),
+  refreshToken: signRefreshToken({ sub: userId, type }),
+});
+
+// ─── OTP Helpers ──────────────────────────────────────────────────────────────
+
+const invalidatePreviousOtps = async (email) => {
+  await prisma.otpCode.updateMany({
+    where: { email, used: false },
+    data: { used: true },
+  });
+};
+
+const sendAndStoreOtp = async (email, purpose) => {
+  const otp = generateOtp();
+  const codeHash = hashOtp(otp);
+  const expiresAt = otpExpiresAt();
+
+  await invalidatePreviousOtps(email);
+  await prisma.otpCode.create({ data: { email, codeHash, expiresAt } });
+  await sendOtpEmail(email, otp, purpose);
+};
+
+const validateOtp = async (email, code) => {
+  const record = await prisma.otpCode.findFirst({
+    where: { email, used: false },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!record) throw new AppError('No OTP found for this email', 400, 'INVALID_OTP');
+  if (record.expiresAt < new Date()) throw new AppError('OTP has expired', 400, 'OTP_EXPIRED');
+  if (!verifyOtp(code, record.codeHash)) throw new AppError('Invalid OTP code', 400, 'INVALID_OTP');
+
+  await prisma.otpCode.update({ where: { id: record.id }, data: { used: true } });
+  return record;
+};
+
+// ─── Donor Auth ───────────────────────────────────────────────────────────────
+
+const donorLogin = async (email, password) => {
+  const donor = await prisma.donor.findUnique({ where: { email } });
+  if (!donor) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+
+  const valid = await bcrypt.compare(password, donor.passwordHash);
+  if (!valid) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+
+  const tokens = buildTokenPair(donor.id, 'donor');
+  await storeRefreshToken(tokens.refreshToken, 'donor', donor.id);
+
+  await createLog({
+    actor: `Donor: ${donor.name}`,
+    actorType: 'donor',
+    actorId: donor.id,
+    action: 'donor_login',
+    details: `Donor logged in`,
+    donorId: donor.id,
+  });
+
+  const { passwordHash, ...safedonor } = donor;
+  return { tokens, donor: safedonor };
+};
+
+const donorSendOtp = async (email) => {
+  const existing = await prisma.donor.findUnique({ where: { email } });
+  if (existing) throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
+  await sendAndStoreOtp(email, 'verification');
+};
+
+const donorVerifyOtp = async (email, code) => {
+  await validateOtp(email, code);
+  return { verified: true };
+};
+
+const donorCompleteRegistration = async ({ email, name, password, pledge, payments }) => {
+  // Ensure OTP was verified (last OTP for email must be used=true)
+  const lastOtp = await prisma.otpCode.findFirst({
+    where: { email },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!lastOtp || !lastOtp.used) {
+    throw new AppError('Email not verified. Please complete OTP verification first.', 400, 'EMAIL_NOT_VERIFIED');
+  }
+
+  const existing = await prisma.donor.findUnique({ where: { email } });
+  if (existing) throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  const donor = await prisma.donor.create({
+    data: {
+      name,
+      email,
+      passwordHash,
+      ...(pledge && {
+        engagement: {
+          create: {
+            totalPledge: pledge.totalPledge,
+            startDate: new Date(),
+            endDate: pledge.endDate ? new Date(pledge.endDate) : null,
+          },
+        },
+      }),
+      ...(payments?.length && {
+        payments: {
+          create: payments.map((p) => ({
+            amount: p.amount,
+            date: new Date(p.date),
+            method: p.method,
+            note: p.note ?? null,
+          })),
+        },
+      }),
+    },
+  });
+
+  const tokens = buildTokenPair(donor.id, 'donor');
+  await storeRefreshToken(tokens.refreshToken, 'donor', donor.id);
+
+  await createLog({
+    actor: `Donor: ${donor.name}`,
+    actorType: 'donor',
+    actorId: donor.id,
+    action: 'donor_registered',
+    details: `New donor registered: ${donor.email}`,
+    donorId: donor.id,
+  });
+
+  const { passwordHash: _ph, ...safeDonor } = donor;
+  return { tokens, donor: safeDonor };
+};
+
+const donorSendForgotOtp = async (email) => {
+  const donor = await prisma.donor.findUnique({ where: { email } });
+  if (!donor) {
+    // Respond the same way to avoid user enumeration
+    return;
+  }
+  await sendAndStoreOtp(email, 'reset');
+};
+
+const donorVerifyForgotOtp = async (email, code) => {
+  const donor = await prisma.donor.findUnique({ where: { email } });
+  if (!donor) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
+  await validateOtp(email, code);
+  return { verified: true };
+};
+
+const donorResetPassword = async (email, code, newPassword) => {
+  const donor = await prisma.donor.findUnique({ where: { email } });
+  if (!donor) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
+
+  // Re-validate OTP (second call — user must have just verified)
+  const lastOtp = await prisma.otpCode.findFirst({
+    where: { email },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!lastOtp || !lastOtp.used) {
+    throw new AppError('OTP not verified', 400, 'OTP_NOT_VERIFIED');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await prisma.donor.update({ where: { email }, data: { passwordHash } });
+
+  await createLog({
+    actor: `Donor: ${donor.name}`,
+    actorType: 'donor',
+    actorId: donor.id,
+    action: 'donor_password_reset',
+    details: `Password reset for ${email}`,
+    donorId: donor.id,
+  });
+};
+
+// ─── Admin Auth ───────────────────────────────────────────────────────────────
+
+const getAdminSetupStatus = async () => {
+  const adminCount = await prisma.admin.count();
+  return {
+    adminExists: adminCount > 0,
+    adminCount,
+  };
+};
+
+const bootstrapInitialAdmin = async ({ name, email, password }) => {
+  const adminCount = await prisma.admin.count();
+  if (adminCount > 0) {
+    throw new AppError('Initial admin setup is already completed', 409, 'BOOTSTRAP_CLOSED');
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const admin = await prisma.admin.create({
+    data: {
+      name,
+      email,
+      passwordHash,
+    },
+  });
+
+  const tokens = buildTokenPair(admin.id, 'admin');
+  await storeRefreshToken(tokens.refreshToken, 'admin', admin.id);
+
+  await createLog({
+    actor: 'System',
+    actorType: 'system',
+    action: 'admin_bootstrap',
+    details: `Initial admin account created: ${email}`,
+    adminId: admin.id,
+  });
+
+  const { passwordHash: _ph, ...safeAdmin } = admin;
+  return { tokens, admin: safeAdmin };
+};
+
+const adminLogin = async (email, password) => {
+  const admin = await prisma.admin.findUnique({ where: { email } });
+  if (!admin) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+
+  const valid = await bcrypt.compare(password, admin.passwordHash);
+  if (!valid) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+
+  const tokens = buildTokenPair(admin.id, 'admin');
+  await storeRefreshToken(tokens.refreshToken, 'admin', admin.id);
+
+  await createLog({
+    actor: `Admin: ${admin.name}`,
+    actorType: 'admin',
+    actorId: admin.id,
+    action: 'admin_login',
+    details: `Admin logged in`,
+    adminId: admin.id,
+  });
+
+  const { passwordHash, ...safeAdmin } = admin;
+  return { tokens, admin: safeAdmin };
+};
+
+// ─── Token Rotation ───────────────────────────────────────────────────────────
+
+const refreshTokens = async (token) => {
+  const payload = verifyRefreshToken(token);
+  const tokenHash = hashToken(token);
+
+  const stored = await prisma.refreshToken.findUnique({ where: { tokenHash } });
+  if (!stored || stored.expiresAt < new Date()) {
+    throw new AppError('Refresh token invalid or expired', 401, 'UNAUTHORIZED');
+  }
+
+  // Delete used token
+  await prisma.refreshToken.delete({ where: { tokenHash } });
+
+  const newTokens = buildTokenPair(payload.sub, payload.type);
+  await storeRefreshToken(newTokens.refreshToken, payload.type, payload.sub);
+
+  return newTokens;
+};
+
+const logout = async (token) => {
+  const tokenHash = hashToken(token);
+  await prisma.refreshToken.deleteMany({ where: { tokenHash } });
+};
+
+module.exports = {
+  donorLogin,
+  donorSendOtp,
+  donorVerifyOtp,
+  donorCompleteRegistration,
+  donorSendForgotOtp,
+  donorVerifyForgotOtp,
+  donorResetPassword,
+  getAdminSetupStatus,
+  bootstrapInitialAdmin,
+  adminLogin,
+  refreshTokens,
+  logout,
+};

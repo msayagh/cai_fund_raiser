@@ -512,8 +512,13 @@ function languageCurrency(amount, dollarFirst = true) {
   return dollarFirst ? `$${amount.toLocaleString()}` : `${amount.toLocaleString()} $`;
 }
 
-export default function MosqueDonation() {
-  const [language, setLanguage] = useState("en");
+export default function MosqueDonation({ language: langProp, setLanguage: setLangProp }) {
+  // Accept language from App (shared state) but fall back to internal state
+  // if used standalone — keeps the component backward-compatible.
+  const [langState, setLangState] = useState("en");
+  const language    = langProp    !== undefined ? langProp    : langState;
+  const setLanguage = setLangProp !== undefined ? setLangProp : setLangState;
+
   const [tiers, setTiers] = useState(INITIAL_TIERS);
   const [selectedTier, setSelectedTier] = useState(0);
 
