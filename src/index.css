@@ -23,3 +23,83 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Main three-column layout */
+.layout-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.layout-left {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+.layout-center {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.layout-right {
+  width: 340px;
+  flex-shrink: 0;
+}
+
+/* Mosque viz responsiveness */
+.mosque-viz-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.mosque-viz-svg {
+  width: 100%;
+  height: auto;
+}
+
+.mosque-viz-mobile-summary {
+  display: none;
+}
+
+/* Tablet: 768px - 1024px */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .mosque-viz-svg {
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* Mobile: < 768px */
+@media (max-width: 767px) {
+  .layout-main {
+    flex-direction: column;
+  }
+
+  .layout-left,
+  .layout-right {
+    width: 100%;
+  }
+
+  .mosque-side-chips {
+    display: none;
+  }
+
+  .mosque-viz-container {
+    display: none;
+    pointer-events: none;
+  }
+
+  .mosque-viz-mobile-summary {
+    display: block;
+  }
+
+  .mosque-viz-svg,
+  .mosque-viz-grid-layer,
+  .mosque-viz-sky-layer,
+  .mosque-viz-band-lines,
+  .mosque-viz-ornament {
+    display: none !important;
+    pointer-events: none !important;
+  }
+}

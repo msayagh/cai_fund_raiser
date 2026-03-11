@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect, memo } from "react";
 
 const LANGUAGES = {
-  en: "English",
   fr: "Français",
+  en: "English",
   ar: "العربية",
 };
 
@@ -243,7 +243,7 @@ const TIER_CONFIG = {
   foundation: { key: "foundation", name: "Mutasaddiq", funded: 0, total: 320, amount: 500, color: "#C8935A" },
   walls: { key: "walls", name: "Kareem", funded: 0, total: 320, amount: 1000, color: "#7EB8A0" },
   arches: { key: "arches", name: "Jawaad", funded: 0, total: 320, amount: 1500, color: "#8AAED4" },
-  dome: { key: "dome", name: "Sabbaq", funded: 0, total: 320, amount: 2000, color: "#D4A96E" },
+  dome: { key: "dome", name: "Sabbaq", funded: 0, total: 320, amount: 2000, color: "#B87AD9" },
 };
 
 /** Base Google Sheet URL (from env). Used for stats and orders sheets. */
@@ -407,7 +407,6 @@ async function fetchDonationsFromSheet() {
     if (!res.ok) return [];
     const text = await res.text();
     const rows = convertCsvToJson(text);
-    console.log("debug rows", rows);
     if (!Array.isArray(rows) || rows.length === 0) return [];
     return rows;
   } catch {
@@ -600,7 +599,14 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
   const gradId = `mg-${th.mode}`;
   const moonId = `moonGlow-${th.mode}`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: "block" }}>
+    <svg
+      className="mosque-viz-svg"
+      viewBox={`0 0 ${W} ${H}`}
+      width="100%"
+      height="100%"
+      preserveAspectRatio="xMidYMid meet"
+      style={{ display: "block" }}
+    >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={th.vizGradientTop} />
@@ -631,13 +637,13 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
         <rect x="0" y="0" width={W} height={H} fill={th.vizInnerFill} />
       </g>
 
-      <g clipPath="url(#mc)">
+      <g clipPath="url(#mc)" className="mosque-viz-grid-layer">
         <MosaicGrid tiers={tiers} gridTop={130} gridBottom={H} W={W} insideTest={insideTest} selectedTier={selectedTier} theme={th} />
       </g>
 
       <rect x="0" y="0" width={W} height={H} fill={th.vizMaskFill} opacity="1" mask="url(#outsideMask)" />
 
-      <g mask="url(#outsideMask)">
+      <g mask="url(#outsideMask)" className="mosque-viz-sky-layer">
         {[
           [0, 241, 0.8], [781, 236, 0.7], [206, 49, 0.9], [198, 87, 0.5],
           [431, 60, 0.9], [320, 202, 0.8], [142, 373, 0.9], [78, 14, 0.4],
@@ -670,7 +676,7 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
         );
       })()}
 
-      <g clipPath="url(#mc)" style={{ pointerEvents: "none" }}>
+      <g clipPath="url(#mc)" className="mosque-viz-band-lines" style={{ pointerEvents: "none" }}>
         {bands.slice(0, 3).map((b) => (
           <line key={`s${b.tier}`} x1="0" y1={b.y2} x2={W} y2={b.y2} stroke={th.vizLineStroke} strokeWidth="1.5" strokeDasharray="6 5" />
         ))}
@@ -703,7 +709,7 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
         })}
       </g>
 
-      <g style={{ pointerEvents: "none" }}>
+      <g className="mosque-viz-ornament" style={{ pointerEvents: "none" }}>
         <path d="M 400 25 Q 410 15 410 25 Q 410 36 400 36 Q 406 31 406 25 Q 406 20 400 25" fill={th.accentGold} opacity="0.9" />
       </g>
 
@@ -807,11 +813,10 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
         {Object.values(totalsByEmail).map((d, idx) => {
           const block = String(d.details).split("1x ")[1];
           const tier = Object.values(tierByKey).find((value) => value.name.toLowerCase() === block.toLowerCase());
-          const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
+                  const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
           const amount = tier ? tier.amount : 500;
           const progressPct = amount > 0 ? Math.min(100, (d.totalDonated / amount) * 100) : 0;
           const displayName = d.donorLabel.replace('"', '') || "Anonymous";
-          console.log("debug: d", d);
           const tierLabel = tier ? tier.label : d.tier;
           const donated = d.totalDonated;
           return (
@@ -837,7 +842,7 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
                   style={{
                     width: `${progressPct}%`,
                     height: "100%",
-                    background: (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? "#D4A96E",
+                    background: (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? "#B87AD9",
                     transition: "width 0.3s ease",
                   }}
                 />
@@ -853,7 +858,7 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
 const DonationsList = memo(DonationsListInner);
 
 export default function MosqueDonation() {
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState("fr");
   const [tiers, setTiers] = useState(INITIAL_TIERS);
   const [selectedTier, setSelectedTier] = useState(0);
   const [donations, setDonations] = useState([]);
@@ -952,11 +957,10 @@ export default function MosqueDonation() {
     ...tier,
     label: TIER_LABELS[tier.key]?.[language] || TIER_LABELS[tier.key]?.en || tier.key,
   }));
-  console.log("debug: localizedTiers", localizedTiers);
   const sel = localizedTiers[selectedTier];
   const pct = Math.round((sel.funded / sel.total) * 100);
   const remaining = sel.total - sel.funded;
-  const totalRaised = localizedTiers.reduce((sum, tier) => sum + tier.funded * tier.amount, 0);
+  const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + 680000;
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
   const totalBricksFunded = localizedTiers.reduce((sum, tier) => sum + tier.funded, 0);
   const totalBricks = localizedTiers.reduce((sum, tier) => sum + tier.total, 0);
@@ -1092,46 +1096,6 @@ export default function MosqueDonation() {
                 }}
               />
             </div>
-
-            {/* Overall campaign objective (secondary) */}
-            <div style={{ fontSize: "11px", color: theme.textMuted, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>
-                {language === "fr"
-                  ? "Objectif global de la campagne"
-                  : language === "ar"
-                  ? "الهدف الكلي للحملة"
-                  : "Overall campaign objective"}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span>
-                  {headerProgressPct}% {language === "fr" ? "atteint du" : language === "ar" ? " محقق من" : "reached of"}
-                </span>
-                <span style={{ fontWeight: 700, color: theme.textMuted, fontSize: "12px" }}>
-                  {languageCurrency(totalRaised, currencyFirst)}
-                </span>
-              </span>
-            </div>
-            <div
-              aria-hidden="true"
-              style={{
-                width: "100%",
-                height: "5px",
-                borderRadius: "999px",
-                background: theme.vizProgressTrack,
-                overflow: "hidden",
-                opacity: 0.7,
-              }}
-            >
-              <div
-                style={{
-                  width: `${headerProgressPct}%`,
-                  height: "100%",
-                  borderRadius: "999px",
-                  background: theme.textMuted,
-                  transition: "width 0.4s ease",
-                }}
-              />
-            </div>
           </div>
         </div>
 
@@ -1175,23 +1139,8 @@ export default function MosqueDonation() {
         </div>
       </header>
 
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div
-          style={{
-            width: "320px",
-            flexShrink: 0,
-            borderRight: isRTL ? "none" : `2px solid ${theme.border}`,
-            borderLeft: isRTL ? `2px solid ${theme.border}` : "none",
-            padding: "20px 12px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            gap: "12px",
-            background: theme.bgSidebar,
-            minHeight: 0,
-          }}
-        >
+      <div className="layout-main">
+        <div className="layout-left">
           <div style={{ 
             flexShrink: 0, 
             display: "flex", 
@@ -1279,51 +1228,83 @@ export default function MosqueDonation() {
               }}
             />
 
-            {[
-              { id: 3, centerPct: (0 + 394) / 2 / 740 },
-              { id: 2, centerPct: (394 + 514) / 2 / 740 },
-              { id: 1, centerPct: (514 + 624) / 2 / 740 },
-              { id: 0, centerPct: (624 + 740) / 2 / 740 },
-            ].map(({ id, centerPct }) => {
-              const tier = localizedTiers[id];
-              const tierRemaining = tier.total - tier.funded;
-              const isSelected = selectedTier === id;
+            <div className="mosque-side-chips">
+              {[
+                { id: 3, centerPct: (0 + 394) / 2 / 740 },
+                { id: 2, centerPct: (394 + 514) / 2 / 740 },
+                { id: 1, centerPct: (514 + 624) / 2 / 740 },
+                { id: 0, centerPct: (624 + 740) / 2 / 740 },
+              ].map(({ id, centerPct }) => {
+                const tier = localizedTiers[id];
+                const tierRemaining = tier.total - tier.funded;
+                const isSelected = selectedTier === id;
 
-              return (
-                <div
-                  key={id}
-                  onClick={() => setSelectedTier(id)}
-                  style={{
-                    position: "absolute",
-                    right: isRTL ? "auto" : "-85px",
-                    left: isRTL ? "-85px" : "auto",
-                    top: `${centerPct * 100}%`,
-                    transform: "translateY(-50%)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    padding: "10px 14px",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                    background: isSelected ? tier.color : theme.bgCardAlt,
-                    border: `2px solid ${isSelected ? tier.color : theme.border}`,
-                    transition: "all 0.18s",
-                    minWidth: "80px",
-                    boxShadow: isSelected ? `0 0 16px ${tier.color}66` : (theme.mode === "light" ? "0 2px 8px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.5)"),
-                    zIndex: 10,
-                  }}
-                >
-                  <span style={{ fontSize: "22px", fontWeight: 800, color: isSelected ? "#000000" : theme.textPrimary, lineHeight: 1.2, whiteSpace: "nowrap" }}>
-                    {languageCurrency(tier.amount, currencyFirst)}
-                  </span>
-                  <span style={{ fontSize: "16px", fontWeight: 700, color: isSelected ? "#00000099" : tier.color, marginTop: "3px", whiteSpace: "nowrap" }}>
-                    {t.sideChip(tierRemaining)}
-                  </span>
-                </div>
-              );
-            })}
+                return (
+                  <div
+                    key={id}
+                    onClick={() => setSelectedTier(id)}
+                    style={{
+                      position: "absolute",
+                      // Move chips further to the right (or left for RTL), and make the offset responsive
+                      right: isRTL
+                        ? "auto"
+                        : "clamp(-105px, calc(-13vw + 6px), -70px)",
+                      left: isRTL
+                        ? "clamp(-105px, calc(-13vw + 6px), -70px)"
+                        : "auto",
+                      top: `${centerPct * 100}%`,
+                      transform: "translateY(-50%)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      padding: "10px 14px",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                      background: isSelected ? tier.color : theme.bgCardAlt,
+                      border: `2px solid ${isSelected ? tier.color : theme.border}`,
+                      transition: "all 0.18s",
+                      minWidth: "80px",
+                      boxShadow: isSelected
+                        ? `0 0 16px ${tier.color}66`
+                        : theme.mode === "light"
+                        ? "0 2px 8px rgba(0,0,0,0.08)"
+                        : "0 2px 8px rgba(0,0,0,0.5)",
+                      zIndex: 10,
+                    }}
+                  >
+                    <span style={{ fontSize: "22px", fontWeight: 800, color: isSelected ? "#000000" : theme.textPrimary, lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                      {languageCurrency(tier.amount, currencyFirst)}
+                    </span>
+                    <span style={{ fontSize: "16px", fontWeight: 700, color: isSelected ? "#00000099" : tier.color, marginTop: "3px", whiteSpace: "nowrap" }}>
+                      {t.sideChip(tierRemaining)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
 
-            <MosqueViz tiers={localizedTiers} selectedTier={selectedTier} onSelectTier={setSelectedTier} theme={theme} />
+            <div className="mosque-viz-container">
+              <MosqueViz tiers={localizedTiers} selectedTier={selectedTier} onSelectTier={setSelectedTier} theme={theme} />
+            </div>
+            <div className="mosque-viz-mobile-summary">
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: "10px",
+                  marginTop: "12px",
+                  background: theme.bgCardAlt,
+                  border: `1px solid ${theme.border}`,
+                  fontSize: "14px",
+                  lineHeight: 1.5,
+                  textAlign: "center",
+                }}
+              >
+                {t.vizMobileSummary ?? 
+                language === "fr" ? "La visualisation de la mosquée est préférable sur un écran plus grand. Utilisez les cartes ci-dessous pour explorer le progrès sur mobile." :
+                language === "ar" ? "يفضل عرض المسجد على شاشة أكبر. استخدم البطاقات أدناه لاستكشاف التقدم على الهاتف." :
+                "Mosque visualization is best viewed on a larger screen. Use the tier cards below to explore progress on mobile."}
+              </div>
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: "8px", marginTop: "14px", flexWrap: "wrap", justifyContent: "center" }}>
@@ -1353,20 +1334,7 @@ export default function MosqueDonation() {
           </div>
         </div>
 
-        <div
-          style={{
-            width: "340px",
-            flexShrink: 0,
-            borderLeft: isRTL ? "none" : `2px solid ${theme.border}`,
-            borderRight: isRTL ? `2px solid ${theme.border}` : "none",
-            padding: "20px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-            overflowY: "auto",
-            background: theme.bgCard,
-          }}
-        >
+        <div className="layout-right">
           <div>
             <div
               style={{
@@ -1551,6 +1519,7 @@ export default function MosqueDonation() {
 
       <footer
         style={{
+          marginTop: "24px",
           borderTop: `1px solid ${theme.borderAccent}`,
           background: theme.bgHeader,
           padding: "18px 32px 22px",
