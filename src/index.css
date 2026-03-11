@@ -29,6 +29,7 @@ a {
   flex: 1;
   display: flex;
   min-height: 0;
+  margin-top: 24px;
 }
 
 .layout-left {

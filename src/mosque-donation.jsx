@@ -1188,7 +1188,7 @@ export default function MosqueDonation() {
                 <p
                   style={{
                     fontFamily: "'Amiri','Scheherazade New',serif",
-                    fontSize: "18px",
+                    fontSize: "24px",
                     lineHeight: 1.8,
                     color: theme.vizHadith,
                     direction: "rtl",
@@ -1196,7 +1196,7 @@ export default function MosqueDonation() {
                   }}
                 >
                   مَنْ بَنَى مَسْجِدًا يَبْتَغِي بِهِ وَجْهَ اللَّهِ بَنَى اللَّهُ لَهُ مِثْلَهُ فِي الْجَنَّةِ
-                  <span style={{ fontSize: "14px", color: theme.accentGold, marginRight: "8px" }}> ― متفق عليه</span>
+                  <span style={{ fontSize: "18px", color: theme.accentGold, marginRight: "8px" }}> ― متفق عليه</span>
                 </p>
                 <p
                   style={{
