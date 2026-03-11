@@ -454,7 +454,9 @@ async function fetchDonationsFromSheet() {
     const text = await res.text();
     const rows = convertCsvToJson(text);
     if (!Array.isArray(rows) || rows.length === 0) return [];
-    return rows;
+    // Filter out rows based on donation form
+    const filteredRows = rows.filter((row) => row["détails"].startsWith("Levée de fonds ") || row["détails"].startsWith("Travaux d’aménagement dans le nouveau centr"));
+    return filteredRows;
   } catch {
     return [];
   }
