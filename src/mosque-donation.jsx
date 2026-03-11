@@ -226,7 +226,7 @@ const TRANSLATIONS = {
 const DONATION_URL = "https://your-donation-page.com";
 
 function QRCode({ color, alt, theme }) {
-  const src = `public/qr-code.png`;
+  const src = `qr-code.png`;
 
   return (
     <img
@@ -1161,11 +1161,11 @@ export default function MosqueDonation() {
             >
               {t.scanToDonate}
             </div>
-            <div style={{ display: "flex", justifyContent: "center", width: "100%", margin: "10px 0" }}>
-              <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
-            </div>
             <div style={{ fontSize: "12px", color: theme.textMuted, textAlign: "center", lineHeight: 1.5, width: "100%" }}>
               {t.qrHelp}
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", width: "100%", margin: "10px 0" }}>
+              <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
             </div>
           </div>
           <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
