@@ -70,8 +70,8 @@ const THEMES = {
     vizLineMuted: "rgba(0,0,0,0.08)",
     vizLineSubtle: "rgba(0,0,0,0.06)",
     vizAccentFill: "rgba(0,0,0,0.06)",
-    vizMoonBg: "#fffef5",
-    vizMoonCrater: "#e8e6e0",
+    vizMoonBg: "rgba(51, 51, 51, 0.9)",
+    vizMoonCrater: "rgba(225, 226, 228, 0.9)",
     vizHadith: "#3d3d3d",
   },
 };
@@ -102,7 +102,7 @@ const TIER_LABELS = {
 const TRANSLATIONS = {
   en: {
     centerName: "Centre Zad Al-Imane",
-    title: "Masjid Construction Campaign",
+    title: "Masjid Establishment Campaign",
     raisedOfGoal: "raised of",
     goal: "goal",
     bricks: "bricks",
@@ -114,7 +114,7 @@ const TRANSLATIONS = {
     language: "Language",
     aboutCampaign: "About this campaign",
     aboutCampaignText:
-      "Each illuminated brick represents a pledged contribution toward the construction of the masjid. The four contribution tiers correspond to different sections of the structure, allowing supporters to take part in building the foundation, walls, arches, and dome.",
+      "Each illuminated brick represents a pledged contribution toward the establishment of the masjid. The four contribution tiers correspond to different sections of the structure, allowing supporters to take part in building the foundation, walls, arches, and dome.",
     howToParticipate: "How to participate",
     howToParticipateText:
       "Select a tier, review the remaining bricks, then scan the QR code or proceed with your donation method. Your support helps transform this visual plan into a real place of prayer, learning, and community service.",
@@ -128,21 +128,36 @@ const TRANSLATIONS = {
     phone: "Phone",
     website: "Website",
     raisedLine: (totalRaised, totalGoal, totalBricksFunded, totalBricks, th) => (
-      <>
-        <span style={{ color: th.textPrimary, fontWeight: 700 }}>
-          {`$${totalRaised.toLocaleString()} raised`}
-        </span>
-        <span style={{ color: th.textMuted }}> {` of $${totalGoal.toLocaleString()} goal`}</span>
-        <span style={{ color: th.textMuted }}> {" · "} </span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", width: "100%" }}>
         <span style={{ color: th.textPrimary, fontWeight: 700 }}>
           {`${totalBricksFunded}/${totalBricks} bricks funded`}
         </span>
-      </>
+      </div>
+    ),
+    raisedTag: (totalRaised, totalGoal, th) => (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "2px 8px",
+          borderRadius: 999,
+          border: `1px solid ${th.borderAccent}`,
+          background: th.mode === "light" ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.03)",
+          color: th.textMuted,
+          fontSize: 11,
+          fontWeight: 600,
+          marginTop: "4px",
+        }}
+      >
+        <span style={{ opacity: 0.8 }}>Goal</span>
+        <span>{`$${totalRaised.toLocaleString()} raised / $${totalGoal.toLocaleString()}`}</span>
+      </span>
     ),
   },
   fr: {
     centerName: "Centre Zad Al-Imane",
-    title: "Campagne de construction de la mosquée",
+    title: "Campagne d’établissement de la mosquée",
     raisedOfGoal: "collectés sur un objectif de",
     goal: "objectif",
     bricks: "briques",
@@ -154,7 +169,7 @@ const TRANSLATIONS = {
     language: "Langue",
     aboutCampaign: "À propos de cette campagne",
     aboutCampaignText:
-      "Chaque brique illuminée représente une contribution engagée pour la construction de la mosquée. Les quatre paliers de contribution correspondent à différentes parties de l’édifice, permettant aux donateurs de participer à la fondation, aux murs, aux arches et au dôme.",
+      "Chaque brique illuminée représente une contribution engagée pour l’établissement de la mosquée. Les quatre paliers de contribution correspondent à différentes parties de l’édifice, permettant aux donateurs de participer à la fondation, aux murs, aux arches et au dôme.",
     howToParticipate: "Comment participer",
     howToParticipateText:
       "Choisissez un palier, consultez le nombre de briques restantes, puis scannez le code QR ou utilisez votre moyen de don. Votre soutien aide à transformer ce plan visuel en un véritable lieu de prière, d’apprentissage et de service à la communauté.",
@@ -168,21 +183,36 @@ const TRANSLATIONS = {
     phone: "Téléphone",
     website: "Site web",
     raisedLine: (totalRaised, totalGoal, totalBricksFunded, totalBricks, th) => (
-      <>
-        <span style={{ color: th.textPrimary, fontWeight: 700 }}>
-          {`${totalRaised.toLocaleString()} $ collectés`}
-        </span>
-        <span style={{ color: th.textMuted }}> {` sur un objectif de ${totalGoal.toLocaleString()} $`}</span>
-        <span style={{ color: th.textMuted }}> {" · "} </span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", width: "100%" }}>
         <span style={{ color: th.textPrimary, fontWeight: 700 }}>
           {`${totalBricksFunded}/${totalBricks} briques financées`}
         </span>
-      </>
+      </div>
+    ),
+    raisedTag: (totalRaised, totalGoal, th) => (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "2px 8px",
+          borderRadius: 999,
+          border: `1px solid ${th.borderAccent}`,
+          background: th.mode === "light" ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.03)",
+          color: th.textMuted,
+          fontSize: 11,
+          fontWeight: 600,
+          marginTop: "4px",
+        }}
+      >
+        <span style={{ opacity: 0.8 }}>Objectif</span>
+        <span>{`${totalRaised.toLocaleString()} $ collectés / ${totalGoal.toLocaleString()} $`}</span>
+      </span>
     ),
   },
   ar: {
     centerName: "مركز زاد الإيمان",
-    title: "حملة بناء المسجد",
+    title: "حملة تأسيس المسجد",
     raisedOfGoal: "تم جمع",
     goal: "الهدف",
     bricks: "طوبة",
@@ -194,7 +224,7 @@ const TRANSLATIONS = {
     language: "اللغة",
     aboutCampaign: "حول هذه الحملة",
     aboutCampaignText:
-      "تمثل كل طوبة مضيئة مساهمةً متعهداً بها في بناء المسجد. وترتبط فئات التبرع الأربع بأجزاء مختلفة من المبنى، مما يتيح للمساهمين المشاركة في الأساس والجدران والأقواس والقبة.",
+      "تمثل كل طوبة مضيئة مساهمةً متعهداً بها في تأسيس المسجد. وترتبط فئات التبرع الأربع بأجزاء مختلفة من المبنى، مما يتيح للمساهمين المشاركة في الأساس والجدران والأقواس والقبة.",
     howToParticipate: "كيفية المشاركة",
     howToParticipateText:
       "اختر الفئة، واطّلع على عدد الطوب المتبقي، ثم امسح رمز الاستجابة أو استخدم وسيلة التبرع المناسبة. دعمك يساعد على تحويل هذا التصور إلى مسجد حقيقي للصلاة والتعلم وخدمة المجتمع.",
@@ -208,16 +238,32 @@ const TRANSLATIONS = {
     phone: "الهاتف",
     website: "الموقع",
     raisedLine: (totalRaised, totalGoal, totalBricksFunded, totalBricks, th) => (
-      <>
-        <span style={{ color: th.textPrimary, fontWeight: 700 }}>
-          {`${totalRaised.toLocaleString()} $ تم جمعها`}
-        </span>
-        <span style={{ color: th.textMuted }}> {` من أصل هدف قدره ${totalGoal.toLocaleString()} $`}</span>
-        <span style={{ color: th.textMuted }}> {" · "} </span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", width: "100%", direction: "rtl" }}>
         <span style={{ color: th.textPrimary, fontWeight: 700 }}>
           {`${totalBricksFunded}/${totalBricks} طوبة ممولة`}
         </span>
-      </>
+      </div>
+    ),
+    raisedTag: (totalRaised, totalGoal, th) => (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "2px 8px",
+          borderRadius: 999,
+          border: `1px solid ${th.borderAccent}`,
+          background: th.mode === "light" ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.03)",
+          color: th.textMuted,
+          fontSize: 11,
+          fontWeight: 600,
+          marginTop: "4px",
+          direction: "rtl",
+        }}
+      >
+        <span style={{ opacity: 0.8 }}>الهدف</span>
+        <span>{`${totalRaised.toLocaleString()} $ محققة / ${totalGoal.toLocaleString()} $`}</span>
+      </span>
     ),
   },
 };
@@ -709,10 +755,6 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
         })}
       </g>
 
-      <g className="mosque-viz-ornament" style={{ pointerEvents: "none" }}>
-        <path d="M 400 25 Q 410 15 410 25 Q 410 36 400 36 Q 406 31 406 25 Q 406 20 400 25" fill={th.accentGold} opacity="0.9" />
-      </g>
-
       {bands.map((b) => (
         <g key={`hit${b.tier}`} clipPath="url(#mc)">
           <rect x={0} y={b.y1} width={W} height={b.y2 - b.y1} fill="transparent" style={{ cursor: "pointer" }} onClick={() => onSelectTier(b.tier)} />
@@ -798,7 +840,7 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
           flexShrink: 0,
         }}
       >
-        Donations
+        {language === "fr" ? "Liste des donateurs" : language === "ar" ? "قائمة المتبرعين" : "List of donors"}
       </div>
       <div
         style={{
@@ -960,13 +1002,10 @@ export default function MosqueDonation() {
   const sel = localizedTiers[selectedTier];
   const pct = Math.round((sel.funded / sel.total) * 100);
   const remaining = sel.total - sel.funded;
-  const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + 680000;
+  const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + 692602;
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
-  const totalBricksFunded = localizedTiers.reduce((sum, tier) => sum + tier.funded, 0);
-  const totalBricks = localizedTiers.reduce((sum, tier) => sum + tier.total, 0);
   const RAMADAN_TARGET = 200000;
   const headerRamadanPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((ramadanRaised / RAMADAN_TARGET) * 100)) : 0;
-  const headerProgressPct = totalGoal > 0 ? Math.min(100, Math.round((totalRaised / totalGoal) * 100)) : 0;
   const currencyFirst = language === "en";
 
   function handleFund() {
@@ -1032,6 +1071,9 @@ export default function MosqueDonation() {
             <h1 style={{ fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif", fontSize: "16px", fontWeight: 600, letterSpacing: isRTL ? "0" : "0.06em", color: theme.textPrimary, margin: 0 }}>
               {t.title}
             </h1>
+            <div>
+              {t.raisedTag?.(totalRaised, totalGoal, theme)}
+            </div>
           </div>
         </div>
 
@@ -1042,59 +1084,131 @@ export default function MosqueDonation() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: "4px",
             minWidth: 0,
+            width: "100%",
+            maxWidth: 420,
+            padding: "0 8px",
           }}
         >
-          <div style={{ fontSize: "28px", fontWeight: 800, color: theme.accentGold, lineHeight: 1 }}>
-            {languageCurrency(totalRaised, currencyFirst)}
-          </div>
-          <div style={{ fontSize: "14px", color: theme.textMuted }}>
-            {t.raisedLine(totalRaised, totalGoal, totalBricksFunded, totalBricks, theme)}
-          </div>
-          <div style={{ width: "100%", maxWidth: "360px", marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            {/* Ramadan short‑term objective (highlighted) */}
-            <div style={{ 
-              fontSize: "13px", 
-              color: theme.textMuted, 
-              display: "flex", 
-              justifyContent: "space-between",
-              fontWeight: 700,
-              marginBottom: "4px",
-              letterSpacing: isRTL ? "0" : "0.05em",
-            }}>
-              <span>{language === "fr" ? "Objectif de Ramadan" : language === "ar" ? "هدف رمضان" : "Ramadan objective"}</span>
-              <span style={{ fontWeight: 800, color: theme.accentGold, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <span>
-                {headerRamadanPct}%
-                </span>
-                <span>
-                  ({languageCurrency(ramadanRaised, currencyFirst)} {language === "fr" ? "de" : language === "ar" ? "من" : "of"} {languageCurrency(RAMADAN_TARGET, currencyFirst)})
-                </span>
-              </span>
-            </div>
+          {/* Unified Progress Bar */}
+          <div
+            style={{
+              width: "100%",
+              background: theme.bgCardAlt,
+              borderRadius: 16,
+              padding: "18px 22px 16px 22px",
+              boxShadow:
+                theme.mode === "dark"
+                  ? "0 2px 16px 0 rgba(20,18,34,0.11)"
+                  : "0 2px 12px 0 rgba(62,54,38,0.09)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            {/* Centered Ramadan Objective Title */}
             <div
-              aria-hidden="true"
               style={{
                 width: "100%",
-                height: "20px",
-                borderRadius: "999px",
-                background: theme.vizProgressTrack,
-                overflow: "hidden",
-                boxShadow: `0 0 0 2px ${theme.borderAccent}`,
-                marginBottom: "2px",
+                textAlign: "center",
+                marginBottom: "9px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "17px",
+                  fontWeight: 700,
+                  color: theme.textMuted,
+                  letterSpacing: isRTL ? "0" : "0.05em",
+                }}
+              >
+                {language === "fr"
+                  ? "Objectif de Ramadan"
+                  : language === "ar"
+                  ? "هدف رمضان"
+                  : "Ramadan objective"}
+              </span>
+            </div>
+
+            {/* Large total raised line */}
+            <div
+              style={{
+                fontSize: "26px",
+                fontWeight: 800,
+                color: theme.accentGold,
+                letterSpacing: isRTL ? "0" : "0.02em",
+                lineHeight: 1,
+                marginBottom: "7px",
+                textAlign: "center",
+                fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
+                wordBreak: "break-word",
+              }}
+            >
+              {languageCurrency(ramadanRaised, currencyFirst)}{" "}
+              <span
+                style={{
+                  fontSize: "17.5px",
+                  fontWeight: 700,
+                  color: theme.textMuted,
+                }}
+              >
+                {language === "fr"
+                  ? "de"
+                  : language === "ar"
+                  ? "من"
+                  : "of"}
+              </span>{" "}
+              {languageCurrency(RAMADAN_TARGET, currencyFirst)}
+            </div>
+
+            {/* Progress Bar and Value Row */}
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "4px",
+                gap: "12px",
               }}
             >
               <div
+                aria-hidden="true"
                 style={{
-                  width: `${headerRamadanPct}%`,
-                  height: "100%",
+                  flex: 1,
+                  height: "19px",
                   borderRadius: "999px",
-                  background: sel.color,
-                  transition: "width 0.4s cubic-bezier(.79,.14,.15,.86)",
-                  boxShadow: `0 0 16px 2px ${sel.color}44`,
+                  background: theme.vizProgressTrack,
+                  overflow: "hidden",
+                  boxShadow: `0 0 0 2px ${theme.borderAccent}`,
                 }}
-              />
+              >
+                <div
+                  style={{
+                    width: `${headerRamadanPct}%`,
+                    height: "100%",
+                    borderRadius: "999px",
+                    background: sel.color,
+                    transition: "width 0.4s cubic-bezier(.79,.14,.15,.86)",
+                    boxShadow: `0 0 16px 2px ${sel.color}44`,
+                  }}
+                />
+              </div>
+              {/* Progress Value */}
+              <span
+                style={{
+                  fontSize: "15px",
+                  fontWeight: 800,
+                  color: theme.accentGold,
+                  marginLeft: "8px",
+                  whiteSpace: "nowrap",
+                  minWidth: "35px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                }}
+              >
+                {headerRamadanPct}%
+              </span>
             </div>
           </div>
         </div>
