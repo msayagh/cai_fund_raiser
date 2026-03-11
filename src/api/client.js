@@ -44,13 +44,14 @@ const _refresh = async () => {
 };
 
 export const apiFetch = async (path, opts = {}, _retry = false) => {
+  const isAuthPath = path.startsWith('/api/auth/');
   const headers = { 'Content-Type': 'application/json', ...(opts.headers ?? {}) };
-  if (_token) headers['Authorization'] = `Bearer ${_token}`;
+  if (_token && !isAuthPath) headers['Authorization'] = `Bearer ${_token}`;
 
   const res = await fetch(`${BASE}${path}`, { ...opts, headers });
   const json = await res.json().catch(() => ({}));
 
-  if (res.status === 401 && !_retry) {
+  if (res.status === 401 && !_retry && !isAuthPath) {
     try {
       await _refresh();
       return apiFetch(path, opts, true);

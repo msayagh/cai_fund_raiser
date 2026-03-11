@@ -107,6 +107,7 @@ Access tokens expire in **15 minutes**. Use `POST /api/auth/refresh` with your r
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/auth/donor/login` | Donor login |
+| POST | `/auth/donor/google` | Donor Google sign-in (ID token) |
 | POST | `/auth/donor/register/send-otp` | Start donor registration |
 | POST | `/auth/donor/register/verify-otp` | Verify email OTP |
 | POST | `/auth/donor/register/complete` | Complete registration |
@@ -116,6 +117,10 @@ Access tokens expire in **15 minutes**. Use `POST /api/auth/refresh` with your r
 | GET  | `/auth/admin/setup-status` | Check whether any admin exists |
 | POST | `/auth/admin/bootstrap` | Create initial admin (only when no admins exist) |
 | POST | `/auth/admin/login` | Admin login |
+| POST | `/auth/admin/google` | Admin Google sign-in (existing admin email only) |
+| POST | `/auth/admin/forgot/send-otp` | Request admin password reset OTP |
+| POST | `/auth/admin/forgot/verify-otp` | Verify admin reset OTP |
+| POST | `/auth/admin/forgot/reset` | Set new admin password |
 | POST | `/auth/refresh` | Rotate token pair |
 | POST | `/auth/logout` | Revoke refresh token |
 
@@ -233,6 +238,8 @@ DATABASE_URL="postgresql://user:password@localhost:5432/mosque_app"
 
 If `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are set, OTP emails are sent via SMTP.  
 Otherwise (development), OTPs are logged to the console — check your terminal output.
+
+For Google sign-in, set `GOOGLE_CLIENT_ID` in `backend/.env`.
 
 ## File Uploads
 

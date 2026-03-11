@@ -7,6 +7,10 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+const googleSignInSchema = z.object({
+  credential: z.string().min(1, 'Google credential is required'),
+});
+
 const bootstrapAdminSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email address'),
@@ -60,6 +64,7 @@ const logoutSchema = z.object({
 
 module.exports = {
   loginSchema,
+  googleSignInSchema,
   bootstrapAdminSchema,
   sendOtpSchema,
   verifyOtpSchema,

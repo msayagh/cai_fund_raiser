@@ -20,6 +20,7 @@ import { tryAutoLogin, clearTokens } from '../api/client.js';
 import * as authApi from '../api/auth.js';
 import * as adminApi from '../api/admin.js';
 import { PORTAL_T } from "../i18n/portalTranslations";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 
 // ─── Font scale ───────────────────────────────────────────────────────────────
 const F = { xs: "13px", sm: "14px", base: "16px", md: "17px", lg: "19px", xl: "23px", xxl: "27px" };
@@ -203,12 +204,23 @@ function getDonorStatus(donor) {
 export default function AdminDashboard({ navigate, language, setLanguage }) {
   const t = PORTAL_T[language] || PORTAL_T.en;
   const isRTL = language === "ar";
+  const googleSignInEnabled = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   const [currentAdmin, setCurrentAdmin]     = useState(null);
   const [loginEmail, setLoginEmail]         = useState("");
   const [loginPassword, setLoginPassword]   = useState("");
   const [loginError, setLoginError]         = useState("");
+  const [googleSigningIn, setGoogleSigningIn] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [adminForgotStep, setAdminForgotStep]       = useState(1);
+  const [adminForgotEmail, setAdminForgotEmail]     = useState("");
+  const [adminForgotOtp, setAdminForgotOtp]         = useState("");
+  const [adminForgotOtpSent, setAdminForgotOtpSent] = useState(false);
+  const [adminForgotLoading, setAdminForgotLoading] = useState(false);
+  const [adminForgotNewPwd, setAdminForgotNewPwd]   = useState("");
+  const [adminForgotConfirm, setAdminForgotConfirm] = useState("");
+  const [adminForgotError, setAdminForgotError]     = useState("");
 
   const [autoLogging, setAutoLogging]   = useState(true);
   const [donors, setDonors]             = useState([]);
@@ -363,16 +375,85 @@ export default function AdminDashboard({ navigate, language, setLanguage }) {
   // HANDLERS
   // ─────────────────────────────────────────────────────────────────────────
 
+  async function completeAdminSignIn(admin) {
+    localStorage.setItem('mosque_admin', JSON.stringify({ id: admin.id, name: admin.name, email: admin.email }));
+    setCurrentAdmin(admin);
+    await loadAllData();
+    setActiveTab('overview');
+  }
+
   async function handleLogin(e) {
     e.preventDefault(); setLoginError('');
     try {
       const admin = await authApi.adminLogin(loginEmail.trim(), loginPassword);
-      localStorage.setItem('mosque_admin', JSON.stringify({ id: admin.id, name: admin.name, email: admin.email }));
-      setCurrentAdmin(admin);
-      await loadAllData();
-      setActiveTab('overview');
+      await completeAdminSignIn(admin);
     } catch (err) { setLoginError(err.message || t.invalidCredentials); }
     setLoginEmail(''); setLoginPassword('');
+  }
+
+  async function handleGoogleLogin(credential) {
+    setLoginError('');
+    setGoogleSigningIn(true);
+    try {
+      const admin = await authApi.adminGoogleLogin(credential);
+      await completeAdminSignIn(admin);
+      setLoginEmail('');
+      setLoginPassword('');
+    } catch (err) {
+      setLoginError(err.message || "Google sign-in failed.");
+    } finally {
+      setGoogleSigningIn(false);
+    }
+  }
+
+  function resetAdminForgotState() {
+    setAdminForgotStep(1);
+    setAdminForgotEmail('');
+    setAdminForgotOtp('');
+    setAdminForgotOtpSent(false);
+    setAdminForgotLoading(false);
+    setAdminForgotNewPwd('');
+    setAdminForgotConfirm('');
+    setAdminForgotError('');
+  }
+
+  async function handleAdminForgotSendOtp(e) {
+    e.preventDefault();
+    setAdminForgotError('');
+    setAdminForgotLoading(true);
+    try {
+      await authApi.adminForgotSendOtp(adminForgotEmail.trim());
+      setAdminForgotOtpSent(true);
+    } catch (err) {
+      setAdminForgotError(err.message || 'Failed to send reset code.');
+    } finally {
+      setAdminForgotLoading(false);
+    }
+  }
+
+  async function handleAdminForgotVerifyOtp() {
+    setAdminForgotError('');
+    try {
+      await authApi.adminForgotVerifyOtp(adminForgotEmail.trim(), adminForgotOtp.trim());
+      setAdminForgotStep(3);
+    } catch (err) {
+      setAdminForgotError(err.message || 'Failed to verify code.');
+    }
+  }
+
+  async function handleAdminForgotSetPassword(e) {
+    e.preventDefault();
+    setAdminForgotError('');
+    if (adminForgotNewPwd !== adminForgotConfirm) {
+      setAdminForgotError(t.passwordsNoMatch);
+      return;
+    }
+    try {
+      await authApi.adminForgotReset(adminForgotEmail.trim(), adminForgotOtp.trim(), adminForgotNewPwd);
+      setAdminForgotStep(4);
+    } catch (err) {
+      setAdminForgotError(err.message || 'Failed to reset password.');
+    }
   }
 
   async function handleSignOut() {
@@ -594,23 +675,170 @@ export default function AdminDashboard({ navigate, language, setLanguage }) {
             {t.adminDemoHint}
           </div>
 
-          <ErrorBox msg={loginError} />
+          {!showForgotPassword ? (
+            <>
+              <ErrorBox msg={loginError} />
 
-          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div>
+                  <label style={labelStyle}>{t.email}</label>
+                  <input type="email" required value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{t.password}</label>
+                  <input type="password" required value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)} style={inputStyle} />
+                </div>
+                <button type="submit" style={{ ...primaryBtn(), width: "100%", padding: "14px", fontSize: F.sm }}>
+                  {t.signIn}
+                </button>
+              </form>
+
+              <div style={{ marginTop: "12px", textAlign: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(true);
+                    setLoginError('');
+                    setAdminForgotError('');
+                  }}
+                  style={{ background: "transparent", border: "none", color: C.gold, cursor: "pointer", fontSize: F.xs, fontFamily: "inherit" }}
+                >
+                  {t.forgotPasswordLink}
+                </button>
+              </div>
+
+              {googleSignInEnabled && (
+                <>
+                  <div style={{ display:"flex", alignItems:"center", gap:"10px", marginTop:"16px", marginBottom:"12px" }}>
+                    <div style={{ flex:1, height:"1px", background:C.border }} />
+                    <span style={{ fontSize:F.xs, color:C.muted, textTransform:"uppercase", letterSpacing:"0.08em" }}>or</span>
+                    <div style={{ flex:1, height:"1px", background:C.border }} />
+                  </div>
+                  <GoogleSignInButton
+                    width={320}
+                    disabled={googleSigningIn}
+                    onCredential={handleGoogleLogin}
+                    onError={(msg) => setLoginError(msg)}
+                  />
+                  {googleSigningIn && (
+                    <div style={{ marginTop:"10px", fontSize:F.xs, color:C.muted }}>Signing in with Google...</div>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
             <div>
-              <label style={labelStyle}>{t.email}</label>
-              <input type="email" required value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)} style={inputStyle} />
+              <div style={{ fontSize: F.sm, color: C.muted, marginBottom: "14px" }}>{t.forgotPasswordSubtitle}</div>
+              <ErrorBox msg={adminForgotError} />
+
+              {adminForgotStep === 1 && (
+                <form onSubmit={handleAdminForgotSendOtp} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div>
+                    <label style={labelStyle}>{t.email}</label>
+                    <input
+                      type="email"
+                      required
+                      value={adminForgotEmail}
+                      onChange={(e) => {
+                        setAdminForgotEmail(e.target.value);
+                        setAdminForgotOtpSent(false);
+                        setAdminForgotError('');
+                      }}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {!adminForgotOtpSent ? (
+                    <button type="submit" style={{ ...primaryBtn(adminForgotLoading), width: "100%", padding: "14px", fontSize: F.sm }} disabled={adminForgotLoading}>
+                      {adminForgotLoading ? t.sending : t.sendCode}
+                    </button>
+                  ) : (
+                    <>
+                      <div style={{ background:"rgba(212,169,110,0.08)", border:`1px solid rgba(212,169,110,0.25)`, borderRadius:"8px", padding:"11px 14px", fontSize:F.xs, color:C.gold }}>
+                        {t.codeSentTo}: <strong>{adminForgotEmail}</strong>
+                      </div>
+                      <div style={{ background:"rgba(90,90,130,0.15)", border:"1px solid #3a3a5a", borderRadius:"8px", padding:"9px 13px", fontSize:F.xs, color:"#9090bb", textAlign:"center" }}>
+                        {t.demoOtpHint}
+                      </div>
+                      <div>
+                        <label style={labelStyle}>{t.enterCode}</label>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={adminForgotOtp}
+                          onChange={(e) => {
+                            setAdminForgotOtp(e.target.value.replace(/\D/g, ""));
+                            setAdminForgotError('');
+                          }}
+                          style={{ ...inputStyle, textAlign:"center", fontSize:"24px", letterSpacing:"0.35em", fontFamily:"monospace" }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        style={{ ...primaryBtn(adminForgotOtp.length < 6), width: "100%", padding: "14px", fontSize: F.sm }}
+                        disabled={adminForgotOtp.length < 6}
+                        onClick={handleAdminForgotVerifyOtp}
+                      >
+                        {t.verifyCode}
+                      </button>
+                    </>
+                  )}
+                </form>
+              )}
+
+              {adminForgotStep === 3 && (
+                <form onSubmit={handleAdminForgotSetPassword} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ fontSize: F.xs, color: C.muted }}>{t.setNewPassword}</div>
+                  <div>
+                    <label style={labelStyle}>{t.newPassword}</label>
+                    <input type="password" required minLength={8} value={adminForgotNewPwd} onChange={(e) => setAdminForgotNewPwd(e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>{t.confirmPassword}</label>
+                    <input type="password" required value={adminForgotConfirm} onChange={(e) => setAdminForgotConfirm(e.target.value)} style={inputStyle} />
+                  </div>
+                  <button type="submit" style={{ ...primaryBtn(), width: "100%", padding: "14px", fontSize: F.sm }}>
+                    {t.resetPassword}
+                  </button>
+                </form>
+              )}
+
+              {adminForgotStep === 4 && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ background:"rgba(126,184,160,0.12)", border:"1px solid rgba(126,184,160,0.35)", borderRadius:"8px", padding:"11px 15px", fontSize:F.xs, color:C.green, marginBottom:"12px" }}>
+                    {t.passwordResetSuccess}
+                  </div>
+                  <button
+                    type="button"
+                    style={{ ...primaryBtn(), width: "100%", padding: "14px", fontSize: F.sm }}
+                    onClick={() => {
+                      setLoginEmail(adminForgotEmail.trim().toLowerCase());
+                      setLoginPassword('');
+                      setShowForgotPassword(false);
+                      resetAdminForgotState();
+                    }}
+                  >
+                    {t.signIn}
+                  </button>
+                </div>
+              )}
+
+              <div style={{ marginTop: "12px", textAlign: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    resetAdminForgotState();
+                  }}
+                  style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: F.xs, fontFamily: "inherit" }}
+                >
+                  {t.backToSignIn}
+                </button>
+              </div>
             </div>
-            <div>
-              <label style={labelStyle}>{t.password}</label>
-              <input type="password" required value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)} style={inputStyle} />
-            </div>
-            <button type="submit" style={{ ...primaryBtn(), width: "100%", padding: "14px", fontSize: F.sm }}>
-              {t.signIn}
-            </button>
-          </form>
+          )}
         </div>
       </div>
     );

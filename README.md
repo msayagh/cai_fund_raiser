@@ -80,6 +80,7 @@ Health check is **http://localhost:3001/health**
 ```bash
 # From project root
 npm install
+cp .env.example .env
 npm run dev
 ```
 
@@ -178,7 +179,7 @@ Full API documentation: [`backend/README.md`](./backend/README.md)
 
 | Group | Routes |
 |-------|--------|
-| Auth | `POST /auth/donor/login`, `/auth/admin/login`, `/auth/refresh`, `/auth/logout`, OTP flows |
+| Auth | `POST /auth/donor/login`, `/auth/donor/google`, `/auth/admin/login`, `/auth/admin/google`, admin+donor forgot-password OTP flows, `/auth/refresh`, `/auth/logout` |
 | Donor self-service | `GET/PUT /donors/me`, password, engagement, payments, requests |
 | Public requests | `POST /requests`, `POST /requests/:id/attachments` |
 | Admin – donors | List, get, update, delete, payments, reset password |
@@ -205,13 +206,15 @@ look for: OTP for ahmed@example.com: 123456
 PORT, NODE_ENV, DATABASE_URL
 JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
 SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM
-FRONTEND_URL
+FRONTEND_URL, GOOGLE_CLIENT_ID
 ```
 
 **Frontend API base URL** defaults to `http://localhost:3001`. Override with:
 ```bash
 VITE_API_URL=https://your-api.example.com npm run build
 ```
+
+For Google sign-in in the frontend, set `VITE_GOOGLE_CLIENT_ID` in your frontend `.env`.
 
 ---
 
@@ -221,6 +224,7 @@ VITE_API_URL=https://your-api.example.com npm run build
 - [ ] Set `DATABASE_URL` to a real PostgreSQL connection string
 - [ ] Generate and set strong `JWT_ACCESS_SECRET` + `JWT_REFRESH_SECRET`
 - [ ] Configure `SMTP_*` variables for email delivery
-- [ ] Set `FRONTEND_URL` in backend `.env` (for CORS)
+- [ ] Set `FRONTEND_URL` and `GOOGLE_CLIENT_ID` in backend `.env`
 - [ ] Set `VITE_API_URL` in frontend `.env.production`
+- [ ] Set `VITE_GOOGLE_CLIENT_ID` in frontend `.env.production`
 - [ ] Run `npm --prefix backend run db:migrate` against prod database

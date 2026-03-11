@@ -2,6 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const config = require('../../config/env');
 const prisma = require('../../db/client');
 const AppError = require('../../utils/AppError');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../../utils/jwt');
@@ -33,6 +34,50 @@ const buildTokenPair = (userId, type) => ({
   accessToken: signAccessToken({ sub: userId, type }),
   refreshToken: signRefreshToken({ sub: userId, type }),
 });
+
+const sanitizeNameFromEmail = (email) => email.split('@')[0].replace(/[._-]+/g, ' ').trim();
+const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+
+const verifyGoogleCredential = async (credential) => {
+  if (!config.GOOGLE_CLIENT_ID) {
+    throw new AppError(
+      'Google sign-in is not configured on the server',
+      503,
+      'GOOGLE_AUTH_NOT_CONFIGURED'
+    );
+  }
+
+  let payload;
+  try {
+    const url = new URL('https://oauth2.googleapis.com/tokeninfo');
+    url.searchParams.set('id_token', credential);
+
+    const res = await fetch(url);
+    payload = await res.json();
+
+    if (!res.ok) {
+      throw new AppError('Invalid Google credential', 401, 'GOOGLE_TOKEN_INVALID');
+    }
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError('Failed to validate Google credential', 502, 'GOOGLE_VALIDATION_FAILED');
+  }
+
+  if (payload.aud !== config.GOOGLE_CLIENT_ID) {
+    throw new AppError('Google credential audience mismatch', 401, 'GOOGLE_AUDIENCE_MISMATCH');
+  }
+
+  if (!payload.exp || Number(payload.exp) * 1000 <= Date.now()) {
+    throw new AppError('Google credential has expired', 401, 'GOOGLE_TOKEN_EXPIRED');
+  }
+
+  if (payload.email_verified !== 'true' || !payload.email) {
+    throw new AppError('Google account email is not verified', 401, 'GOOGLE_EMAIL_NOT_VERIFIED');
+  }
+
+  const name = payload.name?.trim() || payload.given_name?.trim() || sanitizeNameFromEmail(payload.email);
+  return { email: payload.email.toLowerCase(), name };
+};
 
 // ─── OTP Helpers ──────────────────────────────────────────────────────────────
 
@@ -70,7 +115,8 @@ const validateOtp = async (email, code) => {
 // ─── Donor Auth ───────────────────────────────────────────────────────────────
 
 const donorLogin = async (email, password) => {
-  const donor = await prisma.donor.findUnique({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (!donor) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
 
   const valid = await bcrypt.compare(password, donor.passwordHash);
@@ -92,28 +138,75 @@ const donorLogin = async (email, password) => {
   return { tokens, donor: safedonor };
 };
 
+const donorGoogleLogin = async (credential) => {
+  const googleProfile = await verifyGoogleCredential(credential);
+
+  let donor = await prisma.donor.findUnique({ where: { email: googleProfile.email } });
+  let created = false;
+
+  if (!donor) {
+    const passwordHash = await bcrypt.hash(crypto.randomBytes(48).toString('hex'), BCRYPT_ROUNDS);
+    donor = await prisma.donor.create({
+      data: {
+        name: googleProfile.name,
+        email: googleProfile.email,
+        passwordHash,
+      },
+    });
+    created = true;
+
+    await createLog({
+      actor: `Donor: ${donor.name}`,
+      actorType: 'donor',
+      actorId: donor.id,
+      action: 'donor_registered_google',
+      details: `New donor registered with Google: ${donor.email}`,
+      donorId: donor.id,
+    });
+  }
+
+  const tokens = buildTokenPair(donor.id, 'donor');
+  await storeRefreshToken(tokens.refreshToken, 'donor', donor.id);
+
+  await createLog({
+    actor: `Donor: ${donor.name}`,
+    actorType: 'donor',
+    actorId: donor.id,
+    action: 'donor_google_login',
+    details: created ? 'Donor signed in with Google (new account)' : 'Donor signed in with Google',
+    donorId: donor.id,
+  });
+
+  const { passwordHash, ...safeDonor } = donor;
+  return { tokens, donor: safeDonor };
+};
+
 const donorSendOtp = async (email) => {
-  const existing = await prisma.donor.findUnique({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (existing) throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
-  await sendAndStoreOtp(email, 'verification');
+  await sendAndStoreOtp(normalizedEmail, 'verification');
 };
 
 const donorVerifyOtp = async (email, code) => {
-  await validateOtp(email, code);
+  const normalizedEmail = normalizeEmail(email);
+  await validateOtp(normalizedEmail, code);
   return { verified: true };
 };
 
 const donorCompleteRegistration = async ({ email, name, password, pledge, payments }) => {
+  const normalizedEmail = normalizeEmail(email);
+
   // Ensure OTP was verified (last OTP for email must be used=true)
   const lastOtp = await prisma.otpCode.findFirst({
-    where: { email },
+    where: { email: normalizedEmail },
     orderBy: { createdAt: 'desc' },
   });
   if (!lastOtp || !lastOtp.used) {
     throw new AppError('Email not verified. Please complete OTP verification first.', 400, 'EMAIL_NOT_VERIFIED');
   }
 
-  const existing = await prisma.donor.findUnique({ where: { email } });
+  const existing = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (existing) throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -121,7 +214,7 @@ const donorCompleteRegistration = async ({ email, name, password, pledge, paymen
   const donor = await prisma.donor.create({
     data: {
       name,
-      email,
+      email: normalizedEmail,
       passwordHash,
       ...(pledge && {
         engagement: {
@@ -162,43 +255,46 @@ const donorCompleteRegistration = async ({ email, name, password, pledge, paymen
 };
 
 const donorSendForgotOtp = async (email) => {
-  const donor = await prisma.donor.findUnique({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (!donor) {
     // Respond the same way to avoid user enumeration
     return;
   }
-  await sendAndStoreOtp(email, 'reset');
+  await sendAndStoreOtp(normalizedEmail, 'reset');
 };
 
 const donorVerifyForgotOtp = async (email, code) => {
-  const donor = await prisma.donor.findUnique({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (!donor) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
-  await validateOtp(email, code);
+  await validateOtp(normalizedEmail, code);
   return { verified: true };
 };
 
 const donorResetPassword = async (email, code, newPassword) => {
-  const donor = await prisma.donor.findUnique({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (!donor) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
 
-  // Re-validate OTP (second call — user must have just verified)
+  // Re-validate the exact OTP code used in the previous step.
   const lastOtp = await prisma.otpCode.findFirst({
-    where: { email },
+    where: { email: normalizedEmail, used: true },
     orderBy: { createdAt: 'desc' },
   });
-  if (!lastOtp || !lastOtp.used) {
+  if (!lastOtp || !verifyOtp(code, lastOtp.codeHash)) {
     throw new AppError('OTP not verified', 400, 'OTP_NOT_VERIFIED');
   }
 
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-  await prisma.donor.update({ where: { email }, data: { passwordHash } });
+  await prisma.donor.update({ where: { email: normalizedEmail }, data: { passwordHash } });
 
   await createLog({
     actor: `Donor: ${donor.name}`,
     actorType: 'donor',
     actorId: donor.id,
     action: 'donor_password_reset',
-    details: `Password reset for ${email}`,
+    details: `Password reset for ${normalizedEmail}`,
     donorId: donor.id,
   });
 };
@@ -214,6 +310,7 @@ const getAdminSetupStatus = async () => {
 };
 
 const bootstrapInitialAdmin = async ({ name, email, password }) => {
+  const normalizedEmail = normalizeEmail(email);
   const adminCount = await prisma.admin.count();
   if (adminCount > 0) {
     throw new AppError('Initial admin setup is already completed', 409, 'BOOTSTRAP_CLOSED');
@@ -223,7 +320,7 @@ const bootstrapInitialAdmin = async ({ name, email, password }) => {
   const admin = await prisma.admin.create({
     data: {
       name,
-      email,
+      email: normalizedEmail,
       passwordHash,
     },
   });
@@ -235,7 +332,7 @@ const bootstrapInitialAdmin = async ({ name, email, password }) => {
     actor: 'System',
     actorType: 'system',
     action: 'admin_bootstrap',
-    details: `Initial admin account created: ${email}`,
+    details: `Initial admin account created: ${normalizedEmail}`,
     adminId: admin.id,
   });
 
@@ -244,7 +341,8 @@ const bootstrapInitialAdmin = async ({ name, email, password }) => {
 };
 
 const adminLogin = async (email, password) => {
-  const admin = await prisma.admin.findUnique({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
   if (!admin) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
 
   const valid = await bcrypt.compare(password, admin.passwordHash);
@@ -264,6 +362,77 @@ const adminLogin = async (email, password) => {
 
   const { passwordHash, ...safeAdmin } = admin;
   return { tokens, admin: safeAdmin };
+};
+
+const adminGoogleLogin = async (credential) => {
+  const googleProfile = await verifyGoogleCredential(credential);
+  const admin = await prisma.admin.findUnique({ where: { email: googleProfile.email } });
+
+  if (!admin) {
+    throw new AppError(
+      'No admin account is linked to this Google email',
+      403,
+      'ADMIN_GOOGLE_NOT_ALLOWED'
+    );
+  }
+
+  const tokens = buildTokenPair(admin.id, 'admin');
+  await storeRefreshToken(tokens.refreshToken, 'admin', admin.id);
+
+  await createLog({
+    actor: `Admin: ${admin.name}`,
+    actorType: 'admin',
+    actorId: admin.id,
+    action: 'admin_google_login',
+    details: 'Admin logged in with Google',
+    adminId: admin.id,
+  });
+
+  const { passwordHash, ...safeAdmin } = admin;
+  return { tokens, admin: safeAdmin };
+};
+
+const adminSendForgotOtp = async (email) => {
+  const normalizedEmail = normalizeEmail(email);
+  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
+  if (!admin) {
+    throw new AppError('No admin account exists with this email address', 404, 'ADMIN_ACCOUNT_NOT_FOUND');
+  }
+  await sendAndStoreOtp(normalizedEmail, 'reset');
+};
+
+const adminVerifyForgotOtp = async (email, code) => {
+  const normalizedEmail = normalizeEmail(email);
+  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
+  if (!admin) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
+  await validateOtp(normalizedEmail, code);
+  return { verified: true };
+};
+
+const adminResetPassword = async (email, code, newPassword) => {
+  const normalizedEmail = normalizeEmail(email);
+  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
+  if (!admin) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
+
+  const lastOtp = await prisma.otpCode.findFirst({
+    where: { email: normalizedEmail, used: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!lastOtp || !verifyOtp(code, lastOtp.codeHash)) {
+    throw new AppError('OTP not verified', 400, 'OTP_NOT_VERIFIED');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await prisma.admin.update({ where: { email: normalizedEmail }, data: { passwordHash } });
+
+  await createLog({
+    actor: `Admin: ${admin.name}`,
+    actorType: 'admin',
+    actorId: admin.id,
+    action: 'admin_password_reset',
+    details: `Password reset for ${normalizedEmail}`,
+    adminId: admin.id,
+  });
 };
 
 // ─── Token Rotation ───────────────────────────────────────────────────────────
@@ -293,6 +462,7 @@ const logout = async (token) => {
 
 module.exports = {
   donorLogin,
+  donorGoogleLogin,
   donorSendOtp,
   donorVerifyOtp,
   donorCompleteRegistration,
@@ -302,6 +472,10 @@ module.exports = {
   getAdminSetupStatus,
   bootstrapInitialAdmin,
   adminLogin,
+  adminGoogleLogin,
+  adminSendForgotOtp,
+  adminVerifyForgotOtp,
+  adminResetPassword,
   refreshTokens,
   logout,
 };

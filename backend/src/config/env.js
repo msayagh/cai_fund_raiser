@@ -15,6 +15,7 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   EMAIL_FROM: z.string().default('Masjid Al-Noor <noreply@masjid.com>'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -8,6 +8,7 @@ import { tryAutoLogin } from '../api/client.js';
 import * as authApi from '../api/auth.js';
 import * as donorApi from '../api/donors.js';
 import * as requestsApi from '../api/requests.js';
+import GoogleSignInButton from "../components/GoogleSignInButton";
 
 // ─── Style tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -151,6 +152,7 @@ function StatCard({ label, value, color }) {
 export default function DonorPortal({ navigate, language, setLanguage }) {
   const t     = PORTAL_T[language] || PORTAL_T.en;
   const isRTL = language === "ar";
+  const googleSignInEnabled = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   // ── Auth & view ──────────────────────────────────────────────────────────
   const [currentDonor, setCurrentDonor] = useState(null);
@@ -165,6 +167,7 @@ export default function DonorPortal({ navigate, language, setLanguage }) {
   const [loginEmail, setLoginEmail]       = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError]       = useState("");
+  const [googleSigningIn, setGoogleSigningIn] = useState(false);
 
   // ── Register ─────────────────────────────────────────────────────────────
   const [regStep, setRegStep]           = useState(1);
@@ -256,20 +259,39 @@ export default function DonorPortal({ navigate, language, setLanguage }) {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
+  async function completeDonorSignIn() {
+    const [profile, paymentsData] = await Promise.all([
+      donorApi.getMe(),
+      donorApi.getMyPayments(),
+    ]);
+    setCurrentDonor(profile);
+    setEngagement(profile.engagement ?? null);
+    setPayments(paymentsData);
+    setView('dashboard');
+  }
+
   async function handleLogin(e) {
     e.preventDefault(); setLoginError('');
     try {
       await authApi.donorLogin(loginEmail.trim(), loginPassword);
-      const [profile, paymentsData] = await Promise.all([
-        donorApi.getMe(),
-        donorApi.getMyPayments(),
-      ]);
-      setCurrentDonor(profile);
-      setEngagement(profile.engagement ?? null);
-      setPayments(paymentsData);
-      setView('dashboard');
+      await completeDonorSignIn();
       setLoginEmail(''); setLoginPassword('');
     } catch (err) { setLoginError(err.message || t.invalidCredentials); }
+  }
+
+  async function handleGoogleLogin(credential) {
+    setLoginError('');
+    setGoogleSigningIn(true);
+    try {
+      await authApi.donorGoogleLogin(credential);
+      await completeDonorSignIn();
+      setLoginEmail('');
+      setLoginPassword('');
+    } catch (err) {
+      setLoginError(err.message || 'Google sign-in failed.');
+    } finally {
+      setGoogleSigningIn(false);
+    }
   }
 
   async function handleSendOtp(e) {
@@ -357,7 +379,7 @@ export default function DonorPortal({ navigate, language, setLanguage }) {
     e.preventDefault(); setForgotError('');
     if (forgotNewPwd !== forgotConfirm) { setForgotError(t.passwordsNoMatch); return; }
     try {
-      await authApi.donorForgotReset(forgotEmail.trim(), forgotNewPwd);
+      await authApi.donorForgotReset(forgotEmail.trim(), forgotOtp.trim(), forgotNewPwd);
       setForgotStep(4);
     } catch (err) { setForgotError(err.message); }
   }
@@ -480,6 +502,24 @@ export default function DonorPortal({ navigate, language, setLanguage }) {
           </div>
           <button type="submit" style={PRIMARY()}>{t.signIn}</button>
         </form>
+        {googleSignInEnabled && (
+          <>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px", marginTop:"16px", marginBottom:"14px" }}>
+              <div style={{ flex:1, height:"1px", background:C.border }} />
+              <span style={{ fontSize:F.sm, color:C.muted, textTransform:"uppercase", letterSpacing:"0.08em" }}>or</span>
+              <div style={{ flex:1, height:"1px", background:C.border }} />
+            </div>
+            <GoogleSignInButton
+              width={320}
+              disabled={googleSigningIn}
+              onCredential={handleGoogleLogin}
+              onError={(msg) => setLoginError(msg)}
+            />
+            {googleSigningIn && (
+              <div style={{ marginTop:"10px", fontSize:F.sm, color:C.muted }}>Signing in with Google...</div>
+            )}
+          </>
+        )}
         <div style={{ marginTop:"16px", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:"8px" }}>
           <button style={GHOST} onClick={() => setView("home")}>{t.back}</button>
           <button style={{ ...GHOST, color:C.gold }} onClick={() => { setForgotStep(1); setForgotEmail(""); setForgotOtp(""); setForgotOtpSent(false); setForgotError(""); setView("forgotPassword"); }}>
@@ -623,7 +663,7 @@ export default function DonorPortal({ navigate, language, setLanguage }) {
             <Err msg={forgotError} />
             <div>
               <label style={LBL}>{t.newPassword}</label>
-              <input type="password" required minLength={6} value={forgotNewPwd} onChange={e=>setForgotNewPwd(e.target.value)} style={INPUT} />
+              <input type="password" required minLength={8} value={forgotNewPwd} onChange={e=>setForgotNewPwd(e.target.value)} style={INPUT} />
             </div>
             <div>
               <label style={LBL}>{t.confirmPassword}</label>
@@ -637,7 +677,15 @@ export default function DonorPortal({ navigate, language, setLanguage }) {
         {forgotStep === 4 && (
           <div style={{ textAlign:"center" }}>
             <Success msg={t.passwordResetSuccess} />
-            <button style={PRIMARY()} onClick={() => { setView("login"); setForgotStep(1); setForgotEmail(""); setForgotOtp(""); setForgotOtpSent(false); }}>
+            <button style={PRIMARY()} onClick={() => {
+              setLoginEmail(forgotEmail.trim().toLowerCase());
+              setLoginPassword("");
+              setView("login");
+              setForgotStep(1);
+              setForgotEmail("");
+              setForgotOtp("");
+              setForgotOtpSent(false);
+            }}>
               {t.signIn}
             </button>
           </div>

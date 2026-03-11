@@ -11,6 +11,13 @@ const donorLogin = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const donorGoogleLogin = async (req, res, next) => {
+  try {
+    const result = await authService.donorGoogleLogin(req.body.credential);
+    sendSuccess(res, result, 'Login successful');
+  } catch (err) { next(err); }
+};
+
 const donorSendOtp = async (req, res, next) => {
   try {
     await authService.donorSendOtp(req.body.email);
@@ -63,6 +70,35 @@ const adminLogin = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const adminGoogleLogin = async (req, res, next) => {
+  try {
+    const result = await authService.adminGoogleLogin(req.body.credential);
+    sendSuccess(res, result, 'Login successful');
+  } catch (err) { next(err); }
+};
+
+const adminSendForgotOtp = async (req, res, next) => {
+  try {
+    await authService.adminSendForgotOtp(req.body.email);
+    sendSuccess(res, null, 'Reset code sent to your email address');
+  } catch (err) { next(err); }
+};
+
+const adminVerifyForgotOtp = async (req, res, next) => {
+  try {
+    const result = await authService.adminVerifyForgotOtp(req.body.email, req.body.code);
+    sendSuccess(res, result, 'Code verified');
+  } catch (err) { next(err); }
+};
+
+const adminResetPassword = async (req, res, next) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    await authService.adminResetPassword(email, code, newPassword);
+    sendSuccess(res, null, 'Password reset successfully');
+  } catch (err) { next(err); }
+};
+
 const adminSetupStatus = async (_req, res, next) => {
   try {
     const result = await authService.getAdminSetupStatus();
@@ -93,6 +129,7 @@ const logout = async (req, res, next) => {
 
 module.exports = {
   donorLogin,
+  donorGoogleLogin,
   donorSendOtp,
   donorVerifyOtp,
   donorCompleteRegistration,
@@ -102,6 +139,10 @@ module.exports = {
   adminSetupStatus,
   adminBootstrap,
   adminLogin,
+  adminGoogleLogin,
+  adminSendForgotOtp,
+  adminVerifyForgotOtp,
+  adminResetPassword,
   refresh,
   logout,
 };
