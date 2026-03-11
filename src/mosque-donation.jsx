@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, memo } from "react";
 
 const LANGUAGES = {
   en: "English",
@@ -83,12 +83,12 @@ const TIER_LABELS = {
     ar: "متصدق",
   },
   walls: {
-    en: "Karim",
+    en: "Kareem",
     fr: "Généreux",
     ar: "كريم",
   },
   arches: {
-    en: "Jawwad",
+    en: "Jawaad",
     fr: "Très généreux",
     ar: "جواد",
   },
@@ -226,31 +226,48 @@ const TRANSLATIONS = {
 const DONATION_URL = "https://your-donation-page.com";
 
 function QRCode({ color, alt, theme }) {
-  const encoded = encodeURIComponent(DONATION_URL);
-  const bgHex = theme?.mode === "light" ? "f8f6f2" : "1e2238";
-  const src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encoded}&color=${color.replace("#", "")}&bgcolor=${bgHex}&margin=4`;
+  const src = `public/qr-code.png`;
 
   return (
     <img
       src={src}
       alt={alt}
-      width={140}
-      height={140}
+      width={240}
+      height={240}
       style={{ borderRadius: "8px", border: `2px solid ${color}`, display: "block" }}
     />
   );
 }
 
 const TIER_CONFIG = {
-  foundation: { key: "foundation", funded: 0, total: 320, amount: 500, color: "#C8935A" },
-  walls: { key: "walls", funded: 0, total: 320, amount: 1000, color: "#7EB8A0" },
-  arches: { key: "arches", funded: 0, total: 320, amount: 1500, color: "#8AAED4" },
-  dome: { key: "dome", funded: 0, total: 320, amount: 2000, color: "#D4A96E" },
+  foundation: { key: "foundation", name: "Mutasaddiq", funded: 0, total: 320, amount: 500, color: "#C8935A" },
+  walls: { key: "walls", name: "Kareem", funded: 0, total: 320, amount: 1000, color: "#7EB8A0" },
+  arches: { key: "arches", name: "Jawaad", funded: 0, total: 320, amount: 1500, color: "#8AAED4" },
+  dome: { key: "dome", name: "Sabbaq", funded: 0, total: 320, amount: 2000, color: "#D4A96E" },
 };
 
-/** Google Apps Script Web App URL (from env). Returns JSON: { foundation, walls, arches, dome } with funded counts. */
+/** Base Google Sheet URL (from env). Used for stats and orders sheets. */
 function getGoogleSheetAppUrl() {
   return typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_GOOGLE_SHEET_APP_URL;
+}
+
+/** Sheet gid for "stats" (funded counts). Optional; if unset, exports first sheet. */
+function getStatsGid() {
+  const v = typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_GOOGLE_SHEET_STATS_GID;
+  return v != null && String(v).trim() !== "" ? String(v).trim() : null;
+}
+
+/** Sheet gid for "orders" (donations). Optional; if unset, exports first sheet. */
+function getOrdersGid() {
+  const v = typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_GOOGLE_SHEET_ORDERS_GID;
+  return v != null && String(v).trim() !== "" ? String(v).trim() : null;
+}
+
+/** Build CSV export URL from spreadsheet URL, optionally targeting a sheet by gid. */
+function buildCsvExportUrl(baseUrl, gid) {
+  if (!baseUrl) return null;
+  const exportUrl = baseUrl.replace(/\/edit.*$/, "/export?format=csv");
+  return gid ? `${exportUrl}&gid=${gid}` : exportUrl;
 }
 
 const TIER_KEYS = ["foundation", "walls", "arches", "dome"];
@@ -304,7 +321,7 @@ function cleanAndParseFundedRows(rows) {
  */
 async function fetchFundedFromSheet() {
   const url = getGoogleSheetAppUrl();
-  const exportUrl = url ? url.replace(/\/edit.*$/, "/export?format=csv") : null;
+  const exportUrl = buildCsvExportUrl(url, getStatsGid());
   if (!exportUrl) return null;
   try {
     const res = await fetch(exportUrl, { method: "GET", cache: "no-store" });
@@ -330,7 +347,8 @@ async function fetchFundedFromSheet() {
  */
 
 function getDonationsSheetUrl() {
-  return typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_GOOGLE_DONATIONS_SHEET_URL;
+  const donations = typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_GOOGLE_DONATIONS_SHEET_URL;
+  return donations || getGoogleSheetAppUrl();
 }
 
 /** Parse donated amount to number. */
@@ -382,13 +400,14 @@ function cleanAndParseDonationRows(rows) {
  */
 async function fetchDonationsFromSheet() {
   const url = getDonationsSheetUrl();
-  const exportUrl = url ? url.replace(/\/edit.*$/, "/export?format=csv") : null;
+  const exportUrl = buildCsvExportUrl(url, getOrdersGid());
   if (!exportUrl) return [];
   try {
     const res = await fetch(exportUrl, { method: "GET", cache: "no-store" });
     if (!res.ok) return [];
     const text = await res.text();
     const rows = convertCsvToJson(text);
+    console.log("debug rows", rows);
     if (!Array.isArray(rows) || rows.length === 0) return [];
     return rows;
   } catch {
@@ -543,7 +562,7 @@ function MosaicGrid({ tiers, gridTop, gridBottom, W, insideTest, selectedTier, t
   );
 }
 
-function MosqueViz({ tiers, selectedTier, onSelectTier, theme }) {
+function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
   const th = theme ?? THEMES.dark;
   const W = 800;
   const H = 740;
@@ -620,39 +639,14 @@ function MosqueViz({ tiers, selectedTier, onSelectTier, theme }) {
 
       <g mask="url(#outsideMask)">
         {[
-          [0, 241, 0.8], [781, 236, 0.7], [206, 49, 0.9], [198, 87, 0.5], [676, 339, 0.4], [431, 60, 0.9], [795, 421, 0.9], [275, 173, 0.5],
-          [363, 151, 0.4], [561, 86, 0.7], [796, 87, 0.8], [320, 202, 0.8], [142, 373, 0.9], [78, 14, 0.4], [510, 175, 0.5], [787, 160, 0.8],
-          [246, 158, 0.5], [8, 322, 0.6], [343, 135, 0.6], [195, 168, 0.8], [748, 8, 0.6], [320, 59, 0.9], [313, 35, 0.7], [269, 117, 0.6],
-          [529, 237, 0.8], [239, 77, 1.0], [581, 271, 0.7], [312, 188, 0.6], [583, 188, 0.3], [696, 420, 1.0], [636, 107, 0.7], [788, 158, 0.7],
-          [434, 80, 0.7], [125, 365, 0.5], [173, 155, 0.8], [603, 70, 0.7], [485, 158, 0.6], [428, 20, 0.8], [586, 120, 0.7], [19, 215, 0.7],
-          [703, 155, 0.9], [770, 208, 0.6], [497, 60, 0.8], [775, 186, 0.5], [793, 367, 0.6], [246, 33, 1.0], [680, 67, 0.6], [194, 197, 0.9],
-          [649, 124, 0.5], [527, 107, 0.6], [427, 179, 0.6], [746, 13, 0.4], [420, 4, 0.9], [310, 17, 0.5], [697, 253, 0.7], [584, 132, 0.7],
-          [532, 99, 0.6], [544, 161, 0.6], [404, 156, 0.8], [662, 289, 0.7], [4, 431, 0.7], [158, 342, 0.6], [175, 340, 0.8], [152, 82, 0.9],
-          [213, 258, 0.8], [646, 391, 0.6], [52, 93, 0.5], [618, 124, 0.7], [215, 148, 1.0], [585, 183, 0.6], [672, 346, 0.5], [8, 7, 0.5],
-          [213, 280, 0.9], [331, 207, 0.8], [396, 67, 0.9], [416, 133, 0.5], [658, 68, 0.8], [782, 33, 1.0], [778, 117, 0.6], [138, 64, 0.6],
-          [176, 290, 0.8], [503, 189, 0.9], [481, 203, 0.9], [568, 0, 0.9], [204, 252, 0.9], [33, 297, 0.9], [583, 100, 0.7], [161, 49, 0.8],
-          [595, 192, 0.5], [775, 103, 0.7], [677, 63, 0.6], [272, 129, 0.6], [697, 45, 0.6], [327, 41, 0.8], [122, 42, 0.5], [624, 186, 0.7],
-          [108, 81, 0.9], [6, 187, 0.9], [153, 108, 0.8], [798, 85, 0.8], [607, 55, 0.9], [108, 247, 0.6], [136, 220, 0.8], [26, 357, 0.4],
-          [257, 185, 0.9], [212, 268, 0.7], [328, 200, 0.5], [334, 159, 0.9], [5, 301, 0.4], [779, 364, 0.7], [491, 1, 0.9], [203, 247, 0.8],
-          [607, 137, 0.7], [599, 8, 0.9], [703, 295, 0.9], [540, 95, 0.9], [785, 18, 0.4], [602, 200, 1.0], [549, 211, 0.8], [769, 7, 0.8],
-          [608, 240, 0.5], [783, 353, 0.7], [740, 69, 0.7], [435, 13, 0.9], [180, 91, 0.8], [703, 391, 0.5], [768, 309, 0.8], [178, 48, 0.6],
-          [148, 306, 0.7], [270, 111, 0.6], [257, 165, 0.8], [453, 62, 0.9], [216, 273, 1.0], [740, 22, 0.6], [617, 33, 0.9], [794, 448, 0.9],
-          [779, 170, 0.9], [140, 390, 0.5], [730, 6, 0.9], [635, 342, 0.5], [626, 191, 0.5], [404, 73, 0.7], [335, 12, 0.9], [112, 317, 0.8],
-          [14, 181, 1.0], [59, 67, 0.7], [688, 59, 0.8], [363, 5, 0.6], [103, 186, 0.4], [462, 192, 0.5], [498, 131, 0.4], [675, 365, 0.6],
-          [587, 273, 0.9], [703, 209, 0.8], [166, 275, 0.7], [71, 37, 0.4], [699, 356, 0.6], [506, 116, 0.9], [437, 86, 0.9], [637, 177, 0.8],
-          [672, 168, 0.7], [223, 119, 0.8], [158, 9, 0.7], [335, 193, 0.7], [11, 85, 0.6], [535, 52, 0.7], [646, 109, 0.5], [413, 112, 0.7],
-          [379, 77, 0.6], [277, 54, 0.7], [105, 152, 0.6], [227, 28, 0.8], [194, 54, 0.5], [787, 107, 0.5], [6, 115, 0.5], [268, 93, 1.0],
-          [488, 176, 0.5], [7, 53, 0.7], [372, 103, 0.7], [91, 18, 0.8], [442, 150, 0.8], [375, 20, 0.5], [159, 222, 0.9], [525, 155, 0.6],
-          [138, 75, 0.8], [442, 177, 0.6], [3, 371, 0.6], [729, 108, 0.4], [320, 164, 0.9], [364, 162, 0.7], [342, 34, 0.9], [411, 172, 0.8],
-          [276, 209, 0.7], [656, 96, 0.8], [340, 51, 1.0], [762, 69, 0.5], [513, 88, 0.8], [138, 134, 0.6], [162, 126, 0.8], [166, 68, 0.9],
-          [152, 37, 0.8], [155, 215, 0.9], [537, 141, 1.0], [232, 92, 0.4], [126, 417, 0.7], [35, 112, 0.5], [30, 413, 0.8], [27, 341, 0.7],
-          [9, 220, 0.5], [12, 288, 0.6], [9, 212, 1.0], [20, 440, 0.6], [20, 46, 0.4], [750, 65, 0.9], [738, 8, 0.7], [27, 91, 0.5], [7, 228, 0.9],
-          [759, 155, 0.8], [7, 281, 1.0], [18, 384, 0.6], [24, 205, 0.8], [31, 125, 1.0], [38, 67, 0.9], [764, 99, 0.7], [772, 153, 0.9],
-          [1, 360, 0.7], [10, 147, 0.4], [717, 36, 0.6], [24, 1, 0.7], [37, 195, 0.9], [719, 5, 0.9], [759, 417, 0.9], [796, 384, 0.6],
-          [10, 32, 0.7], [6, 188, 1.0], [29, 57, 0.8], [40, 236, 0.8], [757, 104, 0.9], [762, 184, 0.5], [34, 6, 0.7], [26, 35, 0.8],
-          [29, 257, 0.8], [31, 283, 0.5], [39, 36, 0.7], [797, 177, 0.8], [34, 374, 0.4], [33, 248, 0.9], [22, 32, 1.0], [27, 95, 0.9],
-          [767, 310, 0.7], [792, 213, 0.5], [774, 316, 0.9], [4, 53, 0.9], [13, 62, 0.5], [792, 41, 0.7], [32, 377, 0.6], [36, 200, 0.6],
-          [798, 189, 0.6], [30, 423, 0.7], [34, 17, 0.9], [38, 198, 0.9], [5, 215, 0.8], [39, 203, 0.6], [785, 148, 0.9], [25, 258, 0.8],
+          [0, 241, 0.8], [781, 236, 0.7], [206, 49, 0.9], [198, 87, 0.5],
+          [431, 60, 0.9], [320, 202, 0.8], [142, 373, 0.9], [78, 14, 0.4],
+          [636, 107, 0.7], [503, 189, 0.9], [581, 271, 0.7], [246, 33, 1.0],
+          [194, 197, 0.9], [649, 124, 0.5], [427, 179, 0.6], [404, 73, 0.7],
+          [112, 317, 0.8], [703, 209, 0.8], [340, 51, 1.0], [762, 69, 0.5],
+          [513, 88, 0.8], [138, 134, 0.6], [335, 193, 0.7], [537, 141, 1.0],
+          [126, 417, 0.7], [30, 413, 0.8], [759, 417, 0.9], [320, 164, 0.9],
+          [592, 200, 0.7], [215, 148, 1.0],
         ].map(([cx, cy, op], i) => (
           <circle key={`star${i}`} cx={cx} cy={cy} r="1.2" fill={th.vizStarFill} opacity={th.mode === "light" ? op * 0.6 : op} />
         ))}
@@ -722,7 +716,9 @@ function MosqueViz({ tiers, selectedTier, onSelectTier, theme }) {
   );
 }
 
-function TierCard({ tier, selected, onSelect, t, theme }) {
+const MosqueViz = memo(MosqueVizInner);
+
+function TierCardInner({ tier, selected, onSelect, t, theme }) {
   const th = theme ?? THEMES.dark;
   const pct = Math.round((tier.funded / tier.total) * 100);
 
@@ -758,6 +754,8 @@ function TierCard({ tier, selected, onSelect, t, theme }) {
   );
 }
 
+const TierCard = memo(TierCardInner);
+
 function languageCurrency(amount, dollarFirst = true) {
   return dollarFirst ? `$${amount.toLocaleString()}` : `${amount.toLocaleString()} $`;
 }
@@ -765,11 +763,11 @@ function languageCurrency(amount, dollarFirst = true) {
 /**
  * @param {{ donations: DonationRow[]; tiers: Array<{key: string; label: string; amount: number; color?: string}>; language: string; isRTL: boolean; theme?: object }} props
  */
-function DonationsList({ donations, tiers, language, isRTL, theme }) {
+function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
   const th = theme ?? THEMES.dark;
   const dollarFirst = language === "en";
   const tierByKey = Object.fromEntries(tiers.map((t) => [t.key, t]));
-  if (donations.length === 0) return null;
+  if (Object.keys(totalsByEmail).length === 0) return null;
 
   return (
     <div
@@ -806,16 +804,19 @@ function DonationsList({ donations, tiers, language, isRTL, theme }) {
           paddingLeft: isRTL ? "6px" : "0",
         }}
       >
-        {donations.map((d, idx) => {
-          const tier = Object.values(tierByKey).find((value) => Number(value.id) === Number(d.tier));
+        {Object.values(totalsByEmail).map((d, idx) => {
+          const block = String(d.details).split("1x ")[1];
+          const tier = Object.values(tierByKey).find((value) => value.name.toLowerCase() === block.toLowerCase());
           const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
           const amount = tier ? tier.amount : 500;
-          const progressPct = amount > 0 ? Math.min(100, (d.donated / amount) * 100) : 0;
-          const displayName = d.donorName || d.donorname || d.donorLabel || d.donorlabel || "Anonymous";
+          const progressPct = amount > 0 ? Math.min(100, (d.totalDonated / amount) * 100) : 0;
+          const displayName = d.donorLabel.replace('"', '') || "Anonymous";
+          console.log("debug: d", d);
           const tierLabel = tier ? tier.label : d.tier;
+          const donated = d.totalDonated;
           return (
           <div
-            key={`donation-${d.id}-${idx}`}
+            key={`donation-${d.email}-${idx}`}
             style={{
               padding: "10px 12px",
               marginBottom: "8px",
@@ -826,7 +827,7 @@ function DonationsList({ donations, tiers, language, isRTL, theme }) {
           >
             <div style={{ fontSize: "14px", fontWeight: 700, color: th.textPrimary, marginBottom: "4px" }}>{displayName}</div>
             <div style={{ fontSize: "13px", color: th.accentGold, marginBottom: "6px" }}>
-              {dollarFirst ? `$${d.donated.toLocaleString()}` : `${d.donated.toLocaleString()} $`}
+              {dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`}
             </div>
             <div style={{ fontSize: "11px", color: th.textMuted, marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               {tierLabel}
@@ -849,36 +850,101 @@ function DonationsList({ donations, tiers, language, isRTL, theme }) {
   );
 }
 
+const DonationsList = memo(DonationsListInner);
+
 export default function MosqueDonation() {
   const [language, setLanguage] = useState("en");
   const [tiers, setTiers] = useState(INITIAL_TIERS);
   const [selectedTier, setSelectedTier] = useState(0);
   const [donations, setDonations] = useState([]);
+  const [ramadanRaised, setRamadanRaised] = useState(0);
+  const [totalsByEmail, setTotalsByEmail] = useState({});
   const [themeMode, setThemeMode] = useState("dark");
+  const [showDonationDialog, setShowDonationDialog] = useState(false);
   const theme = THEMES[themeMode] ?? THEMES.dark;
 
   useEffect(() => {
+    // --- Funded Tier Poll ---
     const applyFunded = (funded) => {
       if (!funded) return;
-      setTiers((prev) =>
-        prev.map((tier) => ({
+      setTiers((prev) => {
+        const next = prev.map((tier) => ({
           ...tier,
           funded: Math.min(tier.total, funded[tier.key] ?? tier.funded),
-        }))
-      );
+        }));
+        const unchanged = prev.every((tier, idx) => tier.funded === next[idx].funded);
+        return unchanged ? prev : next;
+      });
     };
-    const poll = () => fetchFundedFromSheet().then(applyFunded);
-    poll();
-    const intervalId = setInterval(poll, 60 * 1000);
-    return () => clearInterval(intervalId);
+
+    // --- Donations Poll ---
+    const pollDonations = () =>
+      fetchDonationsFromSheet().then((rows) => {
+        if (!Array.isArray(rows)) return;
+        setDonations((prev) => {
+          if (prev.length === rows.length && prev.every((d, i) => d.id === rows[i].id && d.donated === rows[i].donated)) {
+            return prev;
+          }
+          return rows;
+        });
+        setTotalsByEmail(getTotalsByEmail(rows));
+        setRamadanRaised(getRamadanRaised(rows));
+      });
+
+    // --- Funded Poll Runner ---
+    const pollFunded = () => fetchFundedFromSheet().then(applyFunded);
+
+    // Initial poll
+    pollFunded();
+    pollDonations();
+
+    // Set intervals
+    const fundedIntervalId = setInterval(pollFunded, 60 * 1000);
+    const donationsIntervalId = setInterval(pollDonations, 60 * 1000);
+
+    // Cleanup
+    return () => {
+      clearInterval(fundedIntervalId);
+      clearInterval(donationsIntervalId);
+    };
   }, []);
 
-  useEffect(() => {
-    const poll = () => fetchDonationsFromSheet().then(setDonations);
-    poll();
-    const intervalId = setInterval(poll, 60 * 1000);
-    return () => clearInterval(intervalId);
-  }, []);
+  function getTotalsByEmail(donations) {
+    const summary = {};
+
+    donations.forEach((donation) => {
+      const email = donation["courriel"];
+      const tier = String(donation["tier"]);
+      const price = parseInt(donation["montant total"]);
+      const donorLabel = donation[Object.keys(donation)[23]];
+      const details = String(donation["détails"]);
+
+      if (!summary[email]) {
+        summary[email] = {
+          email: email,
+          details: details,
+          donorLabel: donorLabel,
+          tier: tier,
+          totalDonated: 0,
+          ticketCount: 0,
+        };
+      }
+
+      summary[email].totalDonated += price;
+      summary[email].ticketCount += 1;
+
+      // Update donor label if it's different from the previous one
+      if (summary[email].donorLabel !== donorLabel) {
+        summary[email].donorLabel = donorLabel;
+      }
+    });
+
+    return summary;
+  }
+
+  function getRamadanRaised(donations) {
+    return donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0);
+  }
 
   const t = TRANSLATIONS[language];
   const isRTL = language === "ar";
@@ -886,6 +952,7 @@ export default function MosqueDonation() {
     ...tier,
     label: TIER_LABELS[tier.key]?.[language] || TIER_LABELS[tier.key]?.en || tier.key,
   }));
+  console.log("debug: localizedTiers", localizedTiers);
   const sel = localizedTiers[selectedTier];
   const pct = Math.round((sel.funded / sel.total) * 100);
   const remaining = sel.total - sel.funded;
@@ -893,6 +960,8 @@ export default function MosqueDonation() {
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
   const totalBricksFunded = localizedTiers.reduce((sum, tier) => sum + tier.funded, 0);
   const totalBricks = localizedTiers.reduce((sum, tier) => sum + tier.total, 0);
+  const RAMADAN_TARGET = 200000;
+  const headerRamadanPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((ramadanRaised / RAMADAN_TARGET) * 100)) : 0;
   const headerProgressPct = totalGoal > 0 ? Math.min(100, Math.round((totalRaised / totalGoal) * 100)) : 0;
   const currencyFirst = language === "en";
 
@@ -912,12 +981,12 @@ export default function MosqueDonation() {
         background: theme.bgPage,
         display: "flex",
         flexDirection: "column",
-        fontFamily: isRTL ? "'Amiri','Cormorant Garamond',serif" : "'Cormorant Garamond',serif",
+        fontFamily: isRTL ? "'Amiri', system-ui, sans-serif" : "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         color: theme.textSecondary,
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         ::-webkit-scrollbar{width:4px}
         ::-webkit-scrollbar-thumb{background:${theme.scrollbarThumb};border-radius:4px}
@@ -979,27 +1048,90 @@ export default function MosqueDonation() {
           <div style={{ fontSize: "14px", color: theme.textMuted }}>
             {t.raisedLine(totalRaised, totalGoal, totalBricksFunded, totalBricks, theme)}
           </div>
-          <div
-            aria-hidden="true"
-            style={{
-              marginTop: "4px",
-              width: "100%",
-              maxWidth: "320px",
-              height: "6px",
-              borderRadius: "999px",
-              background: theme.vizProgressTrack,
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ width: "100%", maxWidth: "360px", marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>
+            {/* Ramadan short‑term objective (highlighted) */}
+            <div style={{ 
+              fontSize: "13px", 
+              color: theme.textMuted, 
+              display: "flex", 
+              justifyContent: "space-between",
+              fontWeight: 700,
+              marginBottom: "4px",
+              letterSpacing: isRTL ? "0" : "0.05em",
+            }}>
+              <span>{language === "fr" ? "Objectif de Ramadan" : language === "ar" ? "هدف رمضان" : "Ramadan objective"}</span>
+              <span style={{ fontWeight: 800, color: theme.accentGold, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>
+                {headerRamadanPct}%
+                </span>
+                <span>
+                  ({languageCurrency(ramadanRaised, currencyFirst)} {language === "fr" ? "de" : language === "ar" ? "من" : "of"} {languageCurrency(RAMADAN_TARGET, currencyFirst)})
+                </span>
+              </span>
+            </div>
             <div
+              aria-hidden="true"
               style={{
-                width: `${headerProgressPct}%`,
-                height: "100%",
+                width: "100%",
+                height: "20px",
                 borderRadius: "999px",
-                background: sel.color,
-                transition: "width 0.4s ease",
+                background: theme.vizProgressTrack,
+                overflow: "hidden",
+                boxShadow: `0 0 0 2px ${theme.borderAccent}`,
+                marginBottom: "2px",
               }}
-            />
+            >
+              <div
+                style={{
+                  width: `${headerRamadanPct}%`,
+                  height: "100%",
+                  borderRadius: "999px",
+                  background: sel.color,
+                  transition: "width 0.4s cubic-bezier(.79,.14,.15,.86)",
+                  boxShadow: `0 0 16px 2px ${sel.color}44`,
+                }}
+              />
+            </div>
+
+            {/* Overall campaign objective (secondary) */}
+            <div style={{ fontSize: "11px", color: theme.textMuted, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>
+                {language === "fr"
+                  ? "Objectif global de la campagne"
+                  : language === "ar"
+                  ? "الهدف الكلي للحملة"
+                  : "Overall campaign objective"}
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>
+                  {headerProgressPct}% {language === "fr" ? "atteint du" : language === "ar" ? " محقق من" : "reached of"}
+                </span>
+                <span style={{ fontWeight: 700, color: theme.textMuted, fontSize: "12px" }}>
+                  {languageCurrency(totalRaised, currencyFirst)}
+                </span>
+              </span>
+            </div>
+            <div
+              aria-hidden="true"
+              style={{
+                width: "100%",
+                height: "5px",
+                borderRadius: "999px",
+                background: theme.vizProgressTrack,
+                overflow: "hidden",
+                opacity: 0.7,
+              }}
+            >
+              <div
+                style={{
+                  width: `${headerProgressPct}%`,
+                  height: "100%",
+                  borderRadius: "999px",
+                  background: theme.textMuted,
+                  transition: "width 0.4s ease",
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -1046,7 +1178,7 @@ export default function MosqueDonation() {
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <div
           style={{
-            width: "220px",
+            width: "320px",
             flexShrink: 0,
             borderRight: isRTL ? "none" : `2px solid ${theme.border}`,
             borderLeft: isRTL ? `2px solid ${theme.border}` : "none",
@@ -1060,7 +1192,13 @@ export default function MosqueDonation() {
             minHeight: 0,
           }}
         >
-          <div style={{ flexShrink: 0 }}>
+          <div style={{ 
+            flexShrink: 0, 
+            display: "flex", 
+            flexDirection: "column", 
+            alignItems: "center", 
+            justifyContent: "center" 
+          }}>
             <div
               style={{
                 fontSize: "13px",
@@ -1069,14 +1207,19 @@ export default function MosqueDonation() {
                 color: theme.textPrimary,
                 textTransform: isRTL ? "none" : "uppercase",
                 textAlign: "center",
+                width: "100%",
               }}
             >
               {t.scanToDonate}
             </div>
-            <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
-            <div style={{ fontSize: "12px", color: theme.textMuted, textAlign: "center", lineHeight: 1.5 }}>{t.qrHelp}</div>
+            <div style={{ display: "flex", justifyContent: "center", width: "100%", margin: "10px 0" }}>
+              <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
+            </div>
+            <div style={{ fontSize: "12px", color: theme.textMuted, textAlign: "center", lineHeight: 1.5, width: "100%" }}>
+              {t.qrHelp}
+            </div>
           </div>
-          <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} />
+          <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
         </div>
 
         <div
@@ -1262,7 +1405,10 @@ export default function MosqueDonation() {
             </div>
 
             <button
-              onClick={() => window.open("https://www.zeffy.com/en-CA/donation-form/nouveau-centre-al-imane", "_blank", "noopener,noreferrer")}
+              type="button"
+              onClick={() => {
+                if (remaining > 0) setShowDonationDialog(true);
+              }}
               disabled={remaining === 0}
               style={{
                 width: "100%",
@@ -1301,6 +1447,107 @@ export default function MosqueDonation() {
           </div>
         </div>
       </div>
+
+      {showDonationDialog && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "960px",
+              maxHeight: "90vh",
+              borderRadius: "12px",
+              background: theme.bgCard,
+              color: theme.textPrimary,
+              boxShadow: "0 20px 40px rgba(0,0,0,0.45)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "10px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderBottom: `1px solid ${theme.borderAccent}`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "15px",
+                  fontWeight: 700,
+                }}
+              >
+                {language === "fr"
+                  ? "Faire un don au centre"
+                  : language === "ar"
+                  ? "التبرع للمسجد"
+                  : "Support the masjid"}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDonationDialog(false)}
+                aria-label="Close donation dialog"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: theme.textMuted,
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  padding: "2px 6px",
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: "10px 16px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ fontSize: "13px", color: theme.textMuted }}>
+                {t.zeffyNote}
+              </div>
+              <div
+                style={{
+                  position: "relative",
+                  overflow: "hidden",
+                  width: "100%",
+                  height: "min(450px, 70vh)",
+                  borderRadius: "8px",
+                  background: "#ffffff",
+                }}
+              >
+                <iframe
+                  title="Donation form powered by Zeffy"
+                  style={{
+                    position: "absolute",
+                    border: "0",
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    width: "100%",
+                    height: "100%",
+                  }}
+                  src="https://www.zeffy.com/embed/ticketing/travaux-damenagement-dans-le-nouveau-centre"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer
         style={{
