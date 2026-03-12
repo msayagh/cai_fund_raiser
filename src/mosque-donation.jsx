@@ -272,7 +272,7 @@ const TRANSLATIONS = {
 const DONATION_URL = "https://your-donation-page.com";
 
 function QRCode({ color, alt, theme }) {
-  const src = `qr-code.png`;
+  const src = `qr-code.jpeg`;
 
   return (
     <img
@@ -810,6 +810,103 @@ function languageCurrency(amount, dollarFirst = true) {
   return dollarFirst ? `$${amount.toLocaleString()}` : `${amount.toLocaleString()} $`;
 }
 
+function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, language }) {
+  const th = theme ?? THEMES.dark;
+  if (!totalGoal || totalGoal <= 0) return null;
+
+  const safe = (v) => Math.max(0, Number.isFinite(v) ? v : 0);
+  const ramadan = safe(ramadanRaised);
+  const otherRaised = safe(totalRaised - ramadanRaised);
+  const remaining = safe(totalGoal - totalRaised);
+
+  const slices = [
+    {
+      key: "ramadan",
+      label: language === "fr" ? "Ramadan atteint" : language === "ar" ? "تم تحقيق رمضان" : "Ramadan raised",
+      value: ramadan,
+      color: theme.accentGold,
+    },
+    {
+      key: "other",
+      label: language === "fr" ? "Fonds collectés" : language === "ar" ? "الأموال المجمعة" : "Collected funds",
+      value: otherRaised,
+      color: "#4FB6B0",
+    },
+    {
+      key: "remaining",
+      label: language === "fr" ? "Reste" : language === "ar" ? "المتبقي من الهدف" : "Remaining goal",
+      value: remaining,
+      color: "#5B627A",
+    },
+  ].filter((s) => s.value > 0);
+
+  const total = slices.reduce((sum, s) => sum + s.value, 0);
+  if (total <= 0) return null;
+
+  let currentAngle = -90;
+  const radius = 52;
+  const cx = 60;
+  const cy = 60;
+
+  const arcs = slices.map((slice) => {
+    const angle = (slice.value / total) * 360;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + angle;
+    currentAngle = endAngle;
+
+    const largeArc = angle > 180 ? 1 : 0;
+    const startRad = (Math.PI / 180) * startAngle;
+    const endRad = (Math.PI / 180) * endAngle;
+
+    const x1 = cx + radius * Math.cos(startRad);
+    const y1 = cy + radius * Math.sin(startRad);
+    const x2 = cx + radius * Math.cos(endRad);
+    const y2 = cy + radius * Math.sin(endRad);
+
+    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+    return { slice, d };
+  });
+
+  const formatCurrency = (v) => languageCurrency(v, language === "en");
+  const formatPct = (v) => Math.round((v / totalGoal) * 100);
+
+  return (
+    <div className="campaign-pie">
+      <div className="campaign-pie-title">
+        {language === "fr" ? "Vue d’ensemble de la campagne" : language === "ar" ? "نظرة عامة على الحملة" : "Campaign overview"}
+      </div>
+      <div className="campaign-pie-body">
+        <svg viewBox="0 0 120 120" className="campaign-pie-svg" aria-hidden="true">
+          {arcs.map(({ slice, d }) => (
+            <path key={slice.key} d={d} fill={slice.color} stroke={th.bgSidebar} strokeWidth="0.5" />
+          ))}
+          <circle cx={cx} cy={cy} r={26} fill={th.bgSidebar} />
+          <text x={cx} y={cy - 4} textAnchor="middle" fontSize="10" fill={th.textPrimary} fontWeight="700">
+            {formatPct(totalRaised)}
+            {"%"}
+          </text>
+          <text x={cx} y={cy + 9} textAnchor="middle" fontSize="7" fill={th.textMuted}>
+            {language === "fr" ? "atteint" : language === "ar" ? "محقق" : "reached"}
+          </text>
+        </svg>
+        <div className="campaign-pie-legend">
+          {slices.map((slice) => (
+            <div key={slice.key} className="campaign-pie-legend-row">
+              <span className="campaign-pie-dot" style={{ background: slice.color }} />
+              <div className="campaign-pie-legend-text">
+                <span className="campaign-pie-legend-label">{slice.label}</span>
+                <span className="campaign-pie-legend-value">
+                  {formatCurrency(slice.value)} · {formatPct(slice.value)}%
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * @param {{ donations: DonationRow[]; tiers: Array<{key: string; label: string; amount: number; color?: string}>; language: string; isRTL: boolean; theme?: object }} props
  */
@@ -835,6 +932,7 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
         style={{
           fontSize: "11px",
           fontWeight: 700,
+          textAlign: "center",
           letterSpacing: "0.1em",
           color: th.textMuted,
           textTransform: "uppercase",
@@ -1004,7 +1102,8 @@ export default function MosqueDonation() {
   const sel = localizedTiers[selectedTier];
   const pct = Math.round((sel.funded / sel.total) * 100);
   const remaining = sel.total - sel.funded;
-  const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + 692602;
+  const PRE_RAISED = 692602;
+  const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + PRE_RAISED;
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
   const RAMADAN_TARGET = 200000;
   const headerRamadanPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((ramadanRaised / RAMADAN_TARGET) * 100)) : 0;
@@ -1054,7 +1153,7 @@ export default function MosqueDonation() {
           <img
             src="/logo-ccai.png"
             alt="CCAI logo, stylized geometric calligraphy"
-            style={{ width: "44px", height: "44px", objectFit: "contain", flexShrink: 0 }}
+            style={{ width: "88px", height: "88px", objectFit: "contain", flexShrink: 0 }}
           />
           <div>
             <div
@@ -1073,9 +1172,6 @@ export default function MosqueDonation() {
             <h1 style={{ fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif", fontSize: "16px", fontWeight: 600, letterSpacing: isRTL ? "0" : "0.06em", color: theme.textPrimary, margin: 0 }}>
               {t.title}
             </h1>
-            <div>
-              {t.raisedTag?.(totalRaised, totalGoal, theme)}
-            </div>
           </div>
         </div>
 
@@ -1285,6 +1381,7 @@ export default function MosqueDonation() {
             </div>
           </div>
           <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
+          <CampaignPie totalGoal={totalGoal} totalRaised={totalRaised} ramadanRaised={ramadanRaised} theme={theme} language={language} />
         </div>
 
         <div
@@ -1658,7 +1755,7 @@ export default function MosqueDonation() {
               src="/logo-ccai.png"
               alt=""
               aria-hidden="true"
-              style={{ width: "40px", height: "40px", objectFit: "contain", flexShrink: 0, marginTop: "2px" }}
+              style={{ width: "80px", height: "80px", objectFit: "contain", flexShrink: 0, marginTop: "2px" }}
             />
             <div>
               <div

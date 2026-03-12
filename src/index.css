@@ -33,7 +33,7 @@ a {
 }
 
 .layout-left {
-  width: 320px;
+  width: 360px;
   flex-shrink: 0;
 }
 
@@ -45,6 +45,69 @@ a {
 .layout-right {
   width: 340px;
   flex-shrink: 0;
+}
+
+/* Campaign pie (left column) */
+.campaign-pie {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.campaign-pie-title {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.campaign-pie-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.campaign-pie-svg {
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+}
+
+.campaign-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  width: 100%;
+}
+
+.campaign-pie-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.campaign-pie-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.campaign-pie-legend-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.campaign-pie-legend-value {
+  opacity: 0.8;
 }
 
 /* Mosque viz responsiveness */
@@ -80,6 +143,19 @@ a {
   .layout-left,
   .layout-right {
     width: 100%;
+  }
+
+  .campaign-pie {
+    padding: 8px 8px 10px;
+  }
+
+  .campaign-pie-svg {
+    width: 120px;
+    height: 120px;
+  }
+
+  .campaign-pie-legend {
+    font-size: 11px;
   }
 
   .mosque-side-chips {
