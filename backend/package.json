@@ -4,13 +4,17 @@
   "description": "Mosque donation tracker backend API",
   "main": "server.js",
   "scripts": {
+    "prisma:run": "node scripts/run-prisma.js",
+    "predev": "npm run db:generate",
     "dev": "node --watch server.js",
+    "prestart": "npm run db:generate",
     "start": "node server.js",
-    "db:migrate": "prisma migrate dev",
-    "db:generate": "prisma generate",
-    "db:seed": "node prisma/seed.js",
-    "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force && node prisma/seed.js"
+    "db:migrate": "npm run prisma:run -- db push",
+    "db:migrate:dev": "npm run prisma:run -- migrate dev",
+    "db:generate": "npm run prisma:run -- generate",
+    "db:seed": "npm run db:generate && node prisma/seed.js",
+    "db:studio": "npm run prisma:run -- studio",
+    "db:reset": "npm run prisma:run -- db push --force-reset && node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

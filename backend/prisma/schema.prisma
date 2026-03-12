@@ -3,7 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // `npm run prisma:run` rewrites this provider from DB_PROVIDER (mysql/sqlite).
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 

@@ -1,6 +1,6 @@
 # Mosque App — Backend API
 
-REST API for the Mosque Donation Tracking app, built with Node.js + Express + Prisma (SQLite).
+REST API for the Mosque Donation Tracking app, built with Node.js + Express + Prisma (SQLite/MySQL).
 
 ## Prerequisites
 
@@ -40,7 +40,6 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 ```bash
 npm run db:migrate
-# When prompted, give the migration a name e.g. "init"
 ```
 
 If you are in the repository root (`mosque-app/`), use:
@@ -81,6 +80,48 @@ npm start
 The server runs on `http://localhost:3001` by default.  
 API base URL: `http://localhost:3001/api`  
 Health check: `http://localhost:3001/health`
+
+## Run Backend In Docker (Background)
+
+Set DB mode in `backend/.env` (`DB_PROVIDER=sqlite` or `DB_PROVIDER=mysql`), then run:
+
+```bash
+cd backend
+
+# Build image
+docker build -t mosque-backend .
+
+# Start in background
+docker run -d \
+  --name mosque-backend \
+  --env-file .env \
+  -e SQLITE_DATABASE_URL=file:/app/data/dev.db \
+  -p 3001:3001 \
+  -v mosque_backend_sqlite:/app/data \
+  -v mosque_backend_uploads:/app/uploads \
+  -v mosque_backend_logs:/app/logs \
+  mosque-backend
+```
+
+Useful commands:
+```bash
+docker logs -f mosque-backend
+docker stop mosque-backend
+docker rm mosque-backend
+```
+
+Or use Compose:
+```bash
+docker compose up -d --build
+docker compose logs -f backend
+docker compose down
+```
+
+If you previously saw `Schema engine error` with SQLite in Docker, recreate volumes once:
+```bash
+docker rm -f mosque-backend 2>/dev/null || true
+docker volume rm mosque_backend_sqlite mosque_backend_uploads mosque_backend_logs 2>/dev/null || true
+```
 
 ---
 
@@ -211,28 +252,38 @@ Access tokens expire in **15 minutes**. Use `POST /api/auth/refresh` with your r
 
 ```bash
 # Run these inside backend/, or use npm --prefix backend run <script> from mosque-app/
-npm run db:migrate    # Run pending migrations
-npm run db:generate   # Regenerate Prisma client
-npm run db:seed       # Seed with sample data
-npm run db:studio     # Open Prisma Studio (visual DB browser)
-npm run db:reset      # Reset DB and re-seed (destructive!)
-npx prisma migrate reset --force --skip-seed  # Reset DB and keep it empty
+npm run db:migrate      # Push schema to DB selected in .env
+npm run db:migrate:dev  # Prisma migrate dev (requires shadow DB privileges)
+npm run db:generate     # Regenerate Prisma client for selected provider
+npm run db:seed         # Seed with sample data
+npm run db:studio       # Open Prisma Studio (visual DB browser)
+npm run db:reset        # Reset DB and re-seed (destructive!)
 ```
 
-## Switching to PostgreSQL (production)
+## Switching SQLite / MySQL via `.env`
 
-In `prisma/schema.prisma`, change:
-```prisma
-datasource db {
-  provider = "postgresql"   # ← change from "sqlite"
-  url      = env("DATABASE_URL")
-}
+Set `DB_PROVIDER` in `backend/.env`:
+```env
+DB_PROVIDER=sqlite
+# or
+DB_PROVIDER=mysql
 ```
 
-Then update `DATABASE_URL` in your `.env`:
+When `DB_PROVIDER=sqlite`, Prisma uses:
+```env
+SQLITE_DATABASE_URL="file:./dev.db"
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/mosque_app"
+
+When `DB_PROVIDER=mysql`, Prisma builds the URL from:
+```env
+DB_HOST=
+DB_PORT=
+MYSQL_DATABASE=
+MYSQL_USER=
+MYSQL_PASSWORD=
 ```
+
+Optional: set `DATABASE_URL` directly to override all of the above.
 
 ## SMTP / Email
 
