@@ -75,6 +75,46 @@ Health check is **http://localhost:3001/health**
 > ```
 > Run twice and paste the two outputs into `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `.env`.
 
+### 1B. Backend In Docker (Background)
+
+Set your DB mode first in `backend/.env` (`DB_PROVIDER=sqlite` or `DB_PROVIDER=mysql`), then:
+
+```bash
+# Build backend image
+docker build -t mosque-backend ./backend
+
+# Run backend in background
+docker run -d \
+  --name mosque-backend \
+  --env-file ./backend/.env \
+  -e SQLITE_DATABASE_URL=file:/app/data/dev.db \
+  -p 3001:3001 \
+  -v mosque_backend_sqlite:/app/data \
+  -v mosque_backend_uploads:/app/uploads \
+  -v mosque_backend_logs:/app/logs \
+  mosque-backend
+```
+
+Useful commands:
+```bash
+docker logs -f mosque-backend
+docker stop mosque-backend
+docker rm mosque-backend
+```
+
+Compose alternative:
+```bash
+docker compose -f backend/docker-compose.yml up -d --build
+docker compose -f backend/docker-compose.yml logs -f backend
+docker compose -f backend/docker-compose.yml down
+```
+
+If you previously saw `Schema engine error` with SQLite in Docker, recreate volumes once:
+```bash
+docker rm -f mosque-backend 2>/dev/null || true
+docker volume rm mosque_backend_sqlite mosque_backend_uploads mosque_backend_logs 2>/dev/null || true
+```
+
 ### 2. Frontend
 
 ```bash
@@ -85,6 +125,37 @@ npm run dev
 ```
 
 Frontend runs on **http://localhost:5173**
+
+### 3. CI/CD Deployment (GitHub Actions)
+
+This repo includes a workflow at `.github/workflows/ci-cd.yml`:
+- `CI` on pull requests and pushes to `main` (lint/build/generate Prisma/build backend Docker image)
+- `CD` on pushes to `main` (or manual dispatch) via SSH to your host
+
+Create these GitHub repository secrets before enabling deployment:
+- `DEPLOY_HOST` (server hostname or IP)
+- `DEPLOY_PORT` (usually `22`)
+- `DEPLOY_USER` (SSH user)
+- `DEPLOY_SSH_KEY` (private SSH key for that user)
+- `DEPLOY_PATH` (absolute path on server where repo should live, e.g. `/opt/mosque-app`)
+- `BACKEND_ENV_B64` (base64-encoded contents of `backend/.env`)
+
+Generate `BACKEND_ENV_B64` locally:
+```bash
+base64 -i backend/.env | tr -d '\n'
+```
+
+Host prerequisites:
+- `git`
+- `docker`
+- `docker compose`
+
+Deployment flow used by CD:
+1. SSH to host using secrets
+2. Clone repo into `DEPLOY_PATH` if missing
+3. Checkout/reset to latest `main`
+4. Write `backend/.env` from `BACKEND_ENV_B64`
+5. Run `docker compose down --remove-orphans && docker compose up -d --build` in `backend/`
 
 ---
 

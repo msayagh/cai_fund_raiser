@@ -117,6 +117,16 @@ docker compose logs -f backend
 docker compose down
 ```
 
+## CI/CD
+
+GitHub Actions workflow: `../.github/workflows/ci-cd.yml`
+- CI runs lint/build/prisma generate/docker build
+- CD deploys on push to `main` (or manual dispatch) to a remote host over SSH
+
+Required GitHub Secrets:
+- `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH`
+- `BACKEND_ENV_B64` (base64 of this backend `.env` file)
+
 If you previously saw `Schema engine error` with SQLite in Docker, recreate volumes once:
 ```bash
 docker rm -f mosque-backend 2>/dev/null || true
