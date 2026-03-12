@@ -28,7 +28,7 @@ const app = express();
 // ─── Security & Utility Middleware ────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({
-  origin: config.FRONTEND_URL || '*',
+  origin: [config.LIVE_FRONTEND_URL, config.DEV_FRONTEND_URL],
   credentials: true,
 }));
 app.use(compression());

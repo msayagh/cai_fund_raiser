@@ -16,9 +16,6 @@ RUN chmod +x scripts/docker-start.sh \
   && chown -R node:node /app
 
 ENV NODE_ENV=production
-ENV PORT=3001
-ENV RUN_DB_MIGRATE=true
-ENV SQLITE_DATABASE_URL=file:/app/data/dev.db
 
 EXPOSE 3001
 
