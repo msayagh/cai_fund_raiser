@@ -1,6 +1,7 @@
 import React from "react";
 
 const fr = {
+  locale: "fr_CA",
   centerName: "Centre Zad Al-Imane",
   title: "Campagne d’établissement de la mosquée",
   raisedOfGoal: "collectés sur un objectif de",

@@ -38,10 +38,102 @@ const DEFAULT_TRANSLATION =
   TRANSLATION_MODULES[`./translations/${DEFAULT_LANGUAGE}.jsx`]?.default ??
   Object.values(TRANSLATION_MODULES)[0]?.default ??
   {};
-const INITIAL_LANGUAGE = AVAILABLE_LANGUAGE_CODES.includes("fr") ? "fr" : DEFAULT_LANGUAGE;
+const SITE_NAME = "Centre Zad Al-Imane";
+const DEFAULT_SITE_URL = "https://ccai-stjean.org/";
+const DEFAULT_SOCIAL_IMAGE = "/logo-ccai.png";
+
+function getInitialLanguage() {
+  if (typeof window !== "undefined") {
+    const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+    if (requestedLanguage && AVAILABLE_LANGUAGE_CODES.includes(requestedLanguage)) {
+      return requestedLanguage;
+    }
+  }
+
+  return AVAILABLE_LANGUAGE_CODES.includes("fr") ? "fr" : DEFAULT_LANGUAGE;
+}
+
+const INITIAL_LANGUAGE = getInitialLanguage();
 const INITIAL_TRANSLATION =
   TRANSLATION_MODULES[`./translations/${INITIAL_LANGUAGE}.jsx`]?.default ??
   DEFAULT_TRANSLATION;
+
+function truncateText(value, maxLength = 180) {
+  if (!value) return "";
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1).trimEnd()}...`;
+}
+
+function getSiteUrl() {
+  const configuredUrl =
+    typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_SITE_URL
+      ? String(import.meta.env.VITE_SITE_URL).trim()
+      : "";
+
+  if (configuredUrl) return configuredUrl;
+
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${window.location.pathname}`;
+  }
+
+  return DEFAULT_SITE_URL;
+}
+
+function getAbsoluteUrl(pathOrUrl, siteUrl) {
+  try {
+    return new URL(pathOrUrl, siteUrl).toString();
+  } catch {
+    return pathOrUrl;
+  }
+}
+
+function setMetaTag(attribute, key, content) {
+  if (typeof document === "undefined") return;
+
+  let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute(attribute, key);
+    document.head.appendChild(element);
+  }
+  element.setAttribute("content", content);
+}
+
+function setLinkTag(rel, href, extraAttributes = {}) {
+  if (typeof document === "undefined") return;
+
+  const selector = Object.entries(extraAttributes).reduce(
+    (acc, [key, value]) => `${acc}[${key}="${value}"]`,
+    `link[rel="${rel}"]`
+  );
+
+  let element = document.head.querySelector(selector);
+  if (!element) {
+    element = document.createElement("link");
+    element.setAttribute("rel", rel);
+    document.head.appendChild(element);
+  }
+
+  Object.entries(extraAttributes).forEach(([key, value]) => {
+    element.setAttribute(key, value);
+  });
+
+  element.setAttribute("href", href);
+}
+
+function setStructuredData(id, payload) {
+  if (typeof document === "undefined") return;
+
+  let element = document.head.querySelector(`script[data-seo-id="${id}"]`);
+  if (!element) {
+    element = document.createElement("script");
+    element.type = "application/ld+json";
+    element.dataset.seoId = id;
+    document.head.appendChild(element);
+  }
+
+  element.textContent = JSON.stringify(payload);
+}
 
 /** Light mode: WCAG-compliant, warm, spacious. Dark mode: original. */
 const THEMES = {
@@ -914,6 +1006,14 @@ export default function MosqueDonation() {
   }, [language]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", language);
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [language]);
+
+  useEffect(() => {
     if (!showLanguageMenu) return undefined;
 
     const handlePointerDown = (event) => {
@@ -942,6 +1042,88 @@ export default function MosqueDonation() {
   const RAMADAN_TARGET = 200000;
   const headerRamadanPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((ramadanRaised / RAMADAN_TARGET) * 100)) : 0;
   const currencyFirst = language === "en";
+  const siteUrl = getSiteUrl();
+  const pageUrl = getAbsoluteUrl(`/?lang=${language}`, siteUrl);
+  const socialImageUrl = getAbsoluteUrl(DEFAULT_SOCIAL_IMAGE, siteUrl);
+  const pageTitle = `${t.title} | ${t.centerName}`;
+  const pageDescription = truncateText(
+    t.aboutCampaignText ||
+      "Support the Centre Zad Al-Imane masjid establishment campaign and help fund a new place of prayer, learning, and community service."
+  );
+  const locale = t.locale ?? language;
+  const logoAlt = `${t.centerName} logo`;
+  const qrAlt = `${t.qrAlt} - ${sel.label}`;
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    document.title = pageTitle;
+    document.documentElement.lang = language;
+    document.documentElement.dir = isRTL ? "rtl" : "ltr";
+
+    setMetaTag("name", "description", pageDescription);
+    setMetaTag("name", "robots", "index, follow, max-image-preview:large");
+    setMetaTag("property", "og:type", "website");
+    setMetaTag("property", "og:site_name", SITE_NAME);
+    setMetaTag("property", "og:title", pageTitle);
+    setMetaTag("property", "og:description", pageDescription);
+    setMetaTag("property", "og:url", pageUrl);
+    setMetaTag("property", "og:image", socialImageUrl);
+    setMetaTag("property", "og:image:alt", logoAlt);
+    setMetaTag("property", "og:locale", locale);
+    setMetaTag("name", "twitter:card", "summary_large_image");
+    setMetaTag("name", "twitter:title", pageTitle);
+    setMetaTag("name", "twitter:description", pageDescription);
+    setMetaTag("name", "twitter:image", socialImageUrl);
+    setMetaTag("name", "twitter:image:alt", logoAlt);
+    setLinkTag("canonical", pageUrl);
+
+    AVAILABLE_LANGUAGE_CODES.forEach((code) => {
+      setLinkTag("alternate", getAbsoluteUrl(`/?lang=${code}`, siteUrl), { hreflang: code });
+    });
+    setLinkTag("alternate", siteUrl, { hreflang: "x-default" });
+
+    setStructuredData("campaign-page", [
+      {
+        "@context": "https://schema.org",
+        "@type": "NonprofitOrganization",
+        name: t.centerName,
+        url: siteUrl,
+        logo: socialImageUrl,
+        image: socialImageUrl,
+        telephone: "+1-450-800-4266",
+        sameAs: [
+          "https://ccai-stjean.org/",
+          "https://www.facebook.com/centre.alimane.sjsr/",
+        ],
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: "287 12e Avenue",
+          addressLocality: "Saint-Jean-sur-Richelieu",
+          addressRegion: "QC",
+          postalCode: "J2X 1E4",
+          addressCountry: "CA",
+        },
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: pageTitle,
+        url: pageUrl,
+        description: pageDescription,
+        inLanguage: language,
+        isPartOf: {
+          "@type": "WebSite",
+          name: SITE_NAME,
+          url: siteUrl,
+        },
+        about: {
+          "@type": "Thing",
+          name: "Masjid establishment campaign",
+        },
+      },
+    ]);
+  }, [isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t.centerName]);
 
   function handleTierSelect(nextTier) {
     setSelectedTier(nextTier);
@@ -977,7 +1159,7 @@ export default function MosqueDonation() {
           <div className="header-left">
             <img
               src="/logo-ccai.png"
-              alt="CCAI logo, stylized geometric calligraphy"
+              alt={logoAlt}
               className="header-logo"
             />
             <div className="header-title">
@@ -1126,7 +1308,7 @@ export default function MosqueDonation() {
                 {t.qrHelp}
               </div>
               <div className="qr-code-container">
-                <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
+                <QRCode color={sel.color} alt={qrAlt} theme={theme} />
               </div>
             </div>
             <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} t={t} />
@@ -1151,7 +1333,7 @@ export default function MosqueDonation() {
                   {t.qrHelp}
                 </div>
                 <div className="qr-code-container">
-                  <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
+                  <QRCode color={sel.color} alt={qrAlt} theme={theme} />
                 </div>
               </div>
               <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} t={t} />

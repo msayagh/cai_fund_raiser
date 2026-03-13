@@ -1,6 +1,7 @@
 import React from "react";
 
 const ur = {
+  locale: "ur_PK",
   centerName: "مرکز زاد الایمان",
   title: "مسجد کے قیام کی مہم",
   raisedOfGoal: "جمع شدہ رقم",
