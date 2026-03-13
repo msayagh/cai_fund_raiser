@@ -928,7 +928,7 @@ export default function MosqueDonation() {
     };
   }, [showLanguageMenu]);
 
-  const isRTL = language === "ar";
+  const isRTL = ["ar", "ur"].includes(language);
   const localizedTiers = tiers.map((tier) => ({
     ...tier,
     label: t?.tierLabels?.[tier.key] ?? tier.key,
