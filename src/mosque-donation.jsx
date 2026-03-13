@@ -1,9 +1,15 @@
 import React, { useMemo, useState, useEffect, memo } from "react";
+import en from "./translations/en.jsx";
 
 const LANGUAGES = {
   fr: "Français",
   en: "English",
   ar: "العربية",
+};
+
+const TRANSLATION_LOADERS = {
+  fr: () => import("./translations/fr.jsx"),
+  ar: () => import("./translations/ar.jsx"),
 };
 
 /** Light mode: WCAG-compliant, warm, spacious. Dark mode: original. */
@@ -76,196 +82,13 @@ const THEMES = {
   },
 };
 
-const TIER_LABELS = {
-  foundation: {
-    en: "Mutasaddiq",
-    fr: "Bienfaiteur",
-    ar: "متصدق",
-  },
-  walls: {
-    en: "Kareem",
-    fr: "Généreux",
-    ar: "كريم",
-  },
-  arches: {
-    en: "Jawaad",
-    fr: "Très généreux",
-    ar: "جواد",
-  },
-  dome: {
-    en: "Sabbaq",
-    fr: "Précurseur",
-    ar: "سبّاق",
-  },
-};
-
-const TRANSLATIONS = {
-  en: {
-    centerName: "Centre Zad Al-Imane",
-    title: "Masjid Establishment Campaign",
-    raisedOfGoal: "raised of",
-    goal: "goal",
-    bricks: "bricks",
-    scanToDonate: "Scan to Donate",
-    qrAlt: "Donation QR Code",
-    qrHelp: "Point your camera to give directly",
-    selectTier: "Select Tier",
-    perBrick: "per brick",
-    language: "Language",
-    aboutCampaign: "About this campaign",
-    aboutCampaignText:
-      "Each illuminated brick represents a pledged contribution toward the establishment of the masjid. The four contribution tiers correspond to different sections of the structure, allowing supporters to take part in building the foundation, walls, arches, and dome.",
-    howToParticipate: "How to participate",
-    howToParticipateText:
-      "Select a tier, review the remaining bricks, then scan the QR code or proceed with your donation method. Your support helps transform this visual plan into a real place of prayer, learning, and community service.",
-    fullyFunded: "✦ Fully Funded",
-    brickCount: (funded, total) => `${funded} / ${total} bricks`,
-    legendLabel: (label, amount) => `${label} · $${amount.toLocaleString()}`,
-    sideChip: (remaining) => `${remaining} left`,
-    fundButton: (amount) => `Fund One Brick · $${amount.toLocaleString()}`,
-    zeffyNote: "100% of your donation goes directly to the mosque. Thanks to the Zeffy platform, no commissions are taken.",
-    address: "Address",
-    phone: "Phone",
-    website: "Website",
-    raisedLine: (totalRaised, totalGoal, totalBricksFunded, totalBricks, th) => (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", width: "100%" }}>
-        <span style={{ color: th.textPrimary, fontWeight: 700 }}>
-          {`${totalBricksFunded}/${totalBricks} bricks funded`}
-        </span>
-      </div>
-    ),
-    raisedTag: (totalRaised, totalGoal, th) => (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "2px 8px",
-          borderRadius: 999,
-          border: `1px solid ${th.borderAccent}`,
-          background: th.mode === "light" ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.03)",
-          color: th.textMuted,
-          fontSize: 11,
-          fontWeight: 600,
-          marginTop: "4px",
-        }}
-      >
-        <span style={{ opacity: 0.8 }}>Goal</span>
-        <span>{`$${totalRaised.toLocaleString()} raised / $${totalGoal.toLocaleString()}`}</span>
-      </span>
-    ),
-  },
-  fr: {
-    centerName: "Centre Zad Al-Imane",
-    title: "Campagne d’établissement de la mosquée",
-    raisedOfGoal: "collectés sur un objectif de",
-    goal: "objectif",
-    bricks: "briques",
-    scanToDonate: "Scanner pour donner",
-    qrAlt: "Code QR de don",
-    qrHelp: "Scannez avec votre caméra pour donner directement",
-    selectTier: "Choisir un palier",
-    perBrick: "par brique",
-    language: "Langue",
-    aboutCampaign: "À propos de cette campagne",
-    aboutCampaignText:
-      "Chaque brique illuminée représente une contribution engagée pour l’établissement de la mosquée. Les quatre paliers de contribution correspondent à différentes parties de l’édifice, permettant aux donateurs de participer à la fondation, aux murs, aux arches et au dôme.",
-    howToParticipate: "Comment participer",
-    howToParticipateText:
-      "Choisissez un palier, consultez le nombre de briques restantes, puis scannez le code QR ou utilisez votre moyen de don. Votre soutien aide à transformer ce plan visuel en un véritable lieu de prière, d’apprentissage et de service à la communauté.",
-    fullyFunded: "✦ Entièrement financé",
-    brickCount: (funded, total) => `${funded} / ${total} briques`,
-    legendLabel: (label, amount) => `${label} · ${amount.toLocaleString()} $`,
-    sideChip: (remaining) => `${remaining} restantes`,
-    fundButton: (amount) => `Financer une brique · ${amount.toLocaleString()} $`,
-    zeffyNote: "100 % de votre don va directement à la mosquée. Grâce à la plateforme Zeffy, aucune commission n’est prélevée.",
-    address: "Adresse",
-    phone: "Téléphone",
-    website: "Site web",
-    raisedLine: (totalRaised, totalGoal, totalBricksFunded, totalBricks, th) => (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", width: "100%" }}>
-        <span style={{ color: th.textPrimary, fontWeight: 700 }}>
-          {`${totalBricksFunded}/${totalBricks} briques financées`}
-        </span>
-      </div>
-    ),
-    raisedTag: (totalRaised, totalGoal, th) => (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "2px 8px",
-          borderRadius: 999,
-          border: `1px solid ${th.borderAccent}`,
-          background: th.mode === "light" ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.03)",
-          color: th.textMuted,
-          fontSize: 11,
-          fontWeight: 600,
-          marginTop: "4px",
-        }}
-      >
-        <span style={{ opacity: 0.8 }}>Objectif</span>
-        <span>{`${totalRaised.toLocaleString()} $ collectés / ${totalGoal.toLocaleString()} $`}</span>
-      </span>
-    ),
-  },
-  ar: {
-    centerName: "مركز زاد الإيمان",
-    title: "حملة تأسيس المسجد",
-    raisedOfGoal: "تم جمع",
-    goal: "الهدف",
-    bricks: "طوبة",
-    scanToDonate: "امسح للتبرع",
-    qrAlt: "رمز QR للتبرع",
-    qrHelp: "وجّه كاميرا هاتفك للتبرع مباشرة",
-    selectTier: "اختر الفئة",
-    perBrick: "لكل طوبة",
-    language: "اللغة",
-    aboutCampaign: "حول هذه الحملة",
-    aboutCampaignText:
-      "تمثل كل طوبة مضيئة مساهمةً متعهداً بها في تأسيس المسجد. وترتبط فئات التبرع الأربع بأجزاء مختلفة من المبنى، مما يتيح للمساهمين المشاركة في الأساس والجدران والأقواس والقبة.",
-    howToParticipate: "كيفية المشاركة",
-    howToParticipateText:
-      "اختر الفئة، واطّلع على عدد الطوب المتبقي، ثم امسح رمز الاستجابة أو استخدم وسيلة التبرع المناسبة. دعمك يساعد على تحويل هذا التصور إلى مسجد حقيقي للصلاة والتعلم وخدمة المجتمع.",
-    fullyFunded: "✦ اكتمل التمويل",
-    brickCount: (funded, total) => `${funded} / ${total} طوبة`,
-    legendLabel: (label, amount) => `${label} · ${amount.toLocaleString()} $`,
-    sideChip: (remaining) => `${remaining} متبقية`,
-    fundButton: (amount) => `موّل طوبة واحدة · ${amount.toLocaleString()} $`,
-    zeffyNote: "تذهب 100٪ من تبرعاتكم مباشرةً إلى المسجد بفضل منصة Zeffy، من دون أي عمولات.",
-    address: "العنوان",
-    phone: "الهاتف",
-    website: "الموقع",
-    raisedLine: (totalRaised, totalGoal, totalBricksFunded, totalBricks, th) => (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", width: "100%", direction: "rtl" }}>
-        <span style={{ color: th.textPrimary, fontWeight: 700 }}>
-          {`${totalBricksFunded}/${totalBricks} طوبة ممولة`}
-        </span>
-      </div>
-    ),
-    raisedTag: (totalRaised, totalGoal, th) => (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "2px 8px",
-          borderRadius: 999,
-          border: `1px solid ${th.borderAccent}`,
-          background: th.mode === "light" ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.03)",
-          color: th.textMuted,
-          fontSize: 11,
-          fontWeight: 600,
-          marginTop: "4px",
-          direction: "rtl",
-        }}
-      >
-        <span style={{ opacity: 0.8 }}>الهدف</span>
-        <span>{`${totalRaised.toLocaleString()} $ محققة / ${totalGoal.toLocaleString()} $`}</span>
-      </span>
-    ),
-  },
+// ── Translation loader — imports are code-split per language ───────────────
+const loadTranslation = async (lang) => {
+  if (lang === "en") return en;
+  const loader = TRANSLATION_LOADERS[lang];
+  if (!loader) return en;
+  const module = await loader();
+  return module?.default ?? module;
 };
 
 // ── QR Code component — replace DONATION_URL with your real link ───────────────
@@ -455,7 +278,7 @@ async function fetchDonationsFromSheet() {
     const rows = convertCsvToJson(text);
     if (!Array.isArray(rows) || rows.length === 0) return [];
     // Filter out rows based on donation form
-    const filteredRows = rows.filter((row) => row["détails"].startsWith("Levée de fonds ") || row["détails"].startsWith("Travaux d’aménagement dans le nouveau centr"));
+    const filteredRows = rows.filter((row) => row["détails"].startsWith("Levée de fonds ") || row["détails"].startsWith("Travaux d’aménagement dans le nouveau centr"));
     return filteredRows;
   } catch {
     return [];
@@ -768,7 +591,7 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
 
 const MosqueViz = memo(MosqueVizInner);
 
-function TierCardInner({ tier, selected, onSelect, t, theme }) {
+function TierCardInner({ tier, selected, onSelect, t, theme, dollarFirst = true }) {
   const th = theme ?? THEMES.dark;
   const pct = Math.round((tier.funded / tier.total) * 100);
 
@@ -789,7 +612,7 @@ function TierCardInner({ tier, selected, onSelect, t, theme }) {
         <span style={{ fontSize: "15px", fontWeight: 700, color: selected ? tier.color : th.textPrimary, letterSpacing: "0.04em", textTransform: "uppercase" }}>
           {tier.label}
         </span>
-        <span style={{ fontSize: "16px", fontWeight: 700, color: th.textPrimary }}>{languageCurrency(tier.amount, t === TRANSLATIONS.en)}</span>
+        <span style={{ fontSize: "16px", fontWeight: 700, color: th.textPrimary }}>{languageCurrency(tier.amount, dollarFirst)}</span>
       </div>
 
       <div style={{ background: th.vizProgressTrack, borderRadius: "4px", height: "6px", overflow: "hidden", marginBottom: "6px" }}>
@@ -955,31 +778,31 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
         {Object.values(totalsByEmail).map((d, idx) => {
           const block = String(d.details).split("1x ")[1];
           const tier = Object.values(tierByKey).find((value) => value.name.toLowerCase() === block.toLowerCase());
-                  const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
+          const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
           const amount = tier ? tier.amount : 500;
           const progressPct = amount > 0 ? Math.min(100, (d.totalDonated / amount) * 100) : 0;
           const displayName = d.donorLabel.replace('"', '') || "Anonymous";
           const tierLabel = tier ? tier.label : d.tier;
           const donated = d.totalDonated;
           return (
-          <div
-            key={`donation-${d.email}-${idx}`}
-            style={{
-              padding: "10px 12px",
-              marginBottom: "8px",
-              borderRadius: "8px",
-              background: th.bgCard,
-              border: `2px solid ${tierColor}`,
-            }}
-          >
-            <div style={{ fontSize: "14px", fontWeight: 700, color: th.textPrimary, marginBottom: "4px" }}>{displayName}</div>
-            <div style={{ fontSize: "13px", color: th.accentGold, marginBottom: "6px" }}>
-              {dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`}
-            </div>
-            <div style={{ fontSize: "11px", color: th.textMuted, marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              {tierLabel}
-            </div>
-            <div style={{ background: th.vizProgressTrack, borderRadius: "4px", height: "5px", overflow: "hidden" }}>
+            <div
+              key={`donation-${d.email}-${idx}`}
+              style={{
+                padding: "10px 12px",
+                marginBottom: "8px",
+                borderRadius: "8px",
+                background: th.bgCard,
+                border: `2px solid ${tierColor}`,
+              }}
+            >
+              <div style={{ fontSize: "14px", fontWeight: 700, color: th.textPrimary, marginBottom: "4px" }}>{displayName}</div>
+              <div style={{ fontSize: "13px", color: th.accentGold, marginBottom: "6px" }}>
+                {dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`}
+              </div>
+              <div style={{ fontSize: "11px", color: th.textMuted, marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {tierLabel}
+              </div>
+              <div style={{ background: th.vizProgressTrack, borderRadius: "4px", height: "5px", overflow: "hidden" }}>
                 <div
                   style={{
                     width: `${progressPct}%`,
@@ -1001,6 +824,7 @@ const DonationsList = memo(DonationsListInner);
 
 export default function MosqueDonation() {
   const [language, setLanguage] = useState("fr");
+  const [t, setT] = useState(en);
   const [tiers, setTiers] = useState(INITIAL_TIERS);
   const [selectedTier, setSelectedTier] = useState(0);
   const [donations, setDonations] = useState([]);
@@ -1093,11 +917,22 @@ export default function MosqueDonation() {
     return donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0);
   }
 
-  const t = TRANSLATIONS[language];
+  useEffect(() => {
+    let active = true;
+
+    loadTranslation(language).then((loaded) => {
+      if (active) setT(loaded);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [language]);
+
   const isRTL = language === "ar";
   const localizedTiers = tiers.map((tier) => ({
     ...tier,
-    label: TIER_LABELS[tier.key]?.[language] || TIER_LABELS[tier.key]?.en || tier.key,
+    label: t?.tierLabels?.[tier.key] ?? tier.key,
   }));
   const sel = localizedTiers[selectedTier];
   const pct = Math.round((sel.funded / sel.total) * 100);
@@ -1223,8 +1058,8 @@ export default function MosqueDonation() {
                 {language === "fr"
                   ? "Objectif de Ramadan"
                   : language === "ar"
-                  ? "هدف رمضان"
-                  : "Ramadan objective"}
+                    ? "هدف رمضان"
+                    : "Ramadan objective"}
               </span>
             </div>
 
@@ -1253,8 +1088,8 @@ export default function MosqueDonation() {
                 {language === "fr"
                   ? "de"
                   : language === "ar"
-                  ? "من"
-                  : "of"}
+                    ? "من"
+                    : "of"}
               </span>{" "}
               {languageCurrency(RAMADAN_TARGET, currencyFirst)}
             </div>
@@ -1353,12 +1188,12 @@ export default function MosqueDonation() {
 
       <div className="layout-main">
         <div className="layout-left">
-          <div style={{ 
-            flexShrink: 0, 
-            display: "flex", 
-            flexDirection: "column", 
-            alignItems: "center", 
-            justifyContent: "center" 
+          <div style={{
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center"
           }}>
             <div
               style={{
@@ -1480,8 +1315,8 @@ export default function MosqueDonation() {
                       boxShadow: isSelected
                         ? `0 0 16px ${tier.color}66`
                         : theme.mode === "light"
-                        ? "0 2px 8px rgba(0,0,0,0.08)"
-                        : "0 2px 8px rgba(0,0,0,0.5)",
+                          ? "0 2px 8px rgba(0,0,0,0.08)"
+                          : "0 2px 8px rgba(0,0,0,0.5)",
                       zIndex: 10,
                     }}
                   >
@@ -1512,10 +1347,10 @@ export default function MosqueDonation() {
                   textAlign: "center",
                 }}
               >
-                {t.vizMobileSummary ?? 
-                language === "fr" ? "La visualisation de la mosquée est préférable sur un écran plus grand. Utilisez les cartes ci-dessous pour explorer le progrès sur mobile." :
-                language === "ar" ? "يفضل عرض المسجد على شاشة أكبر. استخدم البطاقات أدناه لاستكشاف التقدم على الهاتف." :
-                "Mosque visualization is best viewed on a larger screen. Use the tier cards below to explore progress on mobile."}
+                {t.vizMobileSummary ??
+                  language === "fr" ? "La visualisation de la mosquée est préférable sur un écran plus grand. Utilisez les cartes ci-dessous pour explorer le progrès sur mobile." :
+                  language === "ar" ? "يفضل عرض المسجد على شاشة أكبر. استخدم البطاقات أدناه لاستكشاف التقدم على الهاتف." :
+                    "Mosque visualization is best viewed on a larger screen. Use the tier cards below to explore progress on mobile."}
               </div>
             </div>
           </div>
@@ -1562,7 +1397,15 @@ export default function MosqueDonation() {
               {t.selectTier}
             </div>
             {[...localizedTiers].reverse().map((tier) => (
-              <TierCard key={tier.id} tier={tier} selected={selectedTier === tier.id} onSelect={setSelectedTier} t={t} theme={theme} />
+              <TierCard
+                key={tier.id}
+                tier={tier}
+                selected={selectedTier === tier.id}
+                onSelect={setSelectedTier}
+                t={t}
+                theme={theme}
+                dollarFirst={currencyFirst}
+              />
             ))}
           </div>
 
@@ -1675,8 +1518,8 @@ export default function MosqueDonation() {
                 {language === "fr"
                   ? "Faire un don au centre"
                   : language === "ar"
-                  ? "التبرع للمسجد"
-                  : "Support the masjid"}
+                    ? "التبرع للمسجد"
+                    : "Support the masjid"}
               </div>
               <button
                 type="button"
