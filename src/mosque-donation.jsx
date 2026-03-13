@@ -1333,8 +1333,8 @@ export default function MosqueDonation() {
         <button
           className="sidebar-toggle-btn sidebar-toggle-prayer"
           onClick={togglePrayerSidebar}
-          aria-label="Toggle prayer times sidebar"
-          title="Prayer times"
+          aria-label={t.prayerTimes}
+          title={t.prayerTimes}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" className="sidebar-toggle-icon">
             <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
@@ -1342,7 +1342,7 @@ export default function MosqueDonation() {
           </svg>
         </button>
 
-        <aside className={`layout-prayer-sidebar ${showPrayerSidebar ? "open" : ""}`} aria-label="Prayer times">
+        <aside className={`layout-prayer-sidebar ${showPrayerSidebar ? "open" : ""}`} aria-label={t.prayerTimes}>
           <button
             className="close-button"
             onClick={() => setShowPrayerSidebar(false)}
@@ -1351,10 +1351,10 @@ export default function MosqueDonation() {
             ×
           </button>
           <div className="prayer-sidebar-content">
-            <div className="prayer-sidebar-title">Prayer Times</div>
+            <div className="prayer-sidebar-title">{t.prayerTimes}</div>
             <iframe
               className="prayer-sidebar-frame"
-              title="Mawaqit prayer times"
+              title={t.prayerTimes}
               src={prayerIframeSrc}
               loading="lazy"
               referrerPolicy="strict-origin-when-cross-origin"

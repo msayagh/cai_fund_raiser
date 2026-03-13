@@ -80,6 +80,7 @@ const ur = {
   campaignOverview: "مہم کا جائزہ",
   reached: "حاصل شدہ",
   donorsList: "عطیہ دہندگان کی فہرست",
+  prayerTimes: "اوقات نماز",
   ramadanObjective: "رمضان کا ہدف",
   prepositionOf: "میں سے",
   donationDialogTitle: "مسجد کی معاونت کریں",

@@ -80,6 +80,7 @@ const ar = {
   campaignOverview: "نظرة عامة على الحملة",
   reached: "محقق",
   donorsList: "قائمة المتبرعين",
+  prayerTimes: "أوقات الصلاة",
   ramadanObjective: "هدف رمضان",
   prepositionOf: "من",
   donationDialogTitle: "التبرع للمسجد",

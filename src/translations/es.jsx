@@ -78,6 +78,7 @@ const es = {
   campaignOverview: "Resumen de la campana",
   reached: "alcanzado",
   donorsList: "Lista de donantes",
+  prayerTimes: "Horarios de oracion",
   ramadanObjective: "Objetivo de Ramadan",
   prepositionOf: "de",
   donationDialogTitle: "Apoya la mezquita",

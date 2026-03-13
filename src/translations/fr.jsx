@@ -78,6 +78,7 @@ const fr = {
   campaignOverview: "Vue d'ensemble de la campagne",
   reached: "atteint",
   donorsList: "Liste des donateurs",
+  prayerTimes: "Heures de priere",
   ramadanObjective: "Objectif de Ramadan",
   prepositionOf: "de",
   donationDialogTitle: "Faire un don au centre",
