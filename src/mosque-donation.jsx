@@ -41,6 +41,7 @@ const DEFAULT_TRANSLATION =
 const SITE_NAME = "Centre Zad Al-Imane";
 const DEFAULT_SITE_URL = "https://ccai-stjean.org/";
 const DEFAULT_SOCIAL_IMAGE = "/logo-ccai.png";
+const MOBILE_BREAKPOINT = 1200;
 
 function getInitialLanguage() {
   if (typeof window !== "undefined") {
@@ -85,6 +86,11 @@ function getAbsoluteUrl(pathOrUrl, siteUrl) {
   } catch {
     return pathOrUrl;
   }
+}
+
+function getPrayerEmbedMode() {
+  if (typeof window === "undefined") return "w";
+  return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches ? "m" : "w";
 }
 
 function setMetaTag(attribute, key, content) {
@@ -906,7 +912,9 @@ export default function MosqueDonation() {
   const [showDonationDialog, setShowDonationDialog] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
+  const [showPrayerSidebar, setShowPrayerSidebar] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [prayerEmbedMode, setPrayerEmbedMode] = useState(getPrayerEmbedMode);
   const languageDropdownRef = useRef(null);
   const theme = THEMES[themeMode] ?? THEMES.dark;
 
@@ -1014,6 +1022,22 @@ export default function MosqueDonation() {
   }, [language]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const syncPrayerEmbedMode = () => {
+      setPrayerEmbedMode(mediaQuery.matches ? "m" : "w");
+    };
+
+    syncPrayerEmbedMode();
+    mediaQuery.addEventListener("change", syncPrayerEmbedMode);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncPrayerEmbedMode);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!showLanguageMenu) return undefined;
 
     const handlePointerDown = (event) => {
@@ -1053,6 +1077,8 @@ export default function MosqueDonation() {
   const locale = t.locale ?? language;
   const logoAlt = `${t.centerName} logo`;
   const qrAlt = `${t.qrAlt} - ${sel.label}`;
+  const prayerLanguage = language.split("-")[0];
+  const prayerIframeSrc = `https://mawaqit.net/${prayerLanguage}/${prayerEmbedMode}/ccai-sjsr?showOnly5PrayerTimes=0`;
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -1128,9 +1154,15 @@ export default function MosqueDonation() {
   function handleTierSelect(nextTier) {
     setSelectedTier(nextTier);
 
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1200px)").matches) {
+    if (typeof window !== "undefined" && window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches) {
       setShowRightSidebar(true);
     }
+  }
+
+  function togglePrayerSidebar() {
+    setShowPrayerSidebar((open) => !open);
+    setShowLeftSidebar(false);
+    setShowRightSidebar(false);
   }
 
   function handleFund() {
@@ -1264,10 +1296,11 @@ export default function MosqueDonation() {
       <div className="layout-main">
         {/* Sidebar Backdrop */}
         <div
-          className={`sidebar-backdrop ${showLeftSidebar || showRightSidebar ? "visible" : ""}`}
+          className={`sidebar-backdrop ${showLeftSidebar || showRightSidebar || showPrayerSidebar ? "visible" : ""}`}
           onClick={() => {
             setShowLeftSidebar(false);
             setShowRightSidebar(false);
+            setShowPrayerSidebar(false);
           }}
         ></div>
 
@@ -1296,6 +1329,38 @@ export default function MosqueDonation() {
             <path d="M9.2 12h5.6M12 9.2v5.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
+
+        <button
+          className="sidebar-toggle-btn sidebar-toggle-prayer"
+          onClick={togglePrayerSidebar}
+          aria-label="Toggle prayer times sidebar"
+          title="Prayer times"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="sidebar-toggle-icon">
+            <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 7.8v4.7l3.1 1.9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        <aside className={`layout-prayer-sidebar ${showPrayerSidebar ? "open" : ""}`} aria-label="Prayer times">
+          <button
+            className="close-button"
+            onClick={() => setShowPrayerSidebar(false)}
+            aria-label="Close prayer times sidebar"
+          >
+            ×
+          </button>
+          <div className="prayer-sidebar-content">
+            <div className="prayer-sidebar-title">Prayer Times</div>
+            <iframe
+              className="prayer-sidebar-frame"
+              title="Mawaqit prayer times"
+              src={prayerIframeSrc}
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        </aside>
 
         <div className="layout-main-inner">
           {/* Desktop Layout-Left */}
