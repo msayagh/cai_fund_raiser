@@ -1,6 +1,7 @@
 import React from "react";
 
 const ar = {
+  welcome: "أهلاً وسهلاً!",
   centerName: "مركز زاد الإيمان",
   title: "حملة تأسيس المسجد",
   raisedOfGoal: "تم جمع",

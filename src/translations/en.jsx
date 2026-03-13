@@ -1,6 +1,7 @@
 import React from "react";
 
 const en = {
+  welcome: "Welcome!",
   centerName: "Centre Zad Al-Imane",
   title: "Masjid Establishment Campaign",
   raisedOfGoal: "raised of",

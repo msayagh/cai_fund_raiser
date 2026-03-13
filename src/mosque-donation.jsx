@@ -1007,6 +1007,9 @@ export default function MosqueDonation() {
             <h1 style={{ fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif", fontSize: "16px", fontWeight: 600, letterSpacing: isRTL ? "0" : "0.06em", color: theme.textPrimary, margin: 0 }}>
               {t.title}
             </h1>
+            <div style={{ fontSize: "13px", color: theme.textMuted, marginTop: "4px" }}>
+              {t.welcome}
+            </div>
           </div>
         </div>
 
