@@ -1,16 +1,47 @@
-import React, { useMemo, useState, useEffect, memo } from "react";
-import en from "./translations/en.jsx";
+import React, { useMemo, useState, useEffect, useRef, memo } from "react";
+import "./mosque-donation.css";
 
-const LANGUAGES = {
-  fr: "Français",
-  en: "English",
-  ar: "العربية",
-};
+const TRANSLATION_LOADERS = import.meta.glob("./translations/*.jsx");
+const TRANSLATION_MODULES = import.meta.glob("./translations/*.jsx", { eager: true });
+const DEFAULT_LANGUAGE = "en";
 
-const TRANSLATION_LOADERS = {
-  fr: () => import("./translations/fr.jsx"),
-  ar: () => import("./translations/ar.jsx"),
-};
+function getLanguageCodeFromPath(path) {
+  const match = path.match(/\/([^/]+)\.jsx$/);
+  return match ? match[1] : null;
+}
+
+function getLanguageLabel(code) {
+  const capitalize = (value) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value);
+
+  try {
+    return capitalize(new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code.toUpperCase());
+  } catch {
+    return code.toUpperCase();
+  }
+}
+
+const AVAILABLE_LANGUAGE_CODES = Object.keys(TRANSLATION_LOADERS)
+  .map(getLanguageCodeFromPath)
+  .filter(Boolean)
+  .sort((a, b) => {
+    if (a === DEFAULT_LANGUAGE) return -1;
+    if (b === DEFAULT_LANGUAGE) return 1;
+    return a.localeCompare(b);
+  });
+
+const LANGUAGE_OPTIONS = AVAILABLE_LANGUAGE_CODES.map((code) => ({
+  code,
+  label: getLanguageLabel(code),
+}));
+
+const DEFAULT_TRANSLATION =
+  TRANSLATION_MODULES[`./translations/${DEFAULT_LANGUAGE}.jsx`]?.default ??
+  Object.values(TRANSLATION_MODULES)[0]?.default ??
+  {};
+const INITIAL_LANGUAGE = AVAILABLE_LANGUAGE_CODES.includes("fr") ? "fr" : DEFAULT_LANGUAGE;
+const INITIAL_TRANSLATION =
+  TRANSLATION_MODULES[`./translations/${INITIAL_LANGUAGE}.jsx`]?.default ??
+  DEFAULT_TRANSLATION;
 
 /** Light mode: WCAG-compliant, warm, spacious. Dark mode: original. */
 const THEMES = {
@@ -84,11 +115,10 @@ const THEMES = {
 
 // ── Translation loader — imports are code-split per language ───────────────
 const loadTranslation = async (lang) => {
-  if (lang === "en") return en;
-  const loader = TRANSLATION_LOADERS[lang];
-  if (!loader) return en;
+  const loader = TRANSLATION_LOADERS[`./translations/${lang}.jsx`];
+  if (!loader) return DEFAULT_TRANSLATION;
   const module = await loader();
-  return module?.default ?? module;
+  return module?.default ?? module ?? DEFAULT_TRANSLATION;
 };
 
 // ── QR Code component — replace DONATION_URL with your real link ───────────────
@@ -103,7 +133,7 @@ function QRCode({ color, alt, theme }) {
       alt={alt}
       width={240}
       height={240}
-      style={{ borderRadius: "8px", border: `2px solid ${color}`, display: "block" }}
+      style={{ borderRadius: "8px", border: `2px solid ${color}` }}
     />
   );
 }
@@ -476,7 +506,6 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
       width="100%"
       height="100%"
       preserveAspectRatio="xMidYMid meet"
-      style={{ display: "block" }}
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -547,7 +576,7 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
         );
       })()}
 
-      <g clipPath="url(#mc)" className="mosque-viz-band-lines" style={{ pointerEvents: "none" }}>
+      <g clipPath="url(#mc)" className="mosque-viz-band-lines">
         {bands.slice(0, 3).map((b) => (
           <line key={`s${b.tier}`} x1="0" y1={b.y2} x2={W} y2={b.y2} stroke={th.vizLineStroke} strokeWidth="1.5" strokeDasharray="6 5" />
         ))}
@@ -582,7 +611,7 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
 
       {bands.map((b) => (
         <g key={`hit${b.tier}`} clipPath="url(#mc)">
-          <rect x={0} y={b.y1} width={W} height={b.y2 - b.y1} fill="transparent" style={{ cursor: "pointer" }} onClick={() => onSelectTier(b.tier)} />
+          <rect x={0} y={b.y1} width={W} height={b.y2 - b.y1} fill="transparent" style={{ cursor: "pointer", pointerEvents: "auto" }} onClick={() => onSelectTier(b.tier)} />
         </g>
       ))}
     </svg>
@@ -598,30 +627,23 @@ function TierCardInner({ tier, selected, onSelect, t, theme, dollarFirst = true 
   return (
     <div
       onClick={() => onSelect(tier.id)}
-      style={{
-        padding: "12px 14px",
-        borderRadius: "9px",
-        marginBottom: "8px",
-        cursor: "pointer",
-        border: `2px solid ${selected ? tier.color : th.border}`,
-        background: selected ? th.bgCardSelected : th.bgCardAlt,
-        transition: "all 0.18s",
-      }}
+      className={`tier-card ${selected ? 'selected' : ''}`}
+      style={{ '--progress-pct': `${pct}%` }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" }}>
-        <span style={{ fontSize: "15px", fontWeight: 700, color: selected ? tier.color : th.textPrimary, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+      <div className="tier-card-header">
+        <span className="tier-card-label">
           {tier.label}
         </span>
-        <span style={{ fontSize: "16px", fontWeight: 700, color: th.textPrimary }}>{languageCurrency(tier.amount, dollarFirst)}</span>
+        <span className="tier-card-amount">{languageCurrency(tier.amount, dollarFirst)}</span>
       </div>
 
-      <div style={{ background: th.vizProgressTrack, borderRadius: "4px", height: "6px", overflow: "hidden", marginBottom: "6px" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: tier.color, transition: "width 0.4s ease" }} />
+      <div className="tier-card-progress">
+        <div className="tier-card-progress-fill"></div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: th.textMuted, fontWeight: 500 }}>
-        <span>{t.brickCount(tier.funded, tier.total)}</span>
-        <span style={{ color: tier.color, fontWeight: 700 }}>{pct}%</span>
+      <div className="tier-card-stats">
+        <span className="tier-card-count">{t.brickCount(tier.funded, tier.total)}</span>
+        <span className="tier-card-pct">{pct}%</span>
       </div>
     </div>
   );
@@ -633,7 +655,7 @@ function languageCurrency(amount, dollarFirst = true) {
   return dollarFirst ? `$${amount.toLocaleString()}` : `${amount.toLocaleString()} $`;
 }
 
-function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, language }) {
+function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, language, t }) {
   const th = theme ?? THEMES.dark;
   if (!totalGoal || totalGoal <= 0) return null;
 
@@ -645,19 +667,19 @@ function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, language })
   const slices = [
     {
       key: "ramadan",
-      label: language === "fr" ? "Ramadan atteint" : language === "ar" ? "تم تحقيق رمضان" : "Ramadan raised",
+      label: t.ramadanRaisedLabel,
       value: ramadan,
       color: theme.accentGold,
     },
     {
       key: "other",
-      label: language === "fr" ? "Fonds collectés" : language === "ar" ? "الأموال المجمعة" : "Collected funds",
+      label: t.collectedFundsLabel,
       value: otherRaised,
       color: "#4FB6B0",
     },
     {
       key: "remaining",
-      label: language === "fr" ? "Reste" : language === "ar" ? "المتبقي من الهدف" : "Remaining goal",
+      label: t.remainingGoalLabel,
       value: remaining,
       color: "#5B627A",
     },
@@ -696,7 +718,7 @@ function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, language })
   return (
     <div className="campaign-pie">
       <div className="campaign-pie-title">
-        {language === "fr" ? "Vue d’ensemble de la campagne" : language === "ar" ? "نظرة عامة على الحملة" : "Campaign overview"}
+        {t.campaignOverview}
       </div>
       <div className="campaign-pie-body">
         <svg viewBox="0 0 120 120" className="campaign-pie-svg" aria-hidden="true">
@@ -709,13 +731,13 @@ function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, language })
             {"%"}
           </text>
           <text x={cx} y={cy + 9} textAnchor="middle" fontSize="7" fill={th.textMuted}>
-            {language === "fr" ? "atteint" : language === "ar" ? "محقق" : "reached"}
+            {t.reached}
           </text>
         </svg>
         <div className="campaign-pie-legend">
           {slices.map((slice) => (
             <div key={slice.key} className="campaign-pie-legend-row">
-              <span className="campaign-pie-dot" style={{ background: slice.color }} />
+              <span className="campaign-pie-dot"></span>
               <div className="campaign-pie-legend-text">
                 <span className="campaign-pie-legend-label">{slice.label}</span>
                 <span className="campaign-pie-legend-value">
@@ -740,41 +762,11 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
   if (Object.keys(totalsByEmail).length === 0) return null;
 
   return (
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        overflow: "auto",
-        maxHeight: "640px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "11px",
-          fontWeight: 700,
-          textAlign: "center",
-          letterSpacing: "0.1em",
-          color: th.textMuted,
-          textTransform: "uppercase",
-          marginBottom: "8px",
-          flexShrink: 0,
-        }}
-      >
-        {language === "fr" ? "Liste des donateurs" : language === "ar" ? "قائمة المتبرعين" : "List of donors"}
+    <div className="donations-list">
+      <div className="donations-list-title">
+        {t.donorsList}
       </div>
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: "auto",
-          width: "100%",
-          paddingRight: isRTL ? "0" : "6px",
-          paddingLeft: isRTL ? "6px" : "0",
-        }}
-      >
+      <div className="donations-list-scroll">
         {Object.values(totalsByEmail).map((d, idx) => {
           const block = String(d.details).split("1x ")[1];
           const tier = Object.values(tierByKey).find((value) => value.name.toLowerCase() === block.toLowerCase());
@@ -787,30 +779,17 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
           return (
             <div
               key={`donation-${d.email}-${idx}`}
-              style={{
-                padding: "10px 12px",
-                marginBottom: "8px",
-                borderRadius: "8px",
-                background: th.bgCard,
-                border: `2px solid ${tierColor}`,
-              }}
+              className="donation-item"
             >
-              <div style={{ fontSize: "14px", fontWeight: 700, color: th.textPrimary, marginBottom: "4px" }}>{displayName}</div>
-              <div style={{ fontSize: "13px", color: th.accentGold, marginBottom: "6px" }}>
+              <div className="donation-item-name">{displayName}</div>
+              <div className="donation-item-amount">
                 {dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`}
               </div>
-              <div style={{ fontSize: "11px", color: th.textMuted, marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <div className="donation-item-tier">
                 {tierLabel}
               </div>
-              <div style={{ background: th.vizProgressTrack, borderRadius: "4px", height: "5px", overflow: "hidden" }}>
-                <div
-                  style={{
-                    width: `${progressPct}%`,
-                    height: "100%",
-                    background: (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? "#B87AD9",
-                    transition: "width 0.3s ease",
-                  }}
-                />
+              <div className="donation-item-progress" style={{ '--progress-pct': `${progressPct}%` }}>
+                <div className="donation-item-progress-fill"></div>
               </div>
             </div>
           );
@@ -823,8 +802,8 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
 const DonationsList = memo(DonationsListInner);
 
 export default function MosqueDonation() {
-  const [language, setLanguage] = useState("fr");
-  const [t, setT] = useState(en);
+  const [language, setLanguage] = useState(INITIAL_LANGUAGE);
+  const [t, setT] = useState(INITIAL_TRANSLATION);
   const [tiers, setTiers] = useState(INITIAL_TIERS);
   const [selectedTier, setSelectedTier] = useState(0);
   const [donations, setDonations] = useState([]);
@@ -832,6 +811,10 @@ export default function MosqueDonation() {
   const [totalsByEmail, setTotalsByEmail] = useState({});
   const [themeMode, setThemeMode] = useState("dark");
   const [showDonationDialog, setShowDonationDialog] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const languageDropdownRef = useRef(null);
   const theme = THEMES[themeMode] ?? THEMES.dark;
 
   useEffect(() => {
@@ -929,6 +912,21 @@ export default function MosqueDonation() {
     };
   }, [language]);
 
+  useEffect(() => {
+    if (!showLanguageMenu) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!languageDropdownRef.current?.contains(event.target)) {
+        setShowLanguageMenu(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [showLanguageMenu]);
+
   const isRTL = language === "ar";
   const localizedTiers = tiers.map((tier) => ({
     ...tier,
@@ -944,6 +942,14 @@ export default function MosqueDonation() {
   const headerRamadanPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((ramadanRaised / RAMADAN_TARGET) * 100)) : 0;
   const currencyFirst = language === "en";
 
+  function handleTierSelect(nextTier) {
+    setSelectedTier(nextTier);
+
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1200px)").matches) {
+      setShowRightSidebar(true);
+    }
+  }
+
   function handleFund() {
     setTiers((prev) =>
       prev.map((tier) =>
@@ -955,14 +961,8 @@ export default function MosqueDonation() {
   return (
     <div
       dir={isRTL ? "rtl" : "ltr"}
-      style={{
-        minHeight: "100vh",
-        background: theme.bgPage,
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: isRTL ? "'Amiri', system-ui, sans-serif" : "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        color: theme.textSecondary,
-      }}
+      className={`mosque-donation ${isRTL ? 'rtl' : ''}`}
+      data-theme={themeMode}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
@@ -971,600 +971,473 @@ export default function MosqueDonation() {
         ::-webkit-scrollbar-thumb{background:${theme.scrollbarThumb};border-radius:4px}
       `}</style>
 
-      <header
-        style={{
-          padding: "14px 32px 16px",
-          borderBottom: `1px solid ${theme.borderAccent}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "20px",
-          flexShrink: 0,
-          background: theme.bgHeader,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 auto", minWidth: 0 }}>
-          <img
-            src="/logo-ccai.png"
-            alt="CCAI logo, stylized geometric calligraphy"
-            style={{ width: "88px", height: "88px", objectFit: "contain", flexShrink: 0 }}
-          />
-          <div>
-            <div
-              style={{
-                fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
-                fontSize: "11px",
-                fontWeight: 700,
-                letterSpacing: isRTL ? "0.04em" : "0.2em",
-                color: theme.accentGold,
-                marginBottom: "2px",
-                textTransform: isRTL ? "none" : "uppercase",
-              }}
-            >
-              {t.centerName}
-            </div>
-            <h1 style={{ fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif", fontSize: "16px", fontWeight: 600, letterSpacing: isRTL ? "0" : "0.06em", color: theme.textPrimary, margin: 0 }}>
-              {t.title}
-            </h1>
-          </div>
-        </div>
-
-        <div
-          style={{
-            flex: "1 1 auto",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: 0,
-            width: "100%",
-            maxWidth: 420,
-            padding: "0 8px",
-          }}
-        >
-          {/* Unified Progress Bar */}
-          <div
-            style={{
-              width: "100%",
-              background: theme.bgCardAlt,
-              borderRadius: 16,
-              padding: "18px 22px 16px 22px",
-              boxShadow:
-                theme.mode === "dark"
-                  ? "0 2px 16px 0 rgba(20,18,34,0.11)"
-                  : "0 2px 12px 0 rgba(62,54,38,0.09)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            {/* Centered Ramadan Objective Title */}
-            <div
-              style={{
-                width: "100%",
-                textAlign: "center",
-                marginBottom: "9px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "17px",
-                  fontWeight: 700,
-                  color: theme.textMuted,
-                  letterSpacing: isRTL ? "0" : "0.05em",
-                }}
-              >
-                {language === "fr"
-                  ? "Objectif de Ramadan"
-                  : language === "ar"
-                    ? "هدف رمضان"
-                    : "Ramadan objective"}
-              </span>
-            </div>
-
-            {/* Large total raised line */}
-            <div
-              style={{
-                fontSize: "26px",
-                fontWeight: 800,
-                color: theme.accentGold,
-                letterSpacing: isRTL ? "0" : "0.02em",
-                lineHeight: 1,
-                marginBottom: "7px",
-                textAlign: "center",
-                fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
-                wordBreak: "break-word",
-              }}
-            >
-              {languageCurrency(ramadanRaised, currencyFirst)}{" "}
-              <span
-                style={{
-                  fontSize: "17.5px",
-                  fontWeight: 700,
-                  color: theme.textMuted,
-                }}
-              >
-                {language === "fr"
-                  ? "de"
-                  : language === "ar"
-                    ? "من"
-                    : "of"}
-              </span>{" "}
-              {languageCurrency(RAMADAN_TARGET, currencyFirst)}
-            </div>
-
-            {/* Progress Bar and Value Row */}
-            <div
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "4px",
-                gap: "12px",
-              }}
-            >
-              <div
-                aria-hidden="true"
-                style={{
-                  flex: 1,
-                  height: "19px",
-                  borderRadius: "999px",
-                  background: theme.vizProgressTrack,
-                  overflow: "hidden",
-                  boxShadow: `0 0 0 2px ${theme.borderAccent}`,
-                }}
-              >
-                <div
-                  style={{
-                    width: `${headerRamadanPct}%`,
-                    height: "100%",
-                    borderRadius: "999px",
-                    background: sel.color,
-                    transition: "width 0.4s cubic-bezier(.79,.14,.15,.86)",
-                    boxShadow: `0 0 16px 2px ${sel.color}44`,
-                  }}
-                />
+      <header className="mosque-donation-header">
+        <div className="mosque-donation-header-inner">
+          <div className="header-left">
+            <img
+              src="/logo-ccai.png"
+              alt="CCAI logo, stylized geometric calligraphy"
+              className="header-logo"
+            />
+            <div className="header-title">
+              <div className="header-center-name">
+                {t.centerName}
               </div>
-              {/* Progress Value */}
-              <span
-                style={{
-                  fontSize: "15px",
-                  fontWeight: 800,
-                  color: theme.accentGold,
-                  marginLeft: "8px",
-                  whiteSpace: "nowrap",
-                  minWidth: "35px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                }}
-              >
-                {headerRamadanPct}%
-              </span>
+              <h1 className="header-title-text">
+                {t.title}
+              </h1>
             </div>
           </div>
-        </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", flex: "1 1 auto", justifyContent: isRTL ? "flex-start" : "flex-end", minWidth: 0 }}>
-          <button
-            onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
-            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            style={{
-              padding: "6px 10px",
-              borderRadius: "6px",
-              border: `1px solid ${theme.border}`,
-              background: theme.bgCard,
-              color: theme.textMuted,
-              cursor: "pointer",
-              fontSize: "18px",
-            }}
-          >
-            {themeMode === "dark" ? "☀" : "☾"}
-          </button>
-          <span style={{ fontSize: "11px", color: theme.textMuted, letterSpacing: isRTL ? "0" : "0.08em", textTransform: isRTL ? "none" : "uppercase" }}>
-            {t.language}
-          </span>
-          {Object.entries(LANGUAGES).map(([code, label]) => (
+          <div className="header-center">
+            {/* Unified Progress Bar */}
+            <div className="progress-bar-container">
+              {/* Centered Ramadan Objective Title */}
+              <div className="progress-objective-title">
+                <span className="progress-objective-text">
+                  {t.ramadanObjective}
+                </span>
+              </div>
+
+              {/* Large total raised line */}
+              <div className="progress-raised-line">
+                {languageCurrency(ramadanRaised, currencyFirst)}{" "}
+                <span className="progress-raised-of">
+                  {t.prepositionOf}
+                </span>{" "}
+                {languageCurrency(RAMADAN_TARGET, currencyFirst)}
+              </div>
+
+              <div className="progress-bar-row" style={{ '--progress-pct': `${headerRamadanPct}%` }}>
+                <div className="progress-bar-track">
+                  <div className="progress-bar-fill"></div>
+                </div>
+                <span className="progress-bar-value">
+                  {headerRamadanPct}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="header-right">
             <button
-              key={code}
-              onClick={() => setLanguage(code)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "999px",
-                border: `1px solid ${language === code ? theme.accentGold : theme.border}`,
-                background: language === code ? theme.bgCardSelected : theme.bgCard,
-                color: language === code ? theme.accentGold : theme.textPrimary,
-                cursor: "pointer",
-                fontSize: "12px",
-                fontWeight: 700,
-              }}
+              onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
+              title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="theme-toggle-button"
             >
-              {label}
+              {themeMode === "dark" ? "☀" : "☾"}
             </button>
-          ))}
+            <span className="language-label">
+              {t.language}
+            </span>
+            <div className="language-button-group">
+              {LANGUAGE_OPTIONS.map(({ code, label }) => (
+                <button
+                  key={code}
+                  onClick={() => setLanguage(code)}
+                  className={`language-button ${language === code ? 'active' : ''}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="language-dropdown" ref={languageDropdownRef}>
+              <button
+                type="button"
+                className={`language-dropdown-trigger ${showLanguageMenu ? 'open' : ''}`}
+                onClick={() => setShowLanguageMenu((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={showLanguageMenu}
+              >
+                {LANGUAGE_OPTIONS.find((option) => option.code === language)?.label ?? language.toUpperCase()}
+              </button>
+              {showLanguageMenu && (
+                <div className="language-dropdown-menu" role="menu">
+                  {LANGUAGE_OPTIONS.map(({ code, label }) => (
+                    <button
+                      key={code}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setLanguage(code);
+                        setShowLanguageMenu(false);
+                      }}
+                      className={`language-dropdown-item ${language === code ? 'active' : ''}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
       <div className="layout-main">
-        <div className="layout-left">
-          <div style={{
-            flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <div
-              style={{
-                fontSize: "13px",
-                fontWeight: 800,
-                letterSpacing: isRTL ? "0" : "0.12em",
-                color: theme.textPrimary,
-                textTransform: isRTL ? "none" : "uppercase",
-                textAlign: "center",
-                width: "100%",
-              }}
-            >
-              {t.scanToDonate}
-            </div>
-            <div style={{ fontSize: "12px", color: theme.textMuted, textAlign: "center", lineHeight: 1.5, width: "100%" }}>
-              {t.qrHelp}
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", width: "100%", margin: "10px 0" }}>
-              <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
-            </div>
-          </div>
-          <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
-          <CampaignPie totalGoal={totalGoal} totalRaised={totalRaised} ramadanRaised={ramadanRaised} theme={theme} language={language} />
-        </div>
-
+        {/* Sidebar Backdrop */}
         <div
-          style={{
-            flex: "1 1 0",
-            padding: isRTL ? "0px 24px 8px 100px" : "0px 100px 8px 24px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-start",
-            alignItems: "center",
-            minWidth: 0,
+          className={`sidebar-backdrop ${showLeftSidebar || showRightSidebar ? "visible" : ""}`}
+          onClick={() => {
+            setShowLeftSidebar(false);
+            setShowRightSidebar(false);
           }}
+        ></div>
+
+        {/* Left Sidebar Toggle Button */}
+        <button
+          className="sidebar-toggle-btn sidebar-toggle-left"
+          onClick={() => setShowLeftSidebar(!showLeftSidebar)}
+          aria-label="Toggle left sidebar"
+          title="Donations & QR"
         >
-          <div style={{ width: "100%", maxWidth: "760px", margin: "0", textAlign: "center" }}>
-            <div style={{ padding: "8px 20px" }}>
-              <div>
-                <p
-                  style={{
-                    fontFamily: "'Amiri','Scheherazade New',serif",
-                    fontSize: "24px",
-                    lineHeight: 1.8,
-                    color: theme.vizHadith,
-                    direction: "rtl",
-                    margin: 0,
-                  }}
-                >
-                  مَنْ بَنَى مَسْجِدًا يَبْتَغِي بِهِ وَجْهَ اللَّهِ بَنَى اللَّهُ لَهُ مِثْلَهُ فِي الْجَنَّةِ
-                  <span style={{ fontSize: "18px", color: theme.accentGold, marginRight: "8px" }}> ― متفق عليه</span>
-                </p>
-                <p
-                  style={{
-                    fontFamily: "inherit",
-                    fontSize: "15px",
-                    color: theme.textPrimary,
-                    textAlign: isRTL ? "right" : "left",
-                    margin: "7px 0 0 0",
-                    direction: isRTL ? "rtl" : "ltr"
-                  }}
-                >
-                  {
-                    language === "fr"
-                      ? <>« Quiconque construit une mosquée en cherchant la Face d’Allah, Allah lui construira son équivalent au Paradis. »<span style={{ fontSize: "13px", color: theme.accentGold, marginLeft: "6px" }}>— Rapporté par al-Bukhari et Muslim</span></>
-                      : <>“Whoever builds a mosque seeking the pleasure of Allah, Allah will build for him its equivalent in Paradise.”<span style={{ fontSize: "13px", color: theme.accentGold, marginLeft: "6px" }}>— Agreed upon</span></>
-                  }
-                </p>
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="sidebar-toggle-icon">
+            <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M15 15h2v2h-2zM18 15h2v5h-2zM15 18h2v2h-2z" fill="currentColor" />
+          </svg>
+        </button>
+
+        {/* Right Sidebar Toggle Button */}
+        <button
+          className="sidebar-toggle-btn sidebar-toggle-right"
+          onClick={() => setShowRightSidebar(!showRightSidebar)}
+          aria-label="Toggle right sidebar"
+          title="Tier Selection"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="sidebar-toggle-icon">
+            <path d="M12 20s-6.5-3.9-6.5-9.1A3.9 3.9 0 0 1 9.4 7c1.1 0 2.1.5 2.6 1.4.5-.9 1.5-1.4 2.6-1.4a3.9 3.9 0 0 1 3.9 3.9C18.5 16.1 12 20 12 20Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M9.2 12h5.6M12 9.2v5.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        <div className="layout-main-inner">
+          {/* Desktop Layout-Left */}
+          <div className="layout-left">
+            <div className="qr-section">
+              <div className="qr-title">
+                {t.scanToDonate}
+              </div>
+              <div className="qr-help">
+                {t.qrHelp}
+              </div>
+              <div className="qr-code-container">
+                <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
               </div>
             </div>
+            <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
+            <CampaignPie totalGoal={totalGoal} totalRaised={totalRaised} ramadanRaised={ramadanRaised} theme={theme} language={language} t={t} />
           </div>
 
-          <div style={{ position: "relative", width: "100%", maxWidth: "760px" }}>
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                pointerEvents: "none",
-                background: theme.mode === "light" ? "radial-gradient(ellipse at 50% 52%, rgba(154,123,79,0.06) 0%, transparent 65%)" : "radial-gradient(ellipse at 50% 52%, rgba(200,169,110,0.07) 0%, transparent 65%)",
-              }}
-            />
+          {/* Mobile Layout-Left Sidebar */}
+          <div className={`layout-left--mobile ${showLeftSidebar ? "open" : ""}`}>
+            <button
+              className="close-button"
+              onClick={() => setShowLeftSidebar(false)}
+              aria-label="Close left sidebar"
+            >
+              ×
+            </button>
+            <div style={{ marginTop: "40px" }}>
+              <div className="qr-section">
+                <div className="qr-title">
+                  {t.scanToDonate}
+                </div>
+                <div className="qr-help">
+                  {t.qrHelp}
+                </div>
+                <div className="qr-code-container">
+                  <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
+                </div>
+              </div>
+              <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
+              <CampaignPie totalGoal={totalGoal} totalRaised={totalRaised} ramadanRaised={ramadanRaised} theme={theme} language={language} t={t} />
+            </div>
+          </div>
 
-            <div className="mosque-side-chips">
-              {[
-                { id: 3, centerPct: (0 + 394) / 2 / 740 },
-                { id: 2, centerPct: (394 + 514) / 2 / 740 },
-                { id: 1, centerPct: (514 + 624) / 2 / 740 },
-                { id: 0, centerPct: (624 + 740) / 2 / 740 },
-              ].map(({ id, centerPct }) => {
-                const tier = localizedTiers[id];
-                const tierRemaining = tier.total - tier.funded;
-                const isSelected = selectedTier === id;
+          <div className="layout-center">
+            <div className="center-content">
+              <div className="hadith-section">
+                <div className="hadith-text">
+                  <p className="hadith-arabic">
+                    {t.hadithArabic}
+                    <span className="hadith-reference"> ― {t.hadithSource}</span>
+                  </p>
+                  <p
+                    style={{
+                      direction: isRTL ? "rtl" : "ltr"
+                    }}
+                    className="hadith-translation"
+                  >
+                    {t.hadithTranslation}
+                  </p>
+                </div>
+              </div>
+            </div>
 
+            <div className="mosque-viz-wrapper">
+              <div className="mosque-viz-overlay"></div>
+
+              <div className="mosque-viz-container">
+                <MosqueViz tiers={localizedTiers} selectedTier={selectedTier} onSelectTier={handleTierSelect} theme={theme} />
+              </div>
+
+              <div className="mosque-side-chips">
+                {[
+                  { id: 3, centerPct: 195 / 740 },
+                  { id: 2, centerPct: 446.5 / 740 },
+                  { id: 1, centerPct: 561.5 / 740 },
+                  { id: 0, centerPct: 676.5 / 740 },
+                ].map(({ id, centerPct }) => {
+                  const tier = localizedTiers[id];
+                  const tierRemaining = tier.total - tier.funded;
+                  const isSelected = selectedTier === id;
+
+                  return (
+                    <div
+                      key={id}
+                      onClick={() => {
+                        setSelectedTier(id);
+                        setShowRightSidebar(true);
+                      }}
+                      className={`mosque-side-chip ${isSelected ? "selected" : ""}`}
+                      style={{
+                        right: isRTL ? "auto" : "8px",
+                        left: isRTL ? "8px" : "auto",
+                        top: `${centerPct * 100}%`,
+                        background: isSelected ? tier.color : theme.bgCardAlt,
+                        border: `2px solid ${isSelected ? tier.color : theme.border}`,
+                        boxShadow: isSelected
+                          ? `0 0 16px ${tier.color}66`
+                          : theme.mode === "light"
+                            ? "0 2px 8px rgba(0,0,0,0.08)"
+                            : "0 2px 8px rgba(0,0,0,0.5)",
+                        zIndex: 10,
+                      }}
+                    >
+                      <span className="mosque-side-chip-amount" style={{ color: isSelected ? "#000000" : theme.textPrimary }}>
+                        {languageCurrency(tier.amount, currencyFirst)}
+                      </span>
+                      <span className="mosque-side-chip-remaining" style={{ color: isSelected ? "#00000099" : tier.color }}>
+                        {t.sideChip(tierRemaining)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="tier-legend-wrapper">
+              {[...localizedTiers].reverse().map((tier) => (
+                <div
+                  key={tier.id}
+                  onClick={() => handleTierSelect(tier.id)}
+                  className="tier-legend-item"
+                  style={{
+                    border: `2px solid ${selectedTier === tier.id ? tier.color : theme.border}`,
+                    background: selectedTier === tier.id ? theme.bgCardSelected : theme.bgCardAlt,
+                    color: selectedTier === tier.id ? tier.color : theme.textPrimary,
+                  }}
+                >
+                  <span className="tier-legend-color-dot" style={{ background: tier.color }} />
+                  {t.legendLabel(tier.label, tier.amount)}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="layout-right">
+            <div className="tier-selection">
+              <div className="tier-selection-title">
+                {t.selectTier}
+              </div>
+              {[...localizedTiers].reverse().map((tier) => {
+                const remaining = tier.total - tier.funded;
+                const pct = tier.total > 0 ? Math.round((tier.funded / tier.total) * 100) : 0;
+                const isSelected = selectedTier === tier.id;
                 return (
                   <div
-                    key={id}
-                    onClick={() => setSelectedTier(id)}
+                    key={tier.id}
+                    onClick={() => setSelectedTier(tier.id)}
+                    className={`tier-card ${isSelected ? 'selected' : ''}`}
                     style={{
-                      position: "absolute",
-                      // Move chips further to the right (or left for RTL), and make the offset responsive
-                      right: isRTL
-                        ? "auto"
-                        : "clamp(-105px, calc(-13vw + 6px), -70px)",
-                      left: isRTL
-                        ? "clamp(-105px, calc(-13vw + 6px), -70px)"
-                        : "auto",
-                      top: `${centerPct * 100}%`,
-                      transform: "translateY(-50%)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      padding: "10px 14px",
-                      borderRadius: "10px",
-                      cursor: "pointer",
-                      background: isSelected ? tier.color : theme.bgCardAlt,
-                      border: `2px solid ${isSelected ? tier.color : theme.border}`,
-                      transition: "all 0.18s",
-                      minWidth: "80px",
-                      boxShadow: isSelected
-                        ? `0 0 16px ${tier.color}66`
-                        : theme.mode === "light"
-                          ? "0 2px 8px rgba(0,0,0,0.08)"
-                          : "0 2px 8px rgba(0,0,0,0.5)",
-                      zIndex: 10,
+                      borderColor: isSelected ? tier.color : undefined,
+                      background: isSelected ? theme.bgCardSelected : undefined,
+                      '--tier-color': tier.color,
                     }}
                   >
-                    <span style={{ fontSize: "22px", fontWeight: 800, color: isSelected ? "#000000" : theme.textPrimary, lineHeight: 1.2, whiteSpace: "nowrap" }}>
-                      {languageCurrency(tier.amount, currencyFirst)}
-                    </span>
-                    <span style={{ fontSize: "16px", fontWeight: 700, color: isSelected ? "#00000099" : tier.color, marginTop: "3px", whiteSpace: "nowrap" }}>
-                      {t.sideChip(tierRemaining)}
-                    </span>
+                    <div className="tier-card-header">
+                      <span className="tier-name" style={{ color: isSelected ? tier.color : undefined }}>
+                        {tier.label}
+                      </span>
+                      <span className="tier-amount">
+                        {languageCurrency(tier.amount, currencyFirst)}
+                      </span>
+                    </div>
+                    <div className="tier-card-progress" style={{ '--tier-color': tier.color }}>
+                      <div className="tier-card-progress-fill" style={{ width: `${pct}%` }}></div>
+                    </div>
+                    <div className="tier-card-stats">
+                      <span>{t.brickCount(tier.funded, tier.total)}</span>
+                      <span className="tier-percentage" style={{ color: tier.color }}>
+                        {pct}%
+                      </span>
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="mosque-viz-container">
-              <MosqueViz tiers={localizedTiers} selectedTier={selectedTier} onSelectTier={setSelectedTier} theme={theme} />
-            </div>
-            <div className="mosque-viz-mobile-summary">
-              <div
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: "10px",
-                  marginTop: "12px",
-                  background: theme.bgCardAlt,
-                  border: `1px solid ${theme.border}`,
-                  fontSize: "14px",
-                  lineHeight: 1.5,
-                  textAlign: "center",
+            <div className="selected-tier-card" style={{ '--sel-color': sel.color }}>
+              <div className="selected-tier-label">
+                {sel.label}
+              </div>
+              <div className="selected-tier-amount">
+                {languageCurrency(sel.amount, currencyFirst)}
+              </div>
+              <div className="selected-tier-per-brick">
+                {t.perBrick}
+              </div>
+
+              <div className="selected-tier-progress" style={{ '--progress-pct': `${pct}%` }}>
+                <div className="selected-tier-progress-stats">
+                  <span className="selected-tier-progress-count">
+                    {t.brickCount(sel.funded, sel.total)}
+                  </span>
+                  <span className="selected-tier-progress-pct">
+                    {pct}%
+                  </span>
+                </div>
+                <div className="selected-tier-progress-bar">
+                  <div className="selected-tier-progress-fill"></div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (remaining > 0) setShowDonationDialog(true);
                 }}
+                disabled={remaining === 0}
+                className={`donate-button ${remaining === 0 ? 'disabled' : ''}`}
               >
-                {t.vizMobileSummary ??
-                  language === "fr" ? "La visualisation de la mosquée est préférable sur un écran plus grand. Utilisez les cartes ci-dessous pour explorer le progrès sur mobile." :
-                  language === "ar" ? "يفضل عرض المسجد على شاشة أكبر. استخدم البطاقات أدناه لاستكشاف التقدم على الهاتف." :
-                    "Mosque visualization is best viewed on a larger screen. Use the tier cards below to explore progress on mobile."}
-              </div>
+                {remaining > 0 ? t.fundButton(sel.amount) : t.fullyFunded}
+              </button>
+              <p className="selected-tier-note">
+                {t.zeffyNote}
+              </p>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "8px", marginTop: "14px", flexWrap: "wrap", justifyContent: "center" }}>
-            {[...localizedTiers].reverse().map((tier) => (
-              <div
-                key={tier.id}
-                onClick={() => setSelectedTier(tier.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "9px 18px",
-                  borderRadius: "20px",
-                  cursor: "pointer",
-                  transition: "all 0.18s",
-                  border: `2px solid ${selectedTier === tier.id ? tier.color : theme.border}`,
-                  background: selectedTier === tier.id ? theme.bgCardSelected : theme.bgCardAlt,
-                  fontSize: "15px",
-                  fontWeight: 700,
-                  color: selectedTier === tier.id ? tier.color : theme.textPrimary,
-                }}
-              >
-                <span style={{ width: 11, height: 11, borderRadius: "2px", background: tier.color, display: "inline-block", flexShrink: 0 }} />
-                {t.legendLabel(tier.label, tier.amount)}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="layout-right">
-          <div>
-            <div
-              style={{
-                fontSize: "14px",
-                fontWeight: 800,
-                letterSpacing: isRTL ? "0" : "0.12em",
-                color: theme.textMuted,
-                marginBottom: "10px",
-                textTransform: isRTL ? "none" : "uppercase",
-              }}
-            >
-              {t.selectTier}
-            </div>
-            {[...localizedTiers].reverse().map((tier) => (
-              <TierCard
-                key={tier.id}
-                tier={tier}
-                selected={selectedTier === tier.id}
-                onSelect={setSelectedTier}
-                t={t}
-                theme={theme}
-                dollarFirst={currencyFirst}
-              />
-            ))}
-          </div>
-
-          <div style={{ padding: "20px", borderRadius: "12px", border: `2px solid ${sel.color}`, background: theme.mode === "light" ? theme.bgCardAlt : "#1e2238" }}>
-            <div style={{ fontSize: "15px", fontWeight: 800, letterSpacing: isRTL ? "0" : "0.12em", color: sel.color, marginBottom: "6px", textTransform: isRTL ? "none" : "uppercase" }}>
-              {sel.label}
-            </div>
-            <div style={{ fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif", fontSize: "36px", fontWeight: 700, color: theme.textPrimary, lineHeight: 1 }}>
-              {languageCurrency(sel.amount, currencyFirst)}
-            </div>
-            <div style={{ fontSize: "16px", color: theme.textMuted, marginBottom: "16px" }}>{t.perBrick}</div>
-
-            <div style={{ marginBottom: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", color: theme.textPrimary, marginBottom: "7px", fontWeight: 600 }}>
-                <span>{t.brickCount(sel.funded, sel.total)}</span>
-                <span style={{ color: sel.color, fontWeight: 800 }}>{pct}%</span>
-              </div>
-              <div style={{ background: theme.vizProgressTrack, borderRadius: "6px", height: "12px", overflow: "hidden" }}>
-                <div style={{ width: `${pct}%`, height: "100%", borderRadius: "6px", background: sel.color, transition: "width 0.5s ease" }} />
-              </div>
-            </div>
-
+          {/* Mobile Layout-Right Sidebar */}
+          <div className={`layout-right--mobile ${showRightSidebar ? "open" : ""}`}>
             <button
-              type="button"
-              onClick={() => {
-                if (remaining > 0) setShowDonationDialog(true);
-              }}
-              disabled={remaining === 0}
-              style={{
-                width: "100%",
-                padding: "16px",
-                borderRadius: "8px",
-                cursor: remaining > 0 ? "pointer" : "not-allowed",
-                border: "none",
-                background: remaining > 0 ? sel.color : "#2e3250",
-                color: remaining > 0 ? "#000000" : "#888899",
-                fontSize: "16px",
-                fontWeight: 800,
-                letterSpacing: isRTL ? "0" : "0.06em",
-                textTransform: isRTL ? "none" : "uppercase",
-                transition: "opacity 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                if (remaining > 0) e.currentTarget.style.opacity = "0.85";
-              }}
-              onMouseLeave={(e) => {
-                if (remaining > 0) e.currentTarget.style.opacity = "1";
-              }}
+              className="close-button"
+              onClick={() => setShowRightSidebar(false)}
+              aria-label="Close right sidebar"
             >
-              {remaining > 0 ? t.fundButton(sel.amount) : t.fullyFunded}
+              ×
             </button>
-            <p
-              style={{
-                marginTop: "10px",
-                fontSize: "12px",
-                color: theme.textMuted,
-                lineHeight: 1.6,
-                textAlign: isRTL ? "right" : "left",
-              }}
-            >
-              {t.zeffyNote}
-            </p>
+            <div style={{ marginTop: "40px" }}>
+              <div className="tier-selection">
+                <div className="tier-selection-title">
+                  {t.selectTier}
+                </div>
+                {[...localizedTiers].reverse().map((tier) => {
+                  const remaining = tier.total - tier.funded;
+                  const pct = tier.total > 0 ? Math.round((tier.funded / tier.total) * 100) : 0;
+                  const isSelected = selectedTier === tier.id;
+                  return (
+                    <div
+                      key={tier.id}
+                      onClick={() => setSelectedTier(tier.id)}
+                      className={`tier-card ${isSelected ? 'selected' : ''}`}
+                      style={{
+                        borderColor: isSelected ? tier.color : undefined,
+                        background: isSelected ? theme.bgCardSelected : undefined,
+                        '--tier-color': tier.color,
+                      }}
+                    >
+                      <div className="tier-card-header">
+                        <span className="tier-name" style={{ color: isSelected ? tier.color : undefined }}>
+                          {tier.label}
+                        </span>
+                        <span className="tier-amount">
+                          {languageCurrency(tier.amount, currencyFirst)}
+                        </span>
+                      </div>
+                      <div className="tier-card-progress" style={{ '--tier-color': tier.color }}>
+                        <div className="tier-card-progress-fill" style={{ width: `${pct}%` }}></div>
+                      </div>
+                      <div className="tier-card-stats">
+                        <span>{t.brickCount(tier.funded, tier.total)}</span>
+                        <span className="tier-percentage" style={{ color: tier.color }}>
+                          {pct}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="selected-tier-card" style={{ '--sel-color': sel.color }}>
+                <div className="selected-tier-label">
+                  {sel.label}
+                </div>
+                <div className="selected-tier-amount">
+                  {languageCurrency(sel.amount, currencyFirst)}
+                </div>
+                <div className="selected-tier-per-brick">
+                  {t.perBrick}
+                </div>
+
+                <div className="selected-tier-progress" style={{ '--progress-pct': `${pct}%` }}>
+                  <div className="selected-tier-progress-stats">
+                    <span className="selected-tier-progress-count">
+                      {t.brickCount(sel.funded, sel.total)}
+                    </span>
+                    <span className="selected-tier-progress-pct">
+                      {pct}%
+                    </span>
+                  </div>
+                  <div className="selected-tier-progress-bar">
+                    <div className="selected-tier-progress-fill"></div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (remaining > 0) setShowDonationDialog(true);
+                  }}
+                  disabled={remaining === 0}
+                  className={`donate-button ${remaining === 0 ? 'disabled' : ''}`}
+                >
+                  {remaining > 0 ? t.fundButton(sel.amount) : t.fullyFunded}
+                </button>
+                <p className="selected-tier-note">
+                  {t.zeffyNote}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {showDonationDialog && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.75)",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "100%",
-              maxWidth: "960px",
-              maxHeight: "90vh",
-              borderRadius: "12px",
-              background: theme.bgCard,
-              color: theme.textPrimary,
-              boxShadow: "0 20px 40px rgba(0,0,0,0.45)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                padding: "10px 16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderBottom: `1px solid ${theme.borderAccent}`,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "15px",
-                  fontWeight: 700,
-                }}
-              >
-                {language === "fr"
-                  ? "Faire un don au centre"
-                  : language === "ar"
-                    ? "التبرع للمسجد"
-                    : "Support the masjid"}
-              </div>
+        <div className="donation-dialog-overlay">
+          <div className="donation-dialog-content">
+            <div className="donation-dialog-body">
               <button
                 type="button"
                 onClick={() => setShowDonationDialog(false)}
                 aria-label="Close donation dialog"
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  color: theme.textMuted,
-                  fontSize: "20px",
-                  cursor: "pointer",
-                  padding: "2px 6px",
-                  lineHeight: 1,
-                }}
+                className="donation-dialog-close"
               >
                 ×
               </button>
-            </div>
-
-            <div style={{ padding: "10px 16px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ fontSize: "13px", color: theme.textMuted }}>
-                {t.zeffyNote}
-              </div>
-              <div
-                style={{
-                  position: "relative",
-                  overflow: "hidden",
-                  width: "100%",
-                  height: "min(450px, 70vh)",
-                  borderRadius: "8px",
-                  background: "#ffffff",
-                }}
-              >
+              <div className="donation-dialog-form-wrapper">
                 <iframe
                   title="Donation form powered by Zeffy"
-                  style={{
-                    position: "absolute",
-                    border: "0",
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    right: 0,
-                    width: "100%",
-                    height: "100%",
-                  }}
                   src="https://www.zeffy.com/embed/ticketing/travaux-damenagement-dans-le-nouveau-centre"
                 />
               </div>
@@ -1573,102 +1446,53 @@ export default function MosqueDonation() {
         </div>
       )}
 
-      <footer
-        style={{
-          marginTop: "24px",
-          borderTop: `1px solid ${theme.borderAccent}`,
-          background: theme.bgHeader,
-          padding: "18px 32px 22px",
-          color: theme.textMutedAlt,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1400px",
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "28px",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: "2 1 520px", display: "flex", alignItems: "flex-start", gap: "16px" }}>
+      <footer className="footer">
+        <div>
+          <div className="footer-content">
             <img
               src="/logo-ccai.png"
               alt=""
               aria-hidden="true"
-              style={{ width: "80px", height: "80px", objectFit: "contain", flexShrink: 0, marginTop: "2px" }}
+              className="footer-logo"
             />
-            <div>
-              <div
-                style={{
-                  fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  letterSpacing: isRTL ? "0" : "0.14em",
-                  textTransform: isRTL ? "none" : "uppercase",
-                  color: theme.accentGold,
-                  marginBottom: "8px",
-                }}
-              >
+            <div className="footer-text">
+              <div className="footer-title">
                 {t.aboutCampaign}
               </div>
-              <p style={{ fontSize: "15px", lineHeight: 1.7, margin: 0, color: theme.textMutedAlt }}>{t.aboutCampaignText}</p>
+              <p className="footer-description">
+                {t.aboutCampaignText}
+              </p>
             </div>
           </div>
 
-          <div style={{ flex: "1 1 280px" }}>
-            <div
-              style={{
-                fontFamily: isRTL ? "'Amiri',serif" : "'Cinzel',serif",
-                fontSize: "14px",
-                fontWeight: 700,
-                letterSpacing: isRTL ? "0" : "0.14em",
-                textTransform: isRTL ? "none" : "uppercase",
-                color: theme.accentGold,
-                marginBottom: "8px",
-              }}
-            >
+          <div className="footer-participate">
+            <div className="footer-participate-title">
               {t.howToParticipate}
             </div>
-            <p style={{ fontSize: "15px", lineHeight: 1.7, margin: 0, color: theme.textMutedAlt }}>{t.howToParticipateText}</p>
+            <p className="footer-participate-text">{t.howToParticipateText}</p>
           </div>
-        </div>
 
-        <div
-          style={{
-            marginTop: "24px",
-            paddingTop: "20px",
-            borderTop: `1px solid ${theme.borderAccent}`,
-            width: "100%",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "20px 32px",
-            fontSize: "14px",
-            lineHeight: 1.6,
-            color: theme.textMutedAlt,
-          }}
-        >
-          <div>
-            <strong style={{ color: theme.accentGold, marginRight: "6px" }}>{t.address} :</strong>
-            287 12e Avenue, Saint-Jean-sur-Richelieu, QC J2X 1E4
-          </div>
-          <div>
-            <strong style={{ color: theme.accentGold, marginRight: "6px" }}>{t.phone} :</strong>
-            <a href="tel:+14508004266" style={{ color: "inherit", textDecoration: "none" }}>(450) 800-4266</a>
-          </div>
-          <div>
-            <strong style={{ color: theme.accentGold, marginRight: "6px" }}>{t.website} :</strong>
-            <a href="https://ccai-stjean.org/" target="_blank" rel="noopener noreferrer" style={{ color: theme.accentGold, textDecoration: "underline" }}>
-              https://ccai-stjean.org/
-            </a>
-          </div>
-          <div>
-            <strong style={{ color: theme.accentGold, marginRight: "6px" }}>Facebook :</strong>
-            <a href="https://www.facebook.com/centre.alimane.sjsr/" target="_blank" rel="noopener noreferrer" style={{ color: theme.accentGold, textDecoration: "underline" }}>
-              facebook.com/centre.alimane.sjsr
-            </a>
+          <div className="footer-contact">
+            <div className="footer-contact-item">
+              <i className="fa-solid fa-location-dot footer-contact-icon" aria-hidden="true"></i>
+              287 12e Avenue, Saint-Jean-sur-Richelieu, QC J2X 1E4
+            </div>
+            <div className="footer-contact-item">
+              <i className="fa-solid fa-phone footer-contact-icon" aria-hidden="true"></i>
+              <a href="tel:+14508004266" className="footer-contact-link">(450) 800-4266</a>
+            </div>
+            <div className="footer-contact-item">
+              <i className="fa-solid fa-globe footer-contact-icon" aria-hidden="true"></i>
+              <a href="https://ccai-stjean.org/" target="_blank" rel="noopener noreferrer" className="footer-contact-link">
+                https://ccai-stjean.org/
+              </a>
+            </div>
+            <div className="footer-contact-item">
+              <i className="fa-brands fa-facebook footer-contact-icon" aria-hidden="true"></i>
+              <a href="https://www.facebook.com/centre.alimane.sjsr/" target="_blank" rel="noopener noreferrer" className="footer-contact-link">
+                facebook.com/centre.alimane.sjsr
+              </a>
+            </div>
           </div>
         </div>
       </footer>

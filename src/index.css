@@ -171,12 +171,4 @@ a {
     display: block;
   }
 
-  .mosque-viz-svg,
-  .mosque-viz-grid-layer,
-  .mosque-viz-sky-layer,
-  .mosque-viz-band-lines,
-  .mosque-viz-ornament {
-    display: none !important;
-    pointer-events: none !important;
-  }
 }

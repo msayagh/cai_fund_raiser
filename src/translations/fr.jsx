@@ -71,6 +71,20 @@ const fr = {
     arches: "Très généreux",
     dome: "Précurseur",
   },
+  ramadanRaisedLabel: "Ramadan atteint",
+  collectedFundsLabel: "Fonds collectés",
+  remainingGoalLabel: "Reste",
+  campaignOverview: "Vue d'ensemble de la campagne",
+  reached: "atteint",
+  donorsList: "Liste des donateurs",
+  ramadanObjective: "Objectif de Ramadan",
+  prepositionOf: "de",
+  donationDialogTitle: "Faire un don au centre",
+  hadithArabic:
+    "مَنْ بَنَى مَسْجِدًا يَبْتَغِي بِهِ وَجْهَ اللَّهِ بَنَى اللَّهُ لَهُ مِثْلَهُ فِي الْجَنَّةِ",
+  hadithTranslation:
+    "Quiconque construit une mosquée en recherchant l'agrément d'Allah, Allah lui construira son équivalent au Paradis.",
+  hadithSource: "Rapporté par al-Bukhari et Muslim",
 };
 
 export default fr;

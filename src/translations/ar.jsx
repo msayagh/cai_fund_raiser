@@ -73,6 +73,20 @@ const ar = {
     arches: "جواد",
     dome: "سبّاق",
   },
+  ramadanRaisedLabel: "تم تحقيق رمضان",
+  collectedFundsLabel: "الأموال المجمعة",
+  remainingGoalLabel: "المتبقي من الهدف",
+  campaignOverview: "نظرة عامة على الحملة",
+  reached: "محقق",
+  donorsList: "قائمة المتبرعين",
+  ramadanObjective: "هدف رمضان",
+  prepositionOf: "من",
+  donationDialogTitle: "التبرع للمسجد",
+  hadithArabic:
+    "مَنْ بَنَى مَسْجِدًا يَبْتَغِي بِهِ وَجْهَ اللَّهِ بَنَى اللَّهُ لَهُ مِثْلَهُ فِي الْجَنَّةِ",
+  hadithTranslation:
+    "من بنى مسجدًا ابتغاء وجه الله بنى الله له مثله في الجنة.",
+  hadithSource: "متفق عليه",
 };
 
 export default ar;

@@ -71,6 +71,20 @@ const en = {
     arches: "Jawaad",
     dome: "Sabbaq",
   },
+  ramadanRaisedLabel: "Ramadan raised",
+  collectedFundsLabel: "Collected funds",
+  remainingGoalLabel: "Remaining goal",
+  campaignOverview: "Campaign overview",
+  reached: "reached",
+  donorsList: "List of donors",
+  ramadanObjective: "Ramadan objective",
+  prepositionOf: "of",
+  donationDialogTitle: "Support the masjid",
+  hadithArabic:
+    "مَنْ بَنَى مَسْجِدًا يَبْتَغِي بِهِ وَجْهَ اللَّهِ بَنَى اللَّهُ لَهُ مِثْلَهُ فِي الْجَنَّةِ",
+  hadithTranslation:
+    "Whoever builds a mosque seeking the pleasure of Allah, Allah will build for him its equivalent in Paradise.",
+  hadithSource: "Agreed upon",
 };
 
 export default en;
