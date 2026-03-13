@@ -753,9 +753,9 @@ function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, language, t
 }
 
 /**
- * @param {{ donations: DonationRow[]; tiers: Array<{key: string; label: string; amount: number; color?: string}>; language: string; isRTL: boolean; theme?: object }} props
+ * @param {{ donations: DonationRow[]; tiers: Array<{key: string; label: string; amount: number; color?: string}>; language: string; isRTL: boolean; theme?: object; t: object }} props
  */
-function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail }) {
+function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail, t }) {
   const th = theme ?? THEMES.dark;
   const dollarFirst = language === "en";
   const tierByKey = Object.fromEntries(tiers.map((t) => [t.key, t]));
@@ -1124,7 +1124,7 @@ export default function MosqueDonation() {
                 <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
               </div>
             </div>
-            <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
+            <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} t={t} />
             <CampaignPie totalGoal={totalGoal} totalRaised={totalRaised} ramadanRaised={ramadanRaised} theme={theme} language={language} t={t} />
           </div>
 
@@ -1149,7 +1149,7 @@ export default function MosqueDonation() {
                   <QRCode color={sel.color} alt={t.qrAlt} theme={theme} />
                 </div>
               </div>
-              <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} />
+              <DonationsList donations={donations} tiers={localizedTiers} language={language} isRTL={isRTL} theme={theme} totalsByEmail={totalsByEmail} t={t} />
               <CampaignPie totalGoal={totalGoal} totalRaised={totalRaised} ramadanRaised={ramadanRaised} theme={theme} language={language} t={t} />
             </div>
           </div>
