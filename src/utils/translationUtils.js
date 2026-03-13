@@ -35,6 +35,8 @@ export const LANGUAGE_OPTIONS = AVAILABLE_LANGUAGE_CODES.map((code) => {
         ar: "🇸🇦",
         ur: "🇵🇰",
         es: "🇪🇸",
+        tr: "🇹🇷",
+        zh: "🇨🇳",
     };
     return {
         code,

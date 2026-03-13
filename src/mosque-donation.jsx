@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import "./mosque-donation.css";
+import "./mosque-donation.scss";
 
 // Components
 import { Header } from "./components/Header.jsx";
