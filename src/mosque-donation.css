@@ -841,34 +841,55 @@
     display: block;
 }
 
-.donations-list-container {
+.donations-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.donations-list-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.donations-list-scroll {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    max-height: 640px;
+    overflow-y: auto;
+    padding-right: 6px;
 }
 
 .donation-item {
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    border-radius: 8px;
+    padding: 12px 14px;
+    border-radius: 10px;
     background: var(--bg-card);
     border: 2px solid var(--tier-color);
+    box-shadow: var(--shadow-light);
 }
 
-.donation-header {
+.donation-item-name {
     font-size: 14px;
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 4px;
 }
 
-.donation-amount {
+.donation-item-amount {
     font-size: 13px;
+    font-weight: 700;
     color: var(--accent-gold);
     margin-bottom: 6px;
 }
 
-.donation-tier {
+.donation-item-tier {
     font-size: 11px;
     color: var(--text-muted);
     margin-bottom: 6px;
@@ -876,14 +897,14 @@
     letter-spacing: 0.06em;
 }
 
-.donation-progress {
+.donation-item-progress {
     background: var(--viz-progress-track);
-    border-radius: 4px;
-    height: 5px;
+    border-radius: 999px;
+    height: 6px;
     overflow: hidden;
 }
 
-.donation-progress-fill {
+.donation-item-progress-fill {
     width: var(--progress-pct);
     height: 100%;
     background: var(--tier-color);
@@ -1285,12 +1306,15 @@
 /* Responsive: Tablet */
 @media (max-width: 768px) {
     .donation-dialog-overlay {
-        padding: 12px;
+        padding: 18px;
     }
 
     .donation-dialog-content {
-        max-width: 100%;
-        max-height: 95vh;
+        width: 92vw;
+        height: 88vh;
+        max-width: 92vw;
+        max-height: 88vh;
+        border-radius: 10px;
     }
 
     .donation-dialog-form-wrapper {
@@ -1301,17 +1325,20 @@
 /* Responsive: Small Mobile */
 @media (max-width: 480px) {
     .donation-dialog-overlay {
-        padding: 8px;
+        padding: 16px;
     }
 
     .donation-dialog-content {
-        max-width: 100%;
+        width: 90vw;
+        height: 84vh;
+        max-width: 90vw;
+        max-height: 84vh;
         border-radius: 8px;
     }
 
     .donation-dialog-close {
-        top: 4px;
-        right: 4px;
+        top: 6px;
+        right: 6px;
         width: 32px;
         height: 32px;
         font-size: 24px;

@@ -780,6 +780,7 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail, t })
             <div
               key={`donation-${d.email}-${idx}`}
               className="donation-item"
+              style={{ "--tier-color": tierColor }}
             >
               <div className="donation-item-name">{displayName}</div>
               <div className="donation-item-amount">
@@ -1008,9 +1009,13 @@ export default function MosqueDonation() {
                 {languageCurrency(RAMADAN_TARGET, currencyFirst)}
               </div>
 
-              <div className="progress-bar-row" style={{ '--progress-pct': `${headerRamadanPct}%` }}>
+              <div className="progress-bar-row">
                 <div className="progress-bar-track">
-                  <div className="progress-bar-fill"></div>
+                  <div
+                    className="progress-bar-fill"
+                    style={{ width: `${headerRamadanPct}%` }}
+                    aria-hidden="true"
+                  ></div>
                 </div>
                 <span className="progress-bar-value">
                   {headerRamadanPct}%
