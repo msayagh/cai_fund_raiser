@@ -973,17 +973,23 @@ export default function MosqueDonation() {
 
       <header
         style={{
-          padding: "14px 32px 16px",
           borderBottom: `1px solid ${theme.borderAccent}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "20px",
           flexShrink: 0,
           background: theme.bgHeader,
-          flexWrap: "wrap",
         }}
       >
+        <div
+          style={{
+            maxWidth: "1400px",
+            margin: "0 auto",
+            padding: "14px 32px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "20px",
+            flexWrap: "wrap",
+          }}
+        >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 auto", minWidth: 0 }}>
           <img
             src="/logo-ccai.png"
@@ -1183,6 +1189,7 @@ export default function MosqueDonation() {
               {label}
             </button>
           ))}
+        </div>
         </div>
       </header>
 
