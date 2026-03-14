@@ -1,0 +1,50 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mosque-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "3001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portal-api.rule=Host(`portal.ccai-stjean.org`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.portal-api.entrypoints=websecure"
+      - "traefik.http.routers.portal-api.tls=true"
+      - "traefik.http.services.portal-api.loadbalancer.server.port=3001"
+    environment:
+      SQLITE_DATABASE_URL: file:/app/data/dev.db
+    volumes:
+      - backend_sqlite_data:/app/data
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    depends_on:
+      - mysql
+    networks:
+      - root_default
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - root_default
+
+networks:
+  root_default:
+    external: true
+
+volumes:
+  backend_sqlite_data:
+  backend_uploads:
+  backend_logs:
+  mysql_data:
