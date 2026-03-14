@@ -23,6 +23,7 @@ export function useTranslation() {
     const [language, setLanguageState] = useState(INITIAL_LANGUAGE);
     const [t, setT] = useState(INITIAL_TRANSLATION);
     const [isMounted, setIsMounted] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     // Load language from localStorage on mount and listen for changes
     useEffect(() => {
@@ -30,19 +31,21 @@ export function useTranslation() {
 
         if (typeof window !== 'undefined') {
             const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+            const savedLanguage = localStorage.getItem('selectedLanguage');
+            let selectedLang = INITIAL_LANGUAGE;
+
             if (requestedLanguage && AVAILABLE_LANGUAGE_CODES.includes(requestedLanguage)) {
-                setLanguageState(requestedLanguage);
+                selectedLang = requestedLanguage;
+            } else if (savedLanguage && AVAILABLE_LANGUAGE_CODES.includes(savedLanguage)) {
+                selectedLang = savedLanguage;
             }
 
-            // Load saved language from localStorage
-            const savedLanguage = localStorage.getItem('selectedLanguage');
-            if ((!requestedLanguage || !AVAILABLE_LANGUAGE_CODES.includes(requestedLanguage)) && savedLanguage && savedLanguage !== language) {
-                setLanguageState(savedLanguage);
-            }
+            setLanguageState(selectedLang);
+            setIsInitialized(true);
 
             // Listen for storage changes from other tabs/windows
             const handleStorageChange = (e) => {
-                if (e.key === 'selectedLanguage' && e.newValue) {
+                if (e.key === 'selectedLanguage' && e.newValue && AVAILABLE_LANGUAGE_CODES.includes(e.newValue)) {
                     setLanguageState(e.newValue);
                 }
             };
@@ -50,6 +53,7 @@ export function useTranslation() {
             window.addEventListener('storage', handleStorageChange);
             return () => window.removeEventListener('storage', handleStorageChange);
         }
+        setIsInitialized(true);
     }, []);
 
     // Update translation when language changes
@@ -65,15 +69,18 @@ export function useTranslation() {
         };
     }, [language]);
 
-    // Save language to localStorage and update URL
+    // Save language to localStorage and update URL only after initialization
     useEffect(() => {
-        if (typeof window === "undefined") return;
+        if (typeof window === "undefined" || !isInitialized) return;
 
         localStorage.setItem('selectedLanguage', language);
         const url = new URL(window.location.href);
         url.searchParams.set("lang", language);
-        window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-    }, [language]);
+        // Only update history if language actually changed from URL
+        if (url.search !== window.location.search) {
+            window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+        }
+    }, [language, isInitialized]);
 
     const setLanguage = useCallback((lang) => {
         setLanguageState(lang);
