@@ -19,6 +19,9 @@ function TierCardSkeleton() {
 
 export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, theme, currencyFirst, t, isLoading, error }) {
     const th = theme ?? THEMES.dark;
+    const formatBrickCount = typeof t?.brickCount === 'function'
+        ? t.brickCount
+        : (funded, total) => `${funded} / ${total} bricks`;
 
     return (
         <div className="tier-selection">
@@ -37,7 +40,7 @@ export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, t
                         onClick={() => setSelectedTier(tier.id)}
                         className={`tier-card ${isSelected ? 'selected' : ''}`}
                         aria-pressed={isSelected}
-                        aria-label={`${tier.label}, ${languageCurrency(tier.amount, currencyFirst)}, ${t.brickCount(tier.funded, tier.total)}, ${pct}% funded`}
+                        aria-label={`${tier.label}, ${languageCurrency(tier.amount, currencyFirst)}, ${formatBrickCount(tier.funded, tier.total)}, ${pct}% funded`}
                         style={{
                             borderColor: isSelected ? tier.color : undefined,
                             background: isSelected ? th.bgCardSelected : undefined,
@@ -56,7 +59,7 @@ export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, t
                             <div className="tier-card-progress-fill" style={{ width: `${pct}%` }}></div>
                         </div>
                         <div className="tier-card-stats">
-                            <span>{t.brickCount(tier.funded, tier.total)}</span>
+                            <span>{formatBrickCount(tier.funded, tier.total)}</span>
                             <span className="tier-percentage" style={{ color: tier.color }}>
                                 {pct}%
                             </span>
@@ -74,6 +77,13 @@ export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, t
 }
 
 export function SelectedTierCard({ sel, pct, remaining, currencyFirst, t, onDonate, isLoading, statusMessage, statusTone }) {
+    const formatBrickCount = typeof t?.brickCount === 'function'
+        ? t.brickCount
+        : (funded, total) => `${funded} / ${total} bricks`;
+    const formatFundButton = typeof t?.fundButton === 'function'
+        ? t.fundButton
+        : (amount) => `Fund One Brick · ${languageCurrency(amount, currencyFirst)}`;
+
     const handleDonateClick = () => {
         if (onDonate) {
             onDonate();
@@ -107,7 +117,7 @@ export function SelectedTierCard({ sel, pct, remaining, currencyFirst, t, onDona
             <div className="selected-tier-progress" style={{ '--progress-pct': `${pct}%` }}>
                 <div className="selected-tier-progress-stats">
                     <span className="selected-tier-progress-count">
-                        {t.brickCount(sel.funded, sel.total)}
+                        {formatBrickCount(sel.funded, sel.total)}
                     </span>
                     <span className="selected-tier-progress-pct">
                         {pct}%
@@ -124,7 +134,7 @@ export function SelectedTierCard({ sel, pct, remaining, currencyFirst, t, onDona
                 onClick={handleDonateClick}
                 className={`donate-button splash ${remaining === 0 ? 'disabled' : ''}`}
             >
-                {remaining > 0 ? t.fundButton(sel.amount) : t.fullyFunded}
+                {remaining > 0 ? formatFundButton(sel.amount) : t.fullyFunded}
             </button>
             <p className="selected-tier-note">
                 {t.zeffyNote}

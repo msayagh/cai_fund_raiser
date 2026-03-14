@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE } from '@/lib/translationUtils.js';
+import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES } from '@/lib/translationUtils.js';
 import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
+import { getCachedValue, setCachedValue } from '@/lib/clientCache.js';
+import { captureException, captureMessage } from '@/lib/monitoring.js';
 import { INITIAL_TIERS, MOBILE_BREAKPOINT, TIER_CONFIG } from '@/constants/config.js';
+
+const TIERS_CACHE_KEY = 'tiers:funded';
+const TIERS_CACHE_TTL = 1000 * 60 * 5;
+const DONATIONS_CACHE_KEY = 'donations:rows';
+const DONATIONS_CACHE_TTL = 1000 * 60;
 
 function getSystemThemePreference() {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -22,9 +29,14 @@ export function useTranslation() {
         setIsMounted(true);
 
         if (typeof window !== 'undefined') {
+            const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+            if (requestedLanguage && AVAILABLE_LANGUAGE_CODES.includes(requestedLanguage)) {
+                setLanguageState(requestedLanguage);
+            }
+
             // Load saved language from localStorage
             const savedLanguage = localStorage.getItem('selectedLanguage');
-            if (savedLanguage && savedLanguage !== language) {
+            if ((!requestedLanguage || !AVAILABLE_LANGUAGE_CODES.includes(requestedLanguage)) && savedLanguage && savedLanguage !== language) {
                 setLanguageState(savedLanguage);
             }
 
@@ -163,17 +175,28 @@ export function useTiers() {
                 setIsLoading(true);
             }
 
+            const cachedFunded = getCachedValue(TIERS_CACHE_KEY, { maxAgeMs: TIERS_CACHE_TTL });
+            if (cachedFunded) {
+                updateFundedTiers(cachedFunded);
+                if (!background) {
+                    setIsLoading(false);
+                }
+            }
+
             try {
                 const funded = await fetchFundedFromSheet();
                 if (!funded) {
                     setError('Unable to load tier progress right now.');
+                    captureMessage('Tier progress fetch returned no data', { level: 'error', source: 'useTiers' });
                     return;
                 }
 
                 updateFundedTiers(funded);
+                setCachedValue(TIERS_CACHE_KEY, funded);
                 setError(null);
-            } catch {
+            } catch (error) {
                 setError('Unable to load tier progress right now.');
+                captureException(error, { source: 'useTiers' });
             } finally {
                 setIsLoading(false);
             }
@@ -210,7 +233,7 @@ export function useDonations() {
             const email = donation["courriel"];
             const tier = String(donation["tier"]);
             const price = parseInt(donation["montant total"]);
-            const donorLabel = donation["donorLabel"] || donation["prénom"] || donation["nom"] || "";
+            const donorLabel = String(donation["donorLabel"] || "").trim();
             const details = String(donation["détails"]);
 
             if (!summary[email]) {
@@ -280,10 +303,22 @@ export function useDonations() {
                 setIsLoading(true);
             }
 
+            const cachedRows = getCachedValue(DONATIONS_CACHE_KEY, { maxAgeMs: DONATIONS_CACHE_TTL });
+            if (Array.isArray(cachedRows) && cachedRows.length > 0) {
+                setDonations(cachedRows);
+                setTotalsByEmail(getTotalsByEmail(cachedRows));
+                setRamadanRaised(getRamadanRaised(cachedRows));
+                setEngagementAmount(getEngagementAmount(cachedRows));
+                if (!background) {
+                    setIsLoading(false);
+                }
+            }
+
             try {
                 const rows = await fetchDonationsFromSheet();
                 if (!Array.isArray(rows)) {
                     setError('Unable to load donations right now.');
+                    captureMessage('Donations fetch returned a non-array payload', { level: 'error', source: 'useDonations' });
                     return;
                 }
 
@@ -294,12 +329,14 @@ export function useDonations() {
                     }
                     return rows;
                 });
+                setCachedValue(DONATIONS_CACHE_KEY, rows);
                 setTotalsByEmail(getTotalsByEmail(rows));
                 setRamadanRaised(getRamadanRaised(rows));
                 setEngagementAmount(getEngagementAmount(rows));
                 setError(null);
-            } catch {
+            } catch (error) {
                 setError('Unable to load donations right now.');
+                captureException(error, { source: 'useDonations' });
             } finally {
                 setIsLoading(false);
             }

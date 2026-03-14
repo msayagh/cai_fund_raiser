@@ -20,14 +20,18 @@ function applyZoom(zoom) {
 
 export default function AccessibilityWidget({ compact = false }) {
     const { t } = useTranslation();
-    const [zoom, setZoom] = useState(() => {
-        if (typeof window === 'undefined') return 1;
-
-        const savedZoom = Number.parseFloat(window.localStorage.getItem(STORAGE_KEY) || '1');
-        return Number.isFinite(savedZoom) ? clampZoom(savedZoom) : 1;
-    });
+    const [zoom, setZoom] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
     const widgetRef = useRef(null);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const savedZoom = Number.parseFloat(window.localStorage.getItem(STORAGE_KEY) || '1');
+        const resolvedZoom = Number.isFinite(savedZoom) ? clampZoom(savedZoom) : 1;
+        setZoom(resolvedZoom);
+        applyZoom(resolvedZoom);
+    }, []);
 
     useEffect(() => {
         applyZoom(zoom);
@@ -76,7 +80,6 @@ export default function AccessibilityWidget({ compact = false }) {
             className={`accessibility-widget ${compact ? 'accessibility-widget--compact' : ''}`}
             role="group"
             aria-label={labels.group}
-            suppressHydrationWarning
             ref={widgetRef}
         >
             <button
