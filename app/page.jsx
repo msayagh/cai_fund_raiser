@@ -20,7 +20,6 @@ import { useTranslation, useThemeMode, useTiers, useDonations, useResponsiveSide
 
 // Utilities
 import { truncateText, getSiteUrl, getAbsoluteUrl, languageCurrency, getPrayerEmbedMode, AVAILABLE_LANGUAGE_CODES } from "@/lib/translationUtils.js";
-import { fetchFundedFromSheet } from "@/lib/dataFetching.js";
 import { setupSEOMetaTags } from "@/lib/seoUtils.js";
 
 // Constants
