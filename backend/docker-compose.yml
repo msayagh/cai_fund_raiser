@@ -3,7 +3,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    container_name: mosque-backend
+    container_name: mosque-backend-1
     restart: unless-stopped
     env_file:
       - .env
@@ -23,7 +23,18 @@ services:
       - backend_logs:/app/logs
     networks:
       - root_default
-
+  
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - root_default
+      
 networks:
   root_default:
     external: true
