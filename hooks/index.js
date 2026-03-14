@@ -125,6 +125,17 @@ export function useTiers() {
         });
     }, []);
 
+    useEffect(() => {
+        const pollFunded = () => fetchFundedFromSheet().then(updateFundedTiers);
+
+        pollFunded();
+        const fundedIntervalId = setInterval(pollFunded, 60 * 1000);
+
+        return () => {
+            clearInterval(fundedIntervalId);
+        };
+    }, [updateFundedTiers]);
+
     return { tiers, setTiers, selectedTier, setSelectedTier, updateFundedTiers, isMounted };
 }
 
@@ -195,21 +206,6 @@ export function useDonations() {
             clearInterval(donationsIntervalId);
         };
     }, [getTotalsByEmail, getRamadanRaised]);
-
-    const updateFundedTiers = useCallback((funded) => {
-        if (!funded) return;
-    }, []);
-
-    useEffect(() => {
-        const pollFunded = () => fetchFundedFromSheet().then(updateFundedTiers);
-
-        pollFunded();
-        const fundedIntervalId = setInterval(pollFunded, 60 * 1000);
-
-        return () => {
-            clearInterval(fundedIntervalId);
-        };
-    }, [updateFundedTiers]);
 
     return { donations, ramadanRaised, totalsByEmail, setDonations, setRamadanRaised, setTotalsByEmail, isMounted };
 }
