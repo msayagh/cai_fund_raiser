@@ -8,19 +8,19 @@ import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { THEMES } from '@/constants/config.js';
+import { setupSEOMetaTags } from '@/lib/seoUtils.js';
+import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 
 const sitemapLinks = [
     {
         href: '/',
         label: 'Home',
         description: 'Main fundraising page and campaign overview.',
-        external: false,
     },
     {
         href: '/login',
         label: 'Login',
         description: 'Upcoming secure login entry point.',
-        external: false,
     },
 ];
 
@@ -31,6 +31,15 @@ export default function SitemapPage() {
     const languageDropdownRef = useRef(null);
     const theme = THEMES[themeMode] ?? THEMES.dark;
     const isRTL = language === 'ar' || language === 'ur';
+    const siteUrl = getSiteUrl();
+    const pageUrl = getAbsoluteUrl(`/sitemap?lang=${language}`, siteUrl);
+    const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
+    const pageTitle = `${t.sitemap || 'Sitemap'} | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const pageDescription = truncateText(
+        t.sitemapDescription || 'Browse the main internal pages available on this site.'
+    );
+    const locale = t.locale ?? language;
+    const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
 
     useEffect(() => {
         if (languageDropdownRef.current && showLanguageMenu) {
@@ -44,6 +53,25 @@ export default function SitemapPage() {
             return () => document.removeEventListener('click', closeMenu);
         }
     }, [showLanguageMenu]);
+
+    useEffect(() => {
+        if (!isMounted) return;
+
+        setupSEOMetaTags({
+            language,
+            isRTL,
+            pageTitle,
+            pageDescription,
+            pageUrl,
+            socialImageUrl,
+            logoAlt,
+            locale,
+            siteUrl,
+            t,
+            pagePath: '/sitemap',
+            pageType: 'sitemap',
+        });
+    }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
     if (!isMounted || !themeMounted) {
         return (
@@ -101,7 +129,7 @@ export default function SitemapPage() {
                         <p className="sitemap-eyebrow">{t.sitemap || 'Sitemap'}</p>
                         <h1 className="sitemap-title">{t.sitemap || 'Sitemap'}</h1>
                         <p className="sitemap-description">
-                            Find the main pages available on this site.
+                            {t.sitemapDescription || 'Browse the main internal pages available on this site.'}
                         </p>
                     </div>
 

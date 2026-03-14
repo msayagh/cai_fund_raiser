@@ -7,6 +7,8 @@ import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { THEMES } from '@/constants/config.js';
+import { setupSEOMetaTags } from '@/lib/seoUtils.js';
+import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import './page.scss';
 
 export default function LoginPage() {
@@ -15,6 +17,16 @@ export default function LoginPage() {
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
     const languageDropdownRef = useRef(null);
     const theme = THEMES[themeMode] ?? THEMES.dark;
+    const isRTL = language === 'ar' || language === 'ur';
+    const siteUrl = getSiteUrl();
+    const pageUrl = getAbsoluteUrl(`/login?lang=${language}`, siteUrl);
+    const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
+    const pageTitle = `${t.loginTitle || 'Login'} | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const pageDescription = truncateText(
+        t.loginDescription || "Secure login access for the Centre Zad Al-Imane donation platform."
+    );
+    const locale = t.locale ?? language;
+    const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
 
     useEffect(() => {
         if (languageDropdownRef.current && showLanguageMenu) {
@@ -27,6 +39,25 @@ export default function LoginPage() {
             return () => document.removeEventListener('click', closeMenu);
         }
     }, [showLanguageMenu]);
+
+    useEffect(() => {
+        if (!isMounted) return;
+
+        setupSEOMetaTags({
+            language,
+            isRTL,
+            pageTitle,
+            pageDescription,
+            pageUrl,
+            socialImageUrl,
+            logoAlt,
+            locale,
+            siteUrl,
+            t,
+            pagePath: '/login',
+            pageType: 'login',
+        });
+    }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
     // Don't render until theme and language are loaded
     if (!isMounted || !themeMounted) {
@@ -46,7 +77,7 @@ export default function LoginPage() {
         <div
             className="login-page-wrapper"
             data-theme={themeMode}
-            dir={language === 'ar' || language === 'ur' ? 'rtl' : 'ltr'}
+            dir={isRTL ? 'rtl' : 'ltr'}
             suppressHydrationWarning
             style={{
                 '--bg-primary': theme['bg-primary'],

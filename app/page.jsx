@@ -23,7 +23,7 @@ import { truncateText, getSiteUrl, getAbsoluteUrl } from "@/lib/translationUtils
 import { setupSEOMetaTags } from "@/lib/seoUtils.js";
 
 // Constants
-import { THEMES, MOBILE_BREAKPOINT, RAMADAN_TARGET, PRE_RAISED, DEFAULT_SOCIAL_IMAGE, SITE_NAME } from "@/constants/config.js";
+import { THEMES, MOBILE_BREAKPOINT, RAMADAN_TARGET, PRE_RAISED, DEFAULT_SOCIAL_IMAGE } from "@/constants/config.js";
 
 export default function MosqueDonation() {
   // Language management
@@ -156,6 +156,8 @@ export default function MosqueDonation() {
       locale,
       siteUrl,
       t,
+      pagePath: '/',
+      pageType: 'campaign',
     });
   }, [isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
