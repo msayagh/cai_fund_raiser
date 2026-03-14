@@ -1,5 +1,3 @@
-import React from "react";
-
 const en = {
   locale: "en_CA",
   centerName: "Centre Zad Al-Imane",

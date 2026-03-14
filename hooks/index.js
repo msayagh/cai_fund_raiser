@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES, clearTranslationCache } from '@/lib/translationUtils.js';
+import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES } from '@/lib/translationUtils.js';
 import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
 import { getCachedValue, setCachedValue } from '@/lib/clientCache.js';
 import { captureException, captureMessage } from '@/lib/monitoring.js';
@@ -56,17 +56,10 @@ export function useTranslation() {
         setIsInitialized(true);
     }, []);
 
-    // Update translation when language changes
+    // Update translation when language changes (synchronous since modules are statically imported)
     useEffect(() => {
-        let active = true;
-
-        loadTranslation(language).then((loaded) => {
-            if (active) setT(loaded);
-        });
-
-        return () => {
-            active = false;
-        };
+        const loaded = loadTranslation(language);
+        setT(loaded);
     }, [language]);
 
     // Save language to localStorage and update URL only after initialization
@@ -83,7 +76,6 @@ export function useTranslation() {
     }, [language, isInitialized]);
 
     const setLanguage = useCallback((lang) => {
-        clearTranslationCache();
         setLanguageState(lang);
     }, []);
 

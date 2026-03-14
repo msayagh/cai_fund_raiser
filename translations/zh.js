@@ -1,5 +1,3 @@
-import React from "react";
-
 const zh = {
     locale: "zh_CN",
     centerName: "Centre Zad Al-Imane",
