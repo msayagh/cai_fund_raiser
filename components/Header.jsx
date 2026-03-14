@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { LANGUAGE_OPTIONS, languageCurrency } from '@/lib/translationUtils.js';
 import Link from 'next/link';
 import AccessibilityWidget from '@/components/AccessibilityWidget.jsx';
@@ -20,9 +21,24 @@ export function Header({
     isLoginPage = false,
     onOpenStatistics,
 }) {
+    const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+    const headerMenuRef = useRef(null);
     const isCurrencyFirst = currencyFirst || language === "en";
     const engagementPct = tierEngagementTarget > 0 ? Math.min(100, Math.round((tierCollectedAmount / tierEngagementTarget) * 100)) : tierEngagementPct;
     const receivedPct = receivedTarget > 0 ? Math.min(100, Math.round((receivedAmount / receivedTarget) * 100)) : 0;
+
+    useEffect(() => {
+        if (!showHeaderMenu) return;
+
+        const handlePointerDown = (event) => {
+            if (!headerMenuRef.current?.contains(event.target)) {
+                setShowHeaderMenu(false);
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        return () => document.removeEventListener('pointerdown', handlePointerDown);
+    }, [showHeaderMenu]);
 
     return (
         <header className="mosque-donation-header">
@@ -106,74 +122,155 @@ export function Header({
                 )}
 
                 <div className="header-right">
-                    {!isLoginPage && (
-                        <button
-                            type="button"
-                            className="header-stats-button"
-                            onClick={onOpenStatistics}
-                            aria-label={t.campaignOverview || 'Campaign overview'}
-                            title={t.campaignOverview || 'Campaign overview'}
-                        >
-                            <i className="fas fa-chart-column" aria-hidden="true"></i>
-                        </button>
-                    )}
-                    <Link href="/login" className="login-button" title="Login">
-                        <i className="fas fa-user" aria-hidden="true"></i>
-                        <span className="login-button-text">{t.loginTitle}</span>
-                    </Link>
-                    <AccessibilityWidget compact />
-                    <button
-                        onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
-                        title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                        className="theme-toggle-button"
-                        aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                    >
-                        {themeMode === "dark" ? "☀" : "☾"}
-                    </button>
-                    <span className="language-label">
-                        {t.language}
-                    </span>
-                    <div className="language-button-group">
-                        {LANGUAGE_OPTIONS.map(({ code, label, flag }) => (
+                    <div className="header-controls-desktop">
+                        {!isLoginPage && (
                             <button
-                                key={code}
-                                onClick={() => setLanguage(code)}
-                                className={`language-button ${language === code ? 'active' : ''}`}
-                                title={label}
+                                type="button"
+                                className="header-stats-button"
+                                onClick={onOpenStatistics}
+                                aria-label={t.campaignOverview || 'Campaign overview'}
+                                title={t.campaignOverview || 'Campaign overview'}
                             >
-                                <span className="language-flag">{flag}</span>
-                                <span className="language-button-text">{label}</span>
+                                <i className="fas fa-chart-column" aria-hidden="true"></i>
                             </button>
-                        ))}
+                        )}
+                        <Link href="/login" className="login-button" title="Login">
+                            <i className="fas fa-user" aria-hidden="true"></i>
+                            <span className="login-button-text">{t.loginTitle}</span>
+                        </Link>
+                        <AccessibilityWidget compact />
+                        <button
+                            onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
+                            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                            className="theme-toggle-button"
+                            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                        >
+                            {themeMode === "dark" ? "☀" : "☾"}
+                        </button>
+                        <span className="language-label">
+                            {t.language}
+                        </span>
+                        <div className="language-button-group">
+                            {LANGUAGE_OPTIONS.map(({ code, label, flag }) => (
+                                <button
+                                    key={code}
+                                    onClick={() => setLanguage(code)}
+                                    className={`language-button ${language === code ? 'active' : ''}`}
+                                    title={label}
+                                >
+                                    <span className="language-flag">{flag}</span>
+                                    <span className="language-button-text">{label}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="language-dropdown" ref={languageDropdownRef}>
+                            <button
+                                type="button"
+                                className={`language-dropdown-trigger ${showLanguageMenu ? 'open' : ''}`}
+                                onClick={() => setShowLanguageMenu((open) => !open)}
+                                aria-haspopup="menu"
+                                aria-expanded={showLanguageMenu}
+                            >
+                                <span className="language-flag">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.flag ?? '🌐'}</span>
+                                <span className="language-dropdown-text">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.label ?? language.toUpperCase()}</span>
+                            </button>
+                            {showLanguageMenu && (
+                                <div className="language-dropdown-menu" role="menu">
+                                    {LANGUAGE_OPTIONS.map(({ code, label, flag }) => (
+                                        <button
+                                            key={code}
+                                            type="button"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                setLanguage(code);
+                                                setShowLanguageMenu(false);
+                                            }}
+                                            className={`language-dropdown-item ${language === code ? 'active' : ''}`}
+                                        >
+                                            <span className="language-flag">{flag}</span>
+                                            <span>{label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="language-dropdown" ref={languageDropdownRef}>
+
+                    <div className="header-menu" ref={headerMenuRef}>
                         <button
                             type="button"
-                            className={`language-dropdown-trigger ${showLanguageMenu ? 'open' : ''}`}
-                            onClick={() => setShowLanguageMenu((open) => !open)}
+                            className={`header-menu-trigger ${showHeaderMenu ? 'open' : ''}`}
+                            onClick={() => setShowHeaderMenu((open) => !open)}
                             aria-haspopup="menu"
-                            aria-expanded={showLanguageMenu}
+                            aria-expanded={showHeaderMenu}
+                            aria-label={showHeaderMenu ? 'Close menu' : 'Open menu'}
+                            title={showHeaderMenu ? 'Close menu' : 'Open menu'}
                         >
-                            <span className="language-flag">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.flag ?? '🌐'}</span>
-                            <span className="language-dropdown-text">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.label ?? language.toUpperCase()}</span>
+                            <i className="fas fa-bars" aria-hidden="true"></i>
                         </button>
-                        {showLanguageMenu && (
-                            <div className="language-dropdown-menu" role="menu">
-                                {LANGUAGE_OPTIONS.map(({ code, label, flag }) => (
-                                    <button
-                                        key={code}
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() => {
-                                            setLanguage(code);
-                                            setShowLanguageMenu(false);
-                                        }}
-                                        className={`language-dropdown-item ${language === code ? 'active' : ''}`}
+
+                        {showHeaderMenu && (
+                            <div className="header-menu-panel" role="menu">
+                                <div className="header-menu-section">
+                                    {!isLoginPage && (
+                                        <button
+                                            type="button"
+                                            className="header-menu-item"
+                                            onClick={() => {
+                                                onOpenStatistics?.();
+                                                setShowHeaderMenu(false);
+                                            }}
+                                        >
+                                            <i className="fas fa-chart-column" aria-hidden="true"></i>
+                                            <span>{t.campaignOverview || 'Campaign overview'}</span>
+                                        </button>
+                                    )}
+                                    <Link
+                                        href="/login"
+                                        className="header-menu-item"
+                                        onClick={() => setShowHeaderMenu(false)}
                                     >
-                                        <span className="language-flag">{flag}</span>
-                                        <span>{label}</span>
-                                    </button>
-                                ))}
+                                        <i className="fas fa-user" aria-hidden="true"></i>
+                                        <span>{t.loginTitle}</span>
+                                    </Link>
+                                    <div className="header-menu-item header-menu-item--inline">
+                                        <span className="header-menu-item-label">{themeMode === "dark" ? "Light mode" : "Dark mode"}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
+                                            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                                            className="theme-toggle-button"
+                                            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                                        >
+                                            {themeMode === "dark" ? "☀" : "☾"}
+                                        </button>
+                                    </div>
+                                    <div className="header-menu-item header-menu-item--inline">
+                                        <span className="header-menu-item-label">{t.accessibilityShortLabel || 'A11y'}</span>
+                                        <AccessibilityWidget compact />
+                                    </div>
+                                </div>
+
+                                <div className="header-menu-section">
+                                    <div className="header-menu-section-title">{t.language}</div>
+                                    <div className="header-menu-languages">
+                                        {LANGUAGE_OPTIONS.map(({ code, label, flag }) => (
+                                            <button
+                                                key={code}
+                                                type="button"
+                                                onClick={() => {
+                                                    setLanguage(code);
+                                                    setShowHeaderMenu(false);
+                                                }}
+                                                className={`language-button ${language === code ? 'active' : ''}`}
+                                                title={label}
+                                            >
+                                                <span className="language-flag">{flag}</span>
+                                                <span className="language-button-text">{label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

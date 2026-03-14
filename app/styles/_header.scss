@@ -90,3 +90,101 @@
     justify-content: var(--justify-end);
     min-width: 0;
 }
+
+.header-controls-desktop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: var(--justify-end);
+}
+
+.header-menu {
+    display: none;
+    position: relative;
+}
+
+.header-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover,
+    &.open,
+    &:focus-visible {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+        background: var(--bg-card-alt);
+    }
+}
+
+.header-menu-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(320px, calc(100vw - 24px));
+    padding: 12px;
+    border-radius: 18px;
+    border: 1px solid var(--border-accent);
+    background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+    z-index: 60;
+    backdrop-filter: blur(12px);
+}
+
+.header-menu-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    & + & {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+    }
+}
+
+.header-menu-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.header-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card-alt);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+
+    &--inline {
+        justify-content: space-between;
+    }
+}
+
+.header-menu-item-label {
+    color: var(--text-muted-alt);
+}
+
+.header-menu-languages {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
