@@ -20,4 +20,5 @@ jobs:
             cd /docker/donations/app
             git pull
             npm install
-            npm run build
+            docker compose down
+            docker compose up -d --build
