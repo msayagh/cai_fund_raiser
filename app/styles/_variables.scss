@@ -1,0 +1,74 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCSS VARIABLES & THEME SETUP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Import auto-generated variables from config
+@import '../../lib/scss-vars.scss';
+
+// ──── Local Variables ────
+$dark-bg-card-alt-dark: #1e2238;
+$light-bg-card-alt-dark: #f5f3ef;
+
+// Typography
+$font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-serif: 'Cinzel', serif;
+$font-amiri: 'Amiri', 'Scheherazade New', serif;
+
+// Spacing
+$letter-spacing-tight: 0.2em;
+$letter-spacing-normal: 0.06em;
+$text-transform-uppercase: uppercase;
+
+// Shadows
+$shadow-light-dark: 0 2px 16px 0 rgba(20, 18, 34, 0.11);
+$shadow-light-light: 0 2px 12px 0 rgba(62, 54, 38, 0.09);
+
+// ──── CSS Custom Properties (Dark Theme - Default) ────
+:root {
+    --page-max-width: #{$page-max-width};
+    --bg-page: #{$dark-bg-page};
+    --bg-header: #{$dark-bg-header};
+    --bg-sidebar: #{$dark-bg-sidebar};
+    --bg-card: #{$dark-bg-card};
+    --bg-card-alt: #{$dark-bg-card-alt};
+    --bg-card-selected: #{$dark-bg-card-selected};
+    --bg-card-alt-dark: #{$dark-bg-card-alt-dark};
+    --border: #{$dark-border};
+    --border-accent: #{$dark-border-accent};
+    --text-primary: #{$dark-text-primary};
+    --text-secondary: #{$dark-text-secondary};
+    --text-muted: #{$dark-text-muted};
+    --text-muted-alt: #{$dark-text-muted-alt};
+    --accent-gold: #{$dark-accent-gold};
+    --viz-progress-track: #{$dark-viz-progress-track};
+    --viz-hadith: #{$dark-viz-hadith};
+    --font-family: #{$font-family};
+    --font-serif: #{$font-serif};
+    --letter-spacing-tight: #{$letter-spacing-tight};
+    --letter-spacing-normal: #{$letter-spacing-normal};
+    --text-transform-uppercase: #{$text-transform-uppercase};
+    --justify-end: flex-end;
+    --text-align-left: left;
+    --shadow-light: #{$shadow-light-dark};
+}
+
+// ──── Light Theme ────
+[data-theme="light"] {
+    --bg-page: #{$light-bg-page};
+    --bg-header: #{$light-bg-header};
+    --bg-sidebar: #{$light-bg-sidebar};
+    --bg-card: #{$light-bg-card};
+    --bg-card-alt: #{$light-bg-card-alt};
+    --bg-card-selected: #{$light-bg-card-selected};
+    --bg-card-alt-dark: #{$light-bg-card-alt-dark};
+    --border: #{$light-border};
+    --border-accent: #{$light-border-accent};
+    --text-primary: #{$light-text-primary};
+    --text-secondary: #{$light-text-secondary};
+    --text-muted: #{$light-text-muted};
+    --text-muted-alt: #{$light-text-muted-alt};
+    --accent-gold: #{$light-accent-gold};
+    --viz-progress-track: #{$light-viz-progress-track};
+    --viz-hadith: #{$light-viz-hadith};
+    --shadow-light: #{$shadow-light-light};
+}

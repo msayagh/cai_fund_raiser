@@ -1,0 +1,71 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// DONATIONS LIST
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.donations-list {
+    flex: 1;
+}
+
+.donations-list-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.donations-list-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 640px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.donation-item {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 2px solid var(--tier-color);
+    box-shadow: var(--shadow-light);
+
+    &-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+
+    &-amount {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--accent-gold);
+        margin-bottom: 6px;
+    }
+
+    &-tier {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    &-progress {
+        background: var(--viz-progress-track);
+        border-radius: 999px;
+        height: 6px;
+        overflow: hidden;
+    }
+
+    &-progress-fill {
+        width: var(--progress-pct);
+        height: 100%;
+        background: var(--tier-color);
+        transition: width 0.3s ease;
+    }
+}

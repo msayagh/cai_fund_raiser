@@ -1,0 +1,16 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL STYLES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.mosque-donation {
+    min-height: 100vh;
+    background: var(--bg-page);
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-family);
+    color: var(--text-secondary);
+
+    &.rtl {
+        direction: rtl;
+    }
+}

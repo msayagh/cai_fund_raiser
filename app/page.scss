@@ -1,0 +1,74 @@
+/* ═════════════════════════════════════════════════════════════════════════════════
+   MOSQUE DONATION APP - MAIN STYLESHEET
+   
+   This file imports all organized SCSS partials. For an overview of the component
+   structure, see the beginning of each partial file.
+
+   NAMING CONVENTION:
+   - Semantic names describe PURPOSE, not appearance
+   - Pattern: .component-section-element
+   - Examples: 
+     .header-logo (header section, logo element)
+     .tier-card (tier selection, card element)
+     .mosque-viz-wrapper (mosque visualization wrapper)
+   
+   PARTIAL FILES:
+   - _variables.scss: Theme variables and CSS custom properties
+   - _animations.scss: Keyframe animations and animation utilities
+   - _global.scss: Global styles and foundation
+   - _header.scss: Header and navigation layout
+   - _progress-bar.scss: Ramadan progress bar styling
+   - _theme-toggle.scss: Theme toggle and language menu controls
+   - _layout.scss: Main grid layout and content sections
+   - _qr-section.scss: QR code display section
+   - _donations-list.scss: Donated amount list component
+   - _campaign-pie.scss: Pie chart visualization
+   - _mosque-viz.scss: Mosque building visualization
+   - _hadith.scss: Hadith/quote display section
+   - _sidebars.scss: Sidebar containers and toggles
+   - _prayer-sidebar.scss: Prayer times sidebar
+   - _tier-selection.scss: Tier selection cards and legends
+   - _selected-tier-card.scss: Selected tier display card
+   - _donate-button.scss: Donation buttons and CTAs
+   - _footer.scss: Footer content and links
+   - _donation-dialog.scss: Donation modal/dialog styles
+   - _responsive.scss: All responsive breakpoints and adjustments
+═════════════════════════════════════════════════════════════════════════════════ */
+
+// ──── Foundation ────
+@import 'styles/variables';
+@import 'styles/animations';
+@import 'styles/global';
+
+// ──── Header & Navigation ────
+@import 'styles/header';
+@import 'styles/progress-bar';
+@import 'styles/theme-toggle';
+
+// ──── Main Layout ────
+@import 'styles/layout';
+
+// ──── Content Sections ────
+@import 'styles/qr-section';
+@import 'styles/donations-list';
+@import 'styles/campaign-pie';
+@import 'styles/mosque-viz';
+@import 'styles/hadith';
+
+// ──── Sidebars & Menus ────
+@import 'styles/sidebars';
+@import 'styles/prayer-sidebar';
+
+// ──── Tier Selection & Donation ────
+@import 'styles/tier-selection';
+@import 'styles/selected-tier-card';
+@import 'styles/donate-button';
+
+// ──── Footer ────
+@import 'styles/footer';
+
+// ──── Modals & Dialogs ────
+@import 'styles/donation-dialog';
+
+// ──── Responsive Design ────
+@import 'styles/responsive';

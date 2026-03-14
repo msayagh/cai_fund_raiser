@@ -1,0 +1,47 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// HADITH SECTION (Quotes)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+$font-amiri: 'Amiri', 'Scheherazade New', serif;
+
+.hadith {
+    font-family: $font-amiri;
+    font-size: 24px;
+    line-height: 1.8;
+    color: var(--viz-hadith);
+    direction: rtl;
+    margin: 0;
+}
+
+.hadith-arabic {
+    font-family: $font-amiri;
+    font-size: 20px;
+    line-height: 1.8;
+    color: var(--viz-hadith);
+    direction: rtl;
+    margin: 0;
+
+    @media (max-width: 768px) {
+        font-size: 18px;
+    }
+
+    @media (max-width: 480px) {
+        font-size: 16px;
+    }
+}
+
+.hadith-translation {
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--text-primary);
+    text-align: center;
+    margin: 7px auto 0;
+    max-width: 450px;
+    word-spacing: 0.2em;
+}
+
+.hadith-reference {
+    font-size: 13px;
+    color: var(--accent-gold);
+    margin-left: 6px;
+}

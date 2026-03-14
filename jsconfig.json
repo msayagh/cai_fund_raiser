@@ -1,0 +1,39 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@/components/*": [
+                "components/*"
+            ],
+            "@/hooks/*": [
+                "hooks/*"
+            ],
+            "@/lib/*": [
+                "lib/*"
+            ],
+            "@/utils/*": [
+                "lib/*"
+            ],
+            "@/constants/*": [
+                "constants/*"
+            ],
+            "@/translations/*": [
+                "translations/*"
+            ],
+            "@/public/*": [
+                "public/*"
+            ],
+            "@/styles/*": [
+                "styles/*"
+            ]
+        }
+    },
+    "include": [
+        "next-env.d.ts",
+        "**/*.js",
+        "**/*.jsx"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

@@ -1,0 +1,81 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// SELECTED TIER CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.selected-tier-card {
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px solid var(--sel-color);
+    background: var(--bg-card-alt-dark);
+}
+
+.selected-tier-label {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: var(--letter-spacing-tight);
+    color: var(--sel-color);
+    margin-bottom: 6px;
+    text-transform: var(--text-transform-uppercase);
+    text-align: center;
+}
+
+.selected-tier-amount {
+    font-family: var(--font-serif);
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    text-align: center;
+}
+
+.selected-tier-per-brick {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.selected-tier-progress {
+    margin-bottom: 16px;
+
+    &-stats {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    &-count {
+        color: var(--text-primary);
+    }
+
+    &-pct {
+        color: var(--sel-color);
+        font-weight: 800;
+    }
+
+    &-bar {
+        background: var(--viz-progress-track);
+        border-radius: 6px;
+        height: 12px;
+        overflow: hidden;
+    }
+
+    &-fill {
+        width: var(--progress-pct);
+        height: 100%;
+        border-radius: 6px;
+        background: var(--sel-color);
+        transition: width 0.5s ease;
+    }
+}
+
+.selected-tier-note {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 12px 0 0 0;
+    line-height: 1.5;
+    text-align: center;
+}

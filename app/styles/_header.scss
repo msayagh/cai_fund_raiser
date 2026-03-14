@@ -1,0 +1,92 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// HEADER SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.mosque-donation-header {
+    padding: 14px 32px 16px;
+    width: 100%;
+    border-bottom: 1px solid var(--border-accent);
+    flex-shrink: 0;
+    display: flex;
+    background: var(--bg-header);
+}
+
+.mosque-donation-header-inner {
+    max-width: var(--page-max-width);
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0;
+    flex-wrap: nowrap;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 30%;
+    min-width: 0;
+}
+
+.header-logo {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+.header-title {
+    flex: 1;
+}
+
+.header-center-name {
+    font-family: var(--font-serif);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: var(--letter-spacing-tight);
+    color: var(--accent-gold);
+    margin-bottom: 2px;
+    text-transform: var(--text-transform-uppercase);
+}
+
+.header-title-text {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: var(--letter-spacing-normal);
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.header-center {
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 8px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 30%;
+    justify-content: var(--justify-end);
+    min-width: 0;
+}
