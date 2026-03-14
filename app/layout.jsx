@@ -1,6 +1,7 @@
 import React from 'react';
 import './page.scss';
 import { DEFAULT_SITE_URL } from '@/constants/config.js';
+import SentryInit from '@/components/SentryInit.jsx';
 
 export const metadata = {
     metadataBase: new URL(DEFAULT_SITE_URL),
@@ -44,7 +45,10 @@ export default function RootLayout({ children }) {
                     }}
                 />
             </head>
-            <body>{children}</body>
+            <body>
+                <SentryInit />
+                {children}
+            </body>
         </html>
     );
 }

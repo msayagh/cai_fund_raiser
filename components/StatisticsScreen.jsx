@@ -32,6 +32,9 @@ export default function StatisticsScreen({
     const fundedBricks = localizedTiers.reduce((sum, tier) => sum + tier.funded, 0);
     const totalBricks = localizedTiers.reduce((sum, tier) => sum + tier.total, 0);
     const averageDonation = donorCount > 0 ? Math.round(totalRaised / donorCount) : 0;
+    const formatBrickCount = typeof t?.brickCount === 'function'
+        ? t.brickCount
+        : (funded, total) => `${funded} / ${total} bricks`;
     const selected = localizedTiers[selectedTier] ?? localizedTiers[0];
     const globalRemaining = Math.max(0, totalGoal - totalRaised);
     const globalCompletionPct = totalGoal > 0 ? Math.round((totalRaised / totalGoal) * 100) : 0;
@@ -178,7 +181,7 @@ export default function StatisticsScreen({
                                             ></div>
                                         </div>
                                         <div className="statistics-tier-row-bottom">
-                                            <span>{t.brickCount(tier.funded, tier.total)}</span>
+                                            <span>{formatBrickCount(tier.funded, tier.total)}</span>
                                             <span>{languageCurrency(tier.funded * tier.amount, currencyFirst)}</span>
                                         </div>
                                     </div>

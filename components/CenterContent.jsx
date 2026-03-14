@@ -26,6 +26,7 @@ export function HadithSection({ t, isRTL }) {
 
 export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier, setShowRightSidebar, isRTL, theme, currencyFirst, t }) {
     const th = theme ?? THEMES.dark;
+    const formatSideChip = typeof t?.sideChip === 'function' ? t.sideChip : (remaining) => `${remaining} left`;
 
     return (
         <div className="mosque-side-chips">
@@ -36,6 +37,8 @@ export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier,
                 { id: 0, centerPct: 676.5 / 740 },
             ].map(({ id, centerPct }) => {
                 const tier = localizedTiers[id];
+                if (!tier) return null;
+
                 const tierRemaining = tier.total - tier.funded;
                 const isSelected = selectedTier === id;
 
@@ -49,7 +52,7 @@ export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier,
                         }}
                         className={`mosque-side-chip ${isSelected ? "selected" : ""}`}
                         aria-pressed={isSelected}
-                        aria-label={`${tier.label}, ${languageCurrency(tier.amount, currencyFirst)}, ${t.sideChip(tierRemaining)}`}
+                        aria-label={`${tier.label}, ${languageCurrency(tier.amount, currencyFirst)}, ${formatSideChip(tierRemaining)}`}
                         style={{
                             right: isRTL ? "auto" : "8px",
                             left: isRTL ? "8px" : "auto",
@@ -63,12 +66,12 @@ export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier,
                                     : "0 2px 8px rgba(0,0,0,0.5)",
                             zIndex: 10,
                         }}
-                    >
+                        >
                         <span className="mosque-side-chip-amount" style={{ color: isSelected ? "#000000" : th.textPrimary }}>
                             {languageCurrency(tier.amount, currencyFirst)}
                         </span>
                         <span className="mosque-side-chip-remaining" style={{ color: isSelected ? "#00000099" : tier.color }}>
-                            {t.sideChip(tierRemaining)}
+                            {formatSideChip(tierRemaining)}
                         </span>
                     </button>
                 );
@@ -79,6 +82,9 @@ export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier,
 
 export function TierLegend({ localizedTiers, selectedTier, handleTierSelect, theme, t }) {
     const th = theme ?? THEMES.dark;
+    const formatLegendLabel = typeof t?.legendLabel === 'function'
+        ? t.legendLabel
+        : (label, amount) => `${label} · ${languageCurrency(amount, true)}`;
 
     return (
         <div className="tier-legend-wrapper">
@@ -89,7 +95,7 @@ export function TierLegend({ localizedTiers, selectedTier, handleTierSelect, the
                     onClick={() => handleTierSelect(tier.id)}
                     className="tier-legend-item"
                     aria-pressed={selectedTier === tier.id}
-                    aria-label={t.legendLabel(tier.label, tier.amount)}
+                    aria-label={formatLegendLabel(tier.label, tier.amount)}
                     style={{
                         border: `2px solid ${selectedTier === tier.id ? tier.color : th.border}`,
                         background: selectedTier === tier.id ? th.bgCardSelected : th.bgCardAlt,
@@ -97,7 +103,7 @@ export function TierLegend({ localizedTiers, selectedTier, handleTierSelect, the
                     }}
                 >
                     <span className="tier-legend-color-dot" style={{ background: tier.color }} />
-                    {t.legendLabel(tier.label, tier.amount)}
+                    {formatLegendLabel(tier.label, tier.amount)}
                 </button>
             ))}
         </div>

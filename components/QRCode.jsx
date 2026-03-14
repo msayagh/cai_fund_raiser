@@ -1,4 +1,4 @@
-export function QRCode({ color, alt, theme }) {
+export function QRCode({ color, alt }) {
     const src = `qr-code.jpeg`;
 
     return (

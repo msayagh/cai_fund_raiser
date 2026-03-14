@@ -1,16 +1,49 @@
-# React + Vite
+# Centre Zad Al-Imane Fundraiser
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Next.js fundraiser site for Centre Zad Al-Imane, with multilingual campaign pages, donation tracking, statistics, sitemap support, and accessibility features.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- `npm run dev`: generate SCSS variables and start the local dev server
+- `npm run build`: generate SCSS variables and build the app
+- `npm run start`: start the production server
+- `npm run lint`: lint the whole repo
+- `npm run lint:source`: lint app source files only
 
-## React Compiler
+## CI/CD
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+GitHub Actions is configured in [.github/workflows/ci-cd.yml](/Users/asimkhan/projects/cai_fund_raiser/.github/workflows/ci-cd.yml).
 
-## Expanding the ESLint configuration
+- Pull requests and pushes run `npm run lint:source` and `npm run build`
+- Pushes to `main` or `master` can deploy automatically to Vercel when these GitHub secrets are set:
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Monitoring
+
+Browser-side Sentry bootstrap is wired through:
+
+- [components/SentryInit.jsx](/Users/asimkhan/projects/cai_fund_raiser/components/SentryInit.jsx)
+- [lib/monitoring.js](/Users/asimkhan/projects/cai_fund_raiser/lib/monitoring.js)
+- [app/global-error.jsx](/Users/asimkhan/projects/cai_fund_raiser/app/global-error.jsx)
+
+Set these environment variables to enable Sentry in production:
+
+- `NEXT_PUBLIC_SENTRY_DSN`
+- `NEXT_PUBLIC_SENTRY_ENVIRONMENT`
+- `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`
+- `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`
+- `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE`
+
+If no DSN is configured, monitoring falls back to structured console logging.
+
+## Caching
+
+Client-side caching now covers:
+
+- translations in [lib/translationUtils.js](/Users/asimkhan/projects/cai_fund_raiser/lib/translationUtils.js)
+- funded tier data and donation rows in [hooks/index.js](/Users/asimkhan/projects/cai_fund_raiser/hooks/index.js)
+- cache storage helpers in [lib/clientCache.js](/Users/asimkhan/projects/cai_fund_raiser/lib/clientCache.js)
+
+This cache uses in-memory storage plus browser storage with TTLs so the UI can paint from fresh cached data first, then refresh in the background.
