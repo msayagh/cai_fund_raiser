@@ -21,19 +21,6 @@ services:
       - backend_sqlite_data:/app/data
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
-    depends_on:
-      - mysql
-    networks:
-      - root_default
-
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-db
-    restart: always
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
     networks:
       - root_default
 
