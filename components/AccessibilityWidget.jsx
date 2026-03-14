@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/hooks/index.js';
 
 const STORAGE_KEY = 'site-accessibility-zoom';
@@ -20,20 +20,33 @@ function applyZoom(zoom) {
 
 export default function AccessibilityWidget({ compact = false }) {
     const { t } = useTranslation();
-    const [zoom, setZoom] = useState(1);
-    const [isMounted, setIsMounted] = useState(false);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
+    const [zoom, setZoom] = useState(() => {
+        if (typeof window === 'undefined') return 1;
 
         const savedZoom = Number.parseFloat(window.localStorage.getItem(STORAGE_KEY) || '1');
-        const initialZoom = Number.isFinite(savedZoom) ? clampZoom(savedZoom) : 1;
-        setZoom(initialZoom);
-        applyZoom(initialZoom);
-        setIsMounted(true);
-    }, []);
+        return Number.isFinite(savedZoom) ? clampZoom(savedZoom) : 1;
+    });
+    const [isOpen, setIsOpen] = useState(false);
+    const widgetRef = useRef(null);
 
-    const labels = isMounted ? {
+    useEffect(() => {
+        applyZoom(zoom);
+    }, [zoom]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handlePointerDown = (event) => {
+            if (!widgetRef.current?.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        return () => document.removeEventListener('pointerdown', handlePointerDown);
+    }, [isOpen]);
+
+    const labels = {
         group: t.accessibilityZoomControls || 'Accessibility zoom controls',
         short: t.accessibilityShortLabel || 'A11y',
         zoomIn: t.accessibilityZoomIn || 'Zoom in text',
@@ -42,15 +55,6 @@ export default function AccessibilityWidget({ compact = false }) {
         zoomOutShort: t.accessibilityZoomOutShort || 'A-',
         reset: t.accessibilityResetZoom || 'Reset text size',
         resetShort: t.accessibilityResetZoomShort || '100%',
-    } : {
-        group: 'Accessibility zoom controls',
-        short: 'A11y',
-        zoomIn: 'Zoom in text',
-        zoomInShort: 'A+',
-        zoomOut: 'Zoom out text',
-        zoomOutShort: 'A-',
-        reset: 'Reset text size',
-        resetShort: '100%',
     };
 
     const updateZoom = (nextZoom) => {
@@ -73,38 +77,56 @@ export default function AccessibilityWidget({ compact = false }) {
             role="group"
             aria-label={labels.group}
             suppressHydrationWarning
+            ref={widgetRef}
         >
-            <div className="accessibility-widget-label">{labels.short}</div>
             <button
                 type="button"
-                className="accessibility-widget-button"
-                onClick={() => updateZoom(zoom + STEP)}
-                aria-label={labels.zoomIn}
-                title={labels.zoomIn}
-                disabled={zoom >= MAX_ZOOM}
+                className={`accessibility-widget-trigger ${isOpen ? 'open' : ''}`}
+                onClick={() => setIsOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={isOpen}
+                aria-label={labels.group}
             >
-                {labels.zoomInShort}
+                <span className="accessibility-widget-trigger-label">{labels.short}</span>
+                <span className="accessibility-widget-trigger-value">{Math.round(zoom * 100)}%</span>
             </button>
-            <button
-                type="button"
-                className="accessibility-widget-button"
-                onClick={() => updateZoom(zoom - STEP)}
-                aria-label={labels.zoomOut}
-                title={labels.zoomOut}
-                disabled={zoom <= MIN_ZOOM}
-            >
-                {labels.zoomOutShort}
-            </button>
-            <button
-                type="button"
-                className="accessibility-widget-button accessibility-widget-button--reset"
-                onClick={() => updateZoom(1)}
-                aria-label={labels.reset}
-                title={labels.reset}
-                disabled={zoom === 1}
-            >
-                {labels.resetShort}
-            </button>
+            {isOpen && (
+                <div className="accessibility-widget-menu" role="menu">
+                    <div className="accessibility-widget-label">{labels.group}</div>
+                    <div className="accessibility-widget-actions">
+                        <button
+                            type="button"
+                            className="accessibility-widget-button"
+                            onClick={() => updateZoom(zoom + STEP)}
+                            aria-label={labels.zoomIn}
+                            title={labels.zoomIn}
+                            disabled={zoom >= MAX_ZOOM}
+                        >
+                            {labels.zoomInShort}
+                        </button>
+                        <button
+                            type="button"
+                            className="accessibility-widget-button"
+                            onClick={() => updateZoom(zoom - STEP)}
+                            aria-label={labels.zoomOut}
+                            title={labels.zoomOut}
+                            disabled={zoom <= MIN_ZOOM}
+                        >
+                            {labels.zoomOutShort}
+                        </button>
+                        <button
+                            type="button"
+                            className="accessibility-widget-button accessibility-widget-button--reset"
+                            onClick={() => updateZoom(1)}
+                            aria-label={labels.reset}
+                            title={labels.reset}
+                            disabled={zoom === 1}
+                        >
+                            {labels.resetShort}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,18 +1,11 @@
 .accessibility-widget {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 0;
 }
 
-.accessibility-widget-label {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    text-align: center;
-    color: var(--accent-gold);
-}
-
+.accessibility-widget-trigger,
 .accessibility-widget-button {
     min-width: 32px;
     height: 32px;
@@ -37,43 +30,85 @@
     }
 }
 
+.accessibility-widget-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+
+    &.open {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+    }
+}
+
+.accessibility-widget-trigger-label {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.accessibility-widget-trigger-value {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--accent-gold);
+}
+
+.accessibility-widget-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 184px;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-light);
+    z-index: 45;
+}
+
+.accessibility-widget-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--accent-gold);
+    margin-bottom: 8px;
+}
+
+.accessibility-widget-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .accessibility-widget-button--reset {
     min-width: 48px;
     font-size: 11px;
 }
 
 .accessibility-widget--compact {
-    gap: 4px;
-
-    .accessibility-widget-label {
-        display: none;
-    }
-
-    .accessibility-widget-button {
-        min-width: 32px;
-        width: 32px;
-        padding: 0;
-    }
-
-    .accessibility-widget-button--reset {
-        width: auto;
-        min-width: 46px;
-    }
+    gap: 0;
 }
 
 @media (max-width: 768px) {
-    .accessibility-widget {
-        gap: 4px;
-    }
-
+    .accessibility-widget-trigger,
     .accessibility-widget-button {
         min-width: 30px;
         height: 30px;
         font-size: 11px;
     }
 
+    .accessibility-widget-trigger {
+        padding: 0 8px;
+    }
+
     .accessibility-widget-button--reset {
         min-width: 42px;
         font-size: 10px;
+    }
+
+    .accessibility-widget-menu {
+        right: -8px;
     }
 }

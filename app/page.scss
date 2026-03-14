@@ -25,6 +25,7 @@
    - _qr-section.scss: QR code display section
    - _donations-list.scss: Donated amount list component
    - _campaign-pie.scss: Pie chart visualization
+   - _statistics-screen.scss: Expanded statistics modal and visuals
    - _mosque-viz.scss: Mosque building visualization
    - _hadith.scss: Hadith/quote display section
    - _sidebars.scss: Sidebar containers and toggles
@@ -56,6 +57,7 @@
 @import 'styles/qr-section';
 @import 'styles/donations-list';
 @import 'styles/campaign-pie';
+@import 'styles/statistics-screen';
 @import 'styles/mosque-viz';
 @import 'styles/hadith';
 

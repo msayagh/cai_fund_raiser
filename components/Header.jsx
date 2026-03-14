@@ -1,6 +1,5 @@
 import { LANGUAGE_OPTIONS, languageCurrency } from '@/lib/translationUtils.js';
 import Link from 'next/link';
-import { useEffect } from 'react';
 import AccessibilityWidget from '@/components/AccessibilityWidget.jsx';
 
 export function Header({
@@ -9,8 +8,6 @@ export function Header({
     t,
     themeMode,
     setThemeMode,
-    ramadanRaised,
-    headerRamadanPct,
     tierCollectedAmount = 0,
     tierEngagementPct = 0,
     tierEngagementTarget = 0,
@@ -21,23 +18,11 @@ export function Header({
     languageDropdownRef,
     currencyFirst = false,
     isLoginPage = false,
+    onOpenStatistics,
 }) {
     const isCurrencyFirst = currencyFirst || language === "en";
     const engagementPct = tierEngagementTarget > 0 ? Math.min(100, Math.round((tierCollectedAmount / tierEngagementTarget) * 100)) : tierEngagementPct;
     const receivedPct = receivedTarget > 0 ? Math.min(100, Math.round((receivedAmount / receivedTarget) * 100)) : 0;
-
-    useEffect(() => {
-        console.log('[Header] Global campaign metrics:', {
-            ramadanRaised,
-            headerRamadanPct,
-            engagementAmount: tierCollectedAmount,
-            engagementTarget: tierEngagementTarget,
-            engagementPct,
-            receivedAmount,
-            receivedTarget,
-            receivedPct,
-        });
-    }, [ramadanRaised, headerRamadanPct, tierCollectedAmount, tierEngagementTarget, engagementPct, receivedAmount, receivedTarget, receivedPct]);
 
     return (
         <header className="mosque-donation-header">
@@ -65,7 +50,7 @@ export function Header({
                         <div className="progress-bar-container">
                             <div className="progress-objective-title">
                                 <span className="progress-objective-text">
-                                    {t.ramadanObjective}
+                                    {t.campaignOverview || 'Campaign comparison'}
                                 </span>
                             </div>
 
@@ -90,41 +75,48 @@ export function Header({
                                 </span>
                             </div>
 
-                            {receivedAmount !== undefined && receivedAmount >= 0 && (
-                                <>
-                                    <div className="progress-objective-title" style={{ marginTop: '16px' }}>
-                                        <span className="progress-objective-text">
-                                            {t.engagement}
-                                        </span>
-                                    </div>
+                            <div className="progress-objective-title" style={{ marginTop: '16px' }}>
+                                <span className="progress-objective-text">
+                                    {t.engagement}
+                                </span>
+                            </div>
 
-                                    <div className="progress-raised-line">
-                                        {languageCurrency(receivedAmount, isCurrencyFirst)}{" "}
-                                        <span className="progress-raised-of">
-                                            {t.prepositionOf}
-                                        </span>{" "}
-                                        {languageCurrency(receivedTarget, isCurrencyFirst)}
-                                    </div>
+                            <div className="progress-raised-line">
+                                {languageCurrency(receivedAmount, isCurrencyFirst)}{" "}
+                                <span className="progress-raised-of">
+                                    {t.prepositionOf}
+                                </span>{" "}
+                                {languageCurrency(receivedTarget, isCurrencyFirst)}
+                            </div>
 
-                                    <div className="progress-bar-row">
-                                        <div className="progress-bar-track">
-                                            <div
-                                                className="progress-bar-fill"
-                                                style={{ width: `${receivedPct}%` }}
-                                                aria-hidden="true"
-                                            ></div>
-                                        </div>
-                                        <span className="progress-bar-value">
-                                            {receivedPct}%
-                                        </span>
-                                    </div>
-                                </>
-                            )}
+                            <div className="progress-bar-row">
+                                <div className="progress-bar-track">
+                                    <div
+                                        className="progress-bar-fill"
+                                        style={{ width: `${receivedPct}%` }}
+                                        aria-hidden="true"
+                                    ></div>
+                                </div>
+                                <span className="progress-bar-value">
+                                    {receivedPct}%
+                                </span>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 <div className="header-right">
+                    {!isLoginPage && (
+                        <button
+                            type="button"
+                            className="header-stats-button"
+                            onClick={onOpenStatistics}
+                            aria-label={t.campaignOverview || 'Campaign overview'}
+                            title={t.campaignOverview || 'Campaign overview'}
+                        >
+                            <i className="fas fa-chart-column" aria-hidden="true"></i>
+                        </button>
+                    )}
                     <Link href="/login" className="login-button" title="Login">
                         <i className="fas fa-user" aria-hidden="true"></i>
                         <span className="login-button-text">{t.loginTitle}</span>

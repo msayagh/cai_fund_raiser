@@ -7,7 +7,7 @@ import "./page.scss";
 import { Header } from "@/components/Header.jsx";
 import { QRCode } from "@/components/QRCode.jsx";
 import { DonationsList } from "@/components/DonationsList.jsx";
-import { CampaignPie } from "@/components/CampaignPie.jsx";
+import StatisticsScreen from "@/components/StatisticsScreen.jsx";
 import { MosqueViz } from "@/components/Mosque/MosqueViz.jsx";
 import { HadithSection, MosqueSideChips, TierLegend } from "@/components/CenterContent.jsx";
 import { TierSelection, SelectedTierCard } from "@/components/RightSidebarContent.jsx";
@@ -77,6 +77,7 @@ export default function MosqueDonation() {
   const [isMounted, setIsMounted] = useState(false);
   const [donationFeedback, setDonationFeedback] = useState(null);
   const [donationIframeLoaded, setDonationIframeLoaded] = useState(false);
+  const [showStatisticsScreen, setShowStatisticsScreen] = useState(false);
   const appReady = isMounted && themeMounted && translationMounted;
   const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
 
@@ -132,13 +133,6 @@ export default function MosqueDonation() {
 
   const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + PRE_RAISED;
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
-  const headerRamadanPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((ramadanRaised / RAMADAN_TARGET) * 100)) : 0;
-
-  // Engagement = sum of pledged pillar objectives, Received = actual payments collected.
-  const tierCollectedAmount = engagementAmount;
-  const tierEngagementTarget = RAMADAN_TARGET;
-  const tierEngagementPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((engagementAmount / RAMADAN_TARGET) * 100)) : 0;
-  const receivedTarget = RAMADAN_TARGET;
 
   const currencyFirst = language === "en";
   const siteUrl = getSiteUrl();
@@ -259,18 +253,32 @@ export default function MosqueDonation() {
         theme={theme}
         themeMode={themeMode}
         setThemeMode={setThemeMode}
-        ramadanRaised={ramadanRaised}
-        headerRamadanPct={headerRamadanPct}
-        tierCollectedAmount={tierCollectedAmount}
-        tierEngagementPct={tierEngagementPct}
-        tierEngagementTarget={tierEngagementTarget}
+        tierCollectedAmount={engagementAmount}
+        tierEngagementPct={RAMADAN_TARGET > 0 ? Math.min(100, Math.round((engagementAmount / RAMADAN_TARGET) * 100)) : 0}
+        tierEngagementTarget={RAMADAN_TARGET}
         receivedAmount={ramadanRaised}
-        receivedTarget={receivedTarget}
-        selectedTierLabel={sel.label}
+        receivedTarget={RAMADAN_TARGET}
         showLanguageMenu={showLanguageMenu}
         setShowLanguageMenu={setShowLanguageMenu}
         languageDropdownRef={languageDropdownRef}
         currencyFirst={currencyFirst}
+        onOpenStatistics={() => setShowStatisticsScreen(true)}
+      />
+
+      <StatisticsScreen
+        isOpen={showStatisticsScreen}
+        onClose={() => setShowStatisticsScreen(false)}
+        t={t}
+        theme={theme}
+        language={language}
+        localizedTiers={localizedTiers}
+        selectedTier={selectedTier}
+        totalRaised={totalRaised}
+        totalGoal={totalGoal}
+        campaignGoal={RAMADAN_TARGET}
+        ramadanRaised={ramadanRaised}
+        engagementAmount={engagementAmount}
+        totalsByEmail={totalsByEmail}
       />
 
       <div className="layout-main">
@@ -345,15 +353,6 @@ export default function MosqueDonation() {
               isLoading={donationsLoading}
               error={donationsError}
             />
-            <CampaignPie
-              totalGoal={totalGoal}
-              totalRaised={totalRaised}
-              ramadanRaised={ramadanRaised}
-              theme={theme}
-              language={language}
-              t={t}
-              sel={sel}
-            />
           </div>
 
           <LeftSidebar
@@ -377,15 +376,6 @@ export default function MosqueDonation() {
               t={t}
               isLoading={donationsLoading}
               error={donationsError}
-            />
-            <CampaignPie
-              totalGoal={totalGoal}
-              totalRaised={totalRaised}
-              ramadanRaised={ramadanRaised}
-              theme={theme}
-              language={language}
-              t={t}
-              sel={sel}
             />
           </LeftSidebar>
 

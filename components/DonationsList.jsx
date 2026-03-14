@@ -48,13 +48,15 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
         return null;
     }
 
+    const sortedDonors = Object.values(totalsByEmail).sort((a, b) => b.totalDonated - a.totalDonated);
+
     return (
         <div className="donations-list">
             <div className="donations-list-title">
                 {t.donorsList}
             </div>
             <div className="donations-list-scroll">
-                {Object.values(totalsByEmail).map((d, idx) => {
+                {sortedDonors.map((d, idx) => {
                     // Try to match tier by name from donation data
                     const tier = d.tier ? tierByName[d.tier.toLowerCase()] : null;
                     const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
@@ -70,15 +72,32 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
                             className="donation-item"
                             style={{ "--tier-color": tierColor }}
                         >
-                            <div className="donation-item-name">{displayName}</div>
-                            <div className="donation-item-amount">
-                                {dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`}
-                            </div>
-                            <div className="donation-item-tier">
-                                {tierLabel}
-                            </div>
-                            <div className="donation-item-progress" style={{ '--progress-pct': `${progressPct}%` }}>
-                                <div className="donation-item-progress-fill"></div>
+                            <div className="donation-item-top">
+                                <div className="donation-item-copy">
+                                    <div className="donation-item-name">{displayName}</div>
+                                    <div className="donation-item-amount">
+                                        {dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`}
+                                    </div>
+                                    <div className="donation-item-tier">
+                                        {tierLabel}
+                                    </div>
+                                </div>
+                                <div
+                                    className="donation-item-progress-circle"
+                                    aria-label={`${Math.round(progressPct)}% funded`}
+                                >
+                                    <svg viewBox="0 0 40 40" className="donation-item-progress-svg" aria-hidden="true">
+                                        <circle className="donation-item-progress-track" cx="20" cy="20" r="16"></circle>
+                                        <circle
+                                            className="donation-item-progress-value"
+                                            cx="20"
+                                            cy="20"
+                                            r="16"
+                                            style={{ "--progress-pct": progressPct / 100 }}
+                                        ></circle>
+                                    </svg>
+                                    <span className="donation-item-progress-label">{Math.round(progressPct)}%</span>
+                                </div>
                             </div>
                         </div>
                     );
