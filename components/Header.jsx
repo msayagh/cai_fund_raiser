@@ -13,7 +13,6 @@ export function Header({
     tierEngagementPct = 0,
     tierEngagementTarget = 0,
     receivedAmount = 0,
-    receivedTarget = 0,
     showLanguageMenu,
     setShowLanguageMenu,
     languageDropdownRef,
