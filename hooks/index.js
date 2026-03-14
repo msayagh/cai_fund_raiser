@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES } from '@/lib/translationUtils.js';
-import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
+import { fetchCampaignSnapshot, fetchFundedFromSheet, fetchDonationsFromSheet, hasFundedSheetConfig } from '@/lib/dataFetching.js';
 import { getCachedValue, setCachedValue } from '@/lib/clientCache.js';
 import { captureException, captureMessage } from '@/lib/monitoring.js';
 import { INITIAL_TIERS, MOBILE_BREAKPOINT, TIER_CONFIG } from '@/constants/config.js';
@@ -36,8 +36,10 @@ export function useTranslation() {
 
             // Load saved language from localStorage
             const savedLanguage = localStorage.getItem('selectedLanguage');
-            if ((!requestedLanguage || !AVAILABLE_LANGUAGE_CODES.includes(requestedLanguage)) && savedLanguage && savedLanguage !== language) {
-                setLanguageState(savedLanguage);
+            if ((!requestedLanguage || !AVAILABLE_LANGUAGE_CODES.includes(requestedLanguage)) && savedLanguage) {
+                setLanguageState((currentLanguage) => (
+                    savedLanguage !== currentLanguage ? savedLanguage : currentLanguage
+                ));
             }
 
             // Listen for storage changes from other tabs/windows
@@ -184,10 +186,21 @@ export function useTiers() {
             }
 
             try {
-                const funded = await fetchFundedFromSheet();
+                const snapshot = await fetchCampaignSnapshot();
+                const fundedFromApi = snapshot?.funded;
+                const hasApiFundedData = fundedFromApi && Object.values(fundedFromApi).some((value) => Number(value) > 0);
+
+                if (hasApiFundedData) {
+                    updateFundedTiers(fundedFromApi);
+                    setCachedValue(TIERS_CACHE_KEY, fundedFromApi);
+                    setError(null);
+                    return;
+                }
+
+                const funded = hasFundedSheetConfig() ? await fetchFundedFromSheet() : null;
                 if (!funded) {
                     setError('Unable to load tier progress right now.');
-                    captureMessage('Tier progress fetch returned no data', { level: 'error', source: 'useTiers' });
+                    captureMessage('Tier progress fetch returned no data from API or sheet', { level: 'error', source: 'useTiers' });
                     return;
                 }
 
@@ -315,10 +328,34 @@ export function useDonations() {
             }
 
             try {
+                const snapshot = await fetchCampaignSnapshot();
+                const apiRows = snapshot?.donations;
+                const apiSummary = snapshot?.summary;
+                const hasApiDonationData = Array.isArray(apiRows) && (
+                    apiRows.length > 0 ||
+                    Number(apiSummary?.ramadanRaised || 0) > 0 ||
+                    Number(apiSummary?.engagementAmount || 0) > 0
+                );
+
+                if (hasApiDonationData) {
+                    setDonations((prev) => {
+                        if (prev.length === apiRows.length && prev.every((d, i) => d.id === apiRows[i].id && d.donated === apiRows[i].donated)) {
+                            return prev;
+                        }
+                        return apiRows;
+                    });
+                    setCachedValue(DONATIONS_CACHE_KEY, apiRows);
+                    setTotalsByEmail(getTotalsByEmail(apiRows));
+                    setRamadanRaised(apiSummary?.ramadanRaised ?? getRamadanRaised(apiRows));
+                    setEngagementAmount(apiSummary?.engagementAmount ?? getEngagementAmount(apiRows));
+                    setError(null);
+                    return;
+                }
+
                 const rows = await fetchDonationsFromSheet();
                 if (!Array.isArray(rows)) {
                     setError('Unable to load donations right now.');
-                    captureMessage('Donations fetch returned a non-array payload', { level: 'error', source: 'useDonations' });
+                    captureMessage('Donations fetch returned a non-array payload from API or sheet', { level: 'error', source: 'useDonations' });
                     return;
                 }
 

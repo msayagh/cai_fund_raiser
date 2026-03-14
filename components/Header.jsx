@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { LANGUAGE_OPTIONS, languageCurrency } from '@/lib/translationUtils.js';
 import Link from 'next/link';
 import AccessibilityWidget from '@/components/AccessibilityWidget.jsx';
+import { getStoredSession, subscribeToSessionChange } from '@/lib/session.js';
+import { logout } from '@/lib/auth.js';
 
 export function Header({
     language,
@@ -20,9 +22,11 @@ export function Header({
     currencyFirst = false,
     isLoginPage = false,
     onOpenStatistics,
+    showHeaderCenter = !isLoginPage,
 }) {
     const [showHeaderMenu, setShowHeaderMenu] = useState(false);
     const headerMenuRef = useRef(null);
+    const [session, setSession] = useState(null);
     const isCurrencyFirst = currencyFirst || language === "en";
     const engagementPct = tierEngagementTarget > 0 ? Math.min(100, Math.round((tierCollectedAmount / tierEngagementTarget) * 100)) : tierEngagementPct;
     const receivedPct = receivedTarget > 0 ? Math.min(100, Math.round((receivedAmount / receivedTarget) * 100)) : 0;
@@ -39,6 +43,21 @@ export function Header({
         document.addEventListener('pointerdown', handlePointerDown);
         return () => document.removeEventListener('pointerdown', handlePointerDown);
     }, [showHeaderMenu]);
+
+    useEffect(() => {
+        setSession(getStoredSession());
+        return subscribeToSessionChange(setSession);
+    }, []);
+
+    const dashboardHref = session?.role === 'admin' ? '/admin/dashboard' : '/donor/dashboard';
+
+    async function handleLogout() {
+        await logout();
+        setShowHeaderMenu(false);
+        if (typeof window !== 'undefined') {
+            window.location.assign('/login');
+        }
+    }
 
     return (
         <header className="mosque-donation-header">
@@ -61,7 +80,7 @@ export function Header({
                     </div>
                 </div>
 
-                {!isLoginPage && (
+                {showHeaderCenter && (
                     <div className="header-center">
                         <div className="progress-bar-container">
                             <div className="progress-objective-title">
@@ -123,7 +142,7 @@ export function Header({
 
                 <div className="header-right">
                     <div className="header-controls-desktop">
-                        {!isLoginPage && (
+                        {!isLoginPage && onOpenStatistics && (
                             <button
                                 type="button"
                                 className="header-stats-button"
@@ -134,10 +153,17 @@ export function Header({
                                 <i className="fas fa-chart-column" aria-hidden="true"></i>
                             </button>
                         )}
-                        <Link href="/login" className="login-button" title="Login">
-                            <i className="fas fa-user" aria-hidden="true"></i>
-                            <span className="login-button-text">{t.loginTitle}</span>
-                        </Link>
+                        {session ? (
+                            <Link href={dashboardHref} className="login-button" title={session.email}>
+                                <i className="fas fa-user-check" aria-hidden="true"></i>
+                                <span className="login-button-text">{session.name || session.email}</span>
+                            </Link>
+                        ) : (
+                            <Link href="/login" className="login-button" title="Login">
+                                <i className="fas fa-user" aria-hidden="true"></i>
+                                <span className="login-button-text">{t.loginTitle}</span>
+                            </Link>
+                        )}
                         <AccessibilityWidget compact />
                         <button
                             onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
@@ -212,7 +238,7 @@ export function Header({
                         {showHeaderMenu && (
                             <div className="header-menu-panel" role="menu">
                                 <div className="header-menu-section">
-                                    {!isLoginPage && (
+                                    {!isLoginPage && onOpenStatistics && (
                                         <button
                                             type="button"
                                             className="header-menu-item"
@@ -225,14 +251,35 @@ export function Header({
                                             <span>{t.campaignOverview || 'Campaign overview'}</span>
                                         </button>
                                     )}
-                                    <Link
-                                        href="/login"
-                                        className="header-menu-item"
-                                        onClick={() => setShowHeaderMenu(false)}
-                                    >
-                                        <i className="fas fa-user" aria-hidden="true"></i>
-                                        <span>{t.loginTitle}</span>
-                                    </Link>
+                                    {session ? (
+                                        <>
+                                            <Link
+                                                href={dashboardHref}
+                                                className="header-menu-item"
+                                                onClick={() => setShowHeaderMenu(false)}
+                                            >
+                                                <i className="fas fa-gauge" aria-hidden="true"></i>
+                                                <span>{session.name || session.email}</span>
+                                            </Link>
+                                            <button
+                                                type="button"
+                                                className="header-menu-item"
+                                                onClick={handleLogout}
+                                            >
+                                                <i className="fas fa-right-from-bracket" aria-hidden="true"></i>
+                                                <span>Sign out</span>
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <Link
+                                            href="/login"
+                                            className="header-menu-item"
+                                            onClick={() => setShowHeaderMenu(false)}
+                                        >
+                                            <i className="fas fa-user" aria-hidden="true"></i>
+                                            <span>{t.loginTitle}</span>
+                                        </Link>
+                                    )}
                                     <div className="header-menu-item header-menu-item--inline">
                                         <span className="header-menu-item-label">{themeMode === "dark" ? "Light mode" : "Dark mode"}</span>
                                         <button

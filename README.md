@@ -38,6 +38,17 @@ Set these environment variables to enable Sentry in production:
 
 If no DSN is configured, monitoring falls back to structured console logging.
 
+## Google Sheets
+
+Funded tier syncing is optional and stays disabled unless `NEXT_PUBLIC_GOOGLE_SHEET_APP_URL` is set.
+
+Optional environment variables:
+
+- `NEXT_PUBLIC_GOOGLE_SHEET_APP_URL`
+- `NEXT_PUBLIC_GOOGLE_SHEET_FUNDED_TIERS_GID`
+- `NEXT_PUBLIC_GOOGLE_DONATIONS_SHEET_URL`
+- `NEXT_PUBLIC_GOOGLE_SHEET_DONATIONS_GID`
+
 ## Caching
 
 Client-side caching now covers:

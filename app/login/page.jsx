@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import '../page.scss';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
@@ -11,9 +12,14 @@ import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
+import { adminLogin, clearTokens, donorLogin, logout, tryAutoLogin } from '@/lib/auth.js';
+import { hasRefreshToken } from '@/lib/apiClient.js';
+import { getStoredSession } from '@/lib/session.js';
 import './page.scss';
 
 export default function LoginPage() {
+    const router = useRouter();
+    const hydratedRef = useRef(false);
     const { language, setLanguage, t, isMounted } = useTranslation();
     const { themeMode, setThemeMode, isMounted: themeMounted } = useThemeMode();
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
@@ -27,15 +33,21 @@ export default function LoginPage() {
     const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
     const pageTitle = `${t.loginTitle || 'Login'} | ${t.centerName || 'Centre Zad Al-Imane'}`;
     const pageDescription = truncateText(
-        t.loginDescription || "Secure login access for the Centre Zad Al-Imane donation platform."
+        t.loginDescription || 'Secure donor and admin login for the Centre Zad Al-Imane platform.'
     );
     const locale = t.locale ?? language;
     const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
 
+    const [activeRole, setActiveRole] = useState('donor');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [status, setStatus] = useState({ loading: true, error: '', success: '', user: null, role: null });
+    const [submitting, setSubmitting] = useState(false);
+
     useEffect(() => {
         if (languageDropdownRef.current && showLanguageMenu) {
-            const closeMenu = (e) => {
-                if (!languageDropdownRef.current?.contains(e.target)) {
+            const closeMenu = (event) => {
+                if (!languageDropdownRef.current?.contains(event.target)) {
                     setShowLanguageMenu(false);
                 }
             };
@@ -63,7 +75,59 @@ export default function LoginPage() {
         });
     }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
-    // Don't render until theme and language are loaded
+    useEffect(() => {
+        if (hydratedRef.current) return;
+        hydratedRef.current = true;
+
+        let active = true;
+
+        async function hydrateSession() {
+            try {
+                const saved = getStoredSession();
+                const canRestoreSession = Boolean(saved) && hasRefreshToken();
+
+                if (!canRestoreSession) {
+                    clearTokens();
+                    setStatus({ loading: false, error: '', success: '', user: null, role: null });
+                    return;
+                }
+
+                const refreshed = await tryAutoLogin();
+                if (!active) return;
+
+                if (!refreshed) {
+                    clearTokens();
+                    setStatus({ loading: false, error: '', success: '', user: null, role: null });
+                    return;
+                }
+
+                const parsed = getStoredSession();
+                setStatus({
+                    loading: false,
+                    error: '',
+                    success: parsed ? `${parsed.role === 'admin' ? 'Admin' : 'Donor'} session restored.` : 'Session restored.',
+                    user: parsed,
+                    role: parsed?.role ?? null,
+                });
+            } catch {
+                if (!active) return;
+                clearTokens();
+                setStatus({ loading: false, error: '', success: '', user: null, role: null });
+            }
+        }
+
+        hydrateSession();
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!status.user || status.loading) return;
+        router.replace(status.role === 'admin' ? '/admin/dashboard' : '/donor/dashboard');
+    }, [router, status.loading, status.role, status.user]);
+
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div
@@ -76,6 +140,47 @@ export default function LoginPage() {
             </div>
         );
     }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+        setSubmitting(true);
+        setStatus((prev) => ({ ...prev, error: '', success: '' }));
+
+        try {
+            const user = activeRole === 'admin'
+                ? await adminLogin(email.trim().toLowerCase(), password)
+                : await donorLogin(email.trim().toLowerCase(), password);
+
+            const nextSession = { ...user, role: activeRole };
+            setStatus({
+                loading: false,
+                error: '',
+                success: `${activeRole === 'admin' ? 'Admin' : 'Donor'} login successful.`,
+                user: nextSession,
+                role: activeRole,
+            });
+            setPassword('');
+        } catch (error) {
+            setStatus((prev) => ({
+                ...prev,
+                loading: false,
+                error: error?.message || 'Unable to sign in right now.',
+                success: '',
+            }));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleLogout() {
+        await logout();
+        setStatus({ loading: false, error: '', success: 'You have been signed out.', user: null, role: null });
+    }
+
+    const authTitle = activeRole === 'admin' ? 'Admin access' : 'Donor access';
+    const authDescription = activeRole === 'admin'
+        ? 'Use your administrator credentials to manage donors, requests, and campaign activity.'
+        : 'Use your donor credentials to access your engagement and account records.';
 
     return (
         <div
@@ -113,17 +218,76 @@ export default function LoginPage() {
                 isLoginPage={true}
             />
             <div className="login-container">
-                <div className="login-card">
+                <div className="login-card login-card--wide">
                     <div className="login-content">
-                        <h1 className="login-title">{isMounted ? t.loginTitle : ''}</h1>
-                        <p className="login-message">{isMounted ? t.loginMessage : ''}</p>
-                        <p className="login-description">
-                            {isMounted ? t.loginDescription : ''}
-                        </p>
+                        <div className="login-eyebrow">{authTitle}</div>
+                        <h1 className="login-title">{isMounted ? t.loginTitle : 'Login'}</h1>
+                        <p className="login-description">{authDescription}</p>
                     </div>
-                    <Link href="/" className="login-back-button">
-                        {isMounted ? t.backToHome : ''}
-                    </Link>
+
+                    <div className="login-role-switcher" role="tablist" aria-label="Account type">
+                        <button type="button" className={`login-role-button ${activeRole === 'donor' ? 'active' : ''}`} onClick={() => setActiveRole('donor')}>
+                            Donor
+                        </button>
+                        <button type="button" className={`login-role-button ${activeRole === 'admin' ? 'active' : ''}`} onClick={() => setActiveRole('admin')}>
+                            Admin
+                        </button>
+                    </div>
+
+                    {status.error ? <div className="login-alert login-alert--error">{status.error}</div> : null}
+                    {status.success ? <div className="login-alert login-alert--success">{status.success}</div> : null}
+
+                    {status.user ? (
+                        <div className="login-session-card">
+                            <div className="login-session-copy">
+                                <div className="login-session-label">Signed in as</div>
+                                <div className="login-session-name">{status.user.name || status.user.email}</div>
+                                <div className="login-session-meta">{status.user.email} · {status.role}</div>
+                            </div>
+                            <button type="button" className="login-primary-button login-primary-button--secondary" onClick={handleLogout}>
+                                Sign out
+                            </button>
+                        </div>
+                    ) : (
+                        <form className="login-form" onSubmit={handleSubmit}>
+                            <label className="login-label">
+                                <span>Email</span>
+                                <input
+                                    className="login-input"
+                                    type="email"
+                                    autoComplete="email"
+                                    value={email}
+                                    onChange={(event) => setEmail(event.target.value)}
+                                    required
+                                />
+                            </label>
+
+                            <label className="login-label">
+                                <span>Password</span>
+                                <input
+                                    className="login-input"
+                                    type="password"
+                                    autoComplete={activeRole === 'admin' ? 'current-password' : 'current-password'}
+                                    value={password}
+                                    onChange={(event) => setPassword(event.target.value)}
+                                    required
+                                />
+                            </label>
+
+                            <button type="submit" className="login-primary-button" disabled={submitting || status.loading}>
+                                {submitting ? 'Signing in...' : `Sign in as ${activeRole}`}
+                            </button>
+                        </form>
+                    )}
+
+                    <div className="login-links">
+                        <Link href="/" className="login-back-button">
+                            {isMounted ? t.backToHome : 'Back to Home'}
+                        </Link>
+                        <Link href="/admin/setup" className="login-inline-link">
+                            Initial admin setup
+                        </Link>
+                    </div>
                 </div>
             </div>
             <Footer t={isMounted ? t : {}} />

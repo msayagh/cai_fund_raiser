@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // `npm run prisma:run` rewrites this provider from DB_PROVIDER (mysql/sqlite).
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Donor {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  engagement    Engagement?
+  payments      Payment[]
+  requests      Request[]
+  logs          ActivityLog[]
+  refreshTokens RefreshToken[]
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  addedById    String?
+  addedBy      Admin?   @relation("AdminHierarchy", fields: [addedById], references: [id])
+  addedAdmins  Admin[]  @relation("AdminHierarchy")
+
+  paymentsRecorded Payment[]
+  logs             ActivityLog[]
+  refreshTokens    RefreshToken[]
+}
+
+model Engagement {
+  id          String    @id @default(cuid())
+  donorId     String    @unique
+  donor       Donor     @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  totalPledge Float
+  startDate   DateTime
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  donorId           String
+  donor             Donor    @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  amount            Float
+  date              DateTime
+  method            String
+  note              String?
+  recordedByAdminId String?
+  recordedByAdmin   Admin?   @relation(fields: [recordedByAdminId], references: [id])
+  createdAt         DateTime @default(now())
+}
+
+model Request {
+  id        String   @id @default(cuid())
+  type      String
+  donorId   String?
+  donor     Donor?   @relation(fields: [donorId], references: [id])
+  name      String
+  email     String
+  message   String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attachments RequestAttachment[]
+}
+
+model RequestAttachment {
+  id        String   @id @default(cuid())
+  requestId String
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  filename  String
+  mimeType  String
+  filePath  String
+  fileSize  Int
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  actor     String
+  actorType String
+  actorId   String?
+  action    String
+  details   String
+  donorId   String?
+  donorRef  Donor?   @relation(fields: [donorId], references: [id])
+  adminId   String?
+  adminRef  Admin?   @relation(fields: [adminId], references: [id])
+  timestamp DateTime @default(now())
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userType  String
+  donorId   String?
+  donor     Donor?   @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  adminId   String?
+  admin     Admin?   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

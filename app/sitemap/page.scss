@@ -11,7 +11,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 28px 20px;
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin: 0 auto;
+    padding: 28px 24px 40px;
 }
 
 .sitemap-card {
@@ -116,6 +119,10 @@
 }
 
 @media (max-width: 768px) {
+    .sitemap-container {
+        padding: 24px 20px 32px;
+    }
+
     .sitemap-card {
         padding: 28px 22px;
         border-radius: 22px;
@@ -132,7 +139,7 @@
 
 @media (max-width: 480px) {
     .sitemap-container {
-        padding: 20px 14px;
+        padding: 16px 14px 24px;
     }
 
     .sitemap-card {

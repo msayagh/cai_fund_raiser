@@ -11,8 +11,9 @@ export default function GlobalError({ error, reset }) {
     return (
         <html>
             <body>
-                <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px', background: '#090c18', color: '#fff' }}>
-                    <div style={{ maxWidth: '480px', textAlign: 'center' }}>
+                <div style={{ minHeight: '100vh', background: '#090c18', color: '#fff' }}>
+                    <div style={{ width: '100%', maxWidth: 'var(--page-max-width)', margin: '0 auto', minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px' }}>
+                        <div style={{ width: '100%', maxWidth: '480px', textAlign: 'center' }}>
                         <h1 style={{ marginBottom: '12px' }}>Something went wrong</h1>
                         <p style={{ marginBottom: '18px', color: 'rgba(255,255,255,0.75)' }}>
                             We logged the error and you can try reloading this screen.
@@ -31,6 +32,7 @@ export default function GlobalError({ error, reset }) {
                         >
                             Retry
                         </button>
+                        </div>
                     </div>
                 </div>
             </body>
