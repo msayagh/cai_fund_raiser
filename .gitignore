@@ -29,6 +29,10 @@ node_modules/
 dist/
 build/
 .next/
+
+# Auto-generated files
+lib/scss-vars.scss
+.next/
 out/
 
 # Coverage directory
