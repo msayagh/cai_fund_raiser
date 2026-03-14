@@ -25,7 +25,7 @@ export function Header({
     const headerMenuRef = useRef(null);
     const isCurrencyFirst = currencyFirst || language === "en";
     const engagementPct = tierEngagementTarget > 0 ? Math.min(100, Math.round((tierCollectedAmount / tierEngagementTarget) * 100)) : tierEngagementPct;
-    const receivedPct = receivedTarget > 0 ? Math.min(100, Math.round((receivedAmount / receivedTarget) * 100)) : 0;
+    const receivedPct = tierCollectedAmount > 0 ? Math.min(100, Math.round((receivedAmount / tierCollectedAmount) * 100)) : 0;
 
     useEffect(() => {
         if (!showHeaderMenu) return;
@@ -102,7 +102,7 @@ export function Header({
                                 <span className="progress-raised-of">
                                     {t.prepositionOf}
                                 </span>{" "}
-                                {languageCurrency(receivedTarget, isCurrencyFirst)}
+                                {languageCurrency(tierCollectedAmount, isCurrencyFirst)}
                             </div>
 
                             <div className="progress-bar-row">
