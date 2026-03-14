@@ -67,7 +67,12 @@ export function CampaignPie({ totalGoal, totalRaised, ramadanRaised, theme, lang
                 {t.campaignOverview}
             </div>
             <div className="campaign-pie-body">
-                <svg viewBox="0 0 120 120" className="campaign-pie-svg" aria-hidden="true">
+                <svg
+                    viewBox="0 0 120 120"
+                    className="campaign-pie-svg"
+                    role="img"
+                    aria-label={`${t.campaignOverview}: ${formatPct(totalRaised)}% ${t.reached}`}
+                >
                     {arcs.map(({ slice, d }) => (
                         <path key={slice.key} d={d} fill={slice.color} stroke={th.bgSidebar} strokeWidth="0.5" className={slice.key === "other" ? "campaign-pie-slice-glow" : ""} />
                     ))}

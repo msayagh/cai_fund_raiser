@@ -3,7 +3,7 @@ import { THEMES, BOUNDARIES } from '../../constants/config.js';
 import { MosaicGrid } from './MosaicGrid.jsx';
 import { createMosqueShapes, createInsideTest } from './mosqueShapes.jsx';
 
-function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
+function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme, describedBy }) {
     const th = theme ?? THEMES.dark;
     const W = 800;
     const H = 740;
@@ -26,6 +26,8 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
 
     const gradId = `mg-${th.mode}`;
     const moonId = `moonGlow-${th.mode}`;
+    const titleId = `mosque-viz-title-${th.mode}`;
+    const descId = `mosque-viz-desc-${th.mode}`;
     return (
         <svg
             className="mosque-viz-svg"
@@ -33,7 +35,15 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
             width="100%"
             height="100%"
             preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-labelledby={`${titleId} ${descId}`}
+            aria-describedby={describedBy}
         >
+            <title id={titleId}>Mosque fundraising visualization</title>
+            <desc id={descId}>
+                Interactive mosque visualization showing fundraising progress across four tiers: foundation, walls, arches, and dome.
+                Use the tier controls to highlight each section and review funded brick counts.
+            </desc>
             <defs>
                 <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={th.vizGradientTop} />
@@ -138,7 +148,24 @@ function MosqueVizInner({ tiers, selectedTier, onSelectTier, theme }) {
 
             {bands.map((b) => (
                 <g key={`hit${b.tier}`} clipPath="url(#mc)">
-                    <rect x={0} y={b.y1} width={W} height={b.y2 - b.y1} fill="transparent" style={{ cursor: "pointer", pointerEvents: "auto" }} onClick={() => onSelectTier(b.tier)} />
+                    <rect
+                        x={0}
+                        y={b.y1}
+                        width={W}
+                        height={b.y2 - b.y1}
+                        fill="transparent"
+                        role="button"
+                        tabIndex="0"
+                        aria-label={`Select ${tiers[b.tier].label} section`}
+                        style={{ cursor: "pointer", pointerEvents: "auto" }}
+                        onClick={() => onSelectTier(b.tier)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                onSelectTier(b.tier);
+                            }
+                        }}
+                    />
                 </g>
             ))}
         </svg>

@@ -13,10 +13,11 @@ import { HadithSection, MosqueSideChips, TierLegend } from "@/components/CenterC
 import { TierSelection, SelectedTierCard } from "@/components/RightSidebarContent.jsx";
 import { SidebarBackdrop, SidebarToggleButton, PrayerSidebar, LeftSidebar, RightSidebar } from "@/components/Sidebars.jsx";
 import Footer from "@/components/Footer.jsx";
-import DonationDialog from "@/components/DonationDialog.jsx";
+import SitePreloader from "@/components/SitePreloader.jsx";
 
 // Hooks
 import { useTranslation, useThemeMode, useTiers, useDonations, useResponsiveSidebars } from "@/hooks/index.js";
+import { useFirstVisitPreloader } from "@/hooks/useFirstVisitPreloader.js";
 
 // Utilities
 import { truncateText, getSiteUrl, getAbsoluteUrl } from "@/lib/translationUtils.js";
@@ -30,10 +31,17 @@ export default function MosqueDonation() {
   const { language, setLanguage, t, isMounted: translationMounted } = useTranslation();
 
   // Tier management
-  const { tiers, selectedTier, setSelectedTier } = useTiers();
+  const { tiers, selectedTier, setSelectedTier, isLoading: tiersLoading, error: tiersError } = useTiers();
 
   // Donations data
-  const { donations, ramadanRaised, engagementAmount, totalsByEmail } = useDonations();
+  const {
+    donations,
+    ramadanRaised,
+    engagementAmount,
+    totalsByEmail,
+    isLoading: donationsLoading,
+    error: donationsError,
+  } = useDonations();
 
   // Log data availability
   useEffect(() => {
@@ -67,6 +75,10 @@ export default function MosqueDonation() {
   // Prayer embed - initialize with default, update on mount
   const [prayerEmbedMode, setPrayerEmbedMode] = useState("w");
   const [isMounted, setIsMounted] = useState(false);
+  const [donationFeedback, setDonationFeedback] = useState(null);
+  const [donationIframeLoaded, setDonationIframeLoaded] = useState(false);
+  const appReady = isMounted && themeMounted && translationMounted;
+  const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
 
   // Refs
   const languageDropdownRef = useRef(null);
@@ -161,8 +173,23 @@ export default function MosqueDonation() {
     });
   }, [isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
+  useEffect(() => {
+    if (!showDonationDialog || donationIframeLoaded) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setDonationFeedback({
+        tone: 'error',
+        message: 'The donation form is taking longer than expected. You can wait a moment or close and try again.',
+      });
+    }, 9000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [showDonationDialog, donationIframeLoaded]);
+
   // Don't render anything that depends on hydration until theme and language are ready
-  if (!isMounted || !themeMounted || !translationMounted) {
+  if (!appReady && shouldShowPreloader && preloaderResolved) {
     return (
       <div
         className="mosque-donation"
@@ -170,7 +197,7 @@ export default function MosqueDonation() {
         suppressHydrationWarning
         style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
       >
-        <div style={{ minHeight: '100vh', width: '100%' }} />
+        <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading campaign" />
       </div>
     );
   }
@@ -194,6 +221,21 @@ export default function MosqueDonation() {
     setShowLeftSidebar(false);
     setShowRightSidebar(false);
     setShowPrayerSidebar(false);
+  }
+
+  function openDonationDialog() {
+    setDonationIframeLoaded(false);
+    setDonationFeedback({
+      tone: 'info',
+      message: 'Opening the secure donation form...',
+    });
+    setShowDonationDialog(true);
+  }
+
+  function closeDonationDialog() {
+    setShowDonationDialog(false);
+    setDonationIframeLoaded(false);
+    setDonationFeedback(null);
   }
 
   return (
@@ -270,6 +312,8 @@ export default function MosqueDonation() {
           onClick={togglePrayerSidebar}
           aria-label={t.prayerTimes}
           title={t.prayerTimes}
+          aria-controls="prayer-sidebar"
+          aria-expanded={showPrayerSidebar}
         >
           <i className="fa-solid fa-clock sidebar-toggle-icon" aria-hidden="true"></i>
         </button>
@@ -298,6 +342,8 @@ export default function MosqueDonation() {
               theme={theme}
               totalsByEmail={totalsByEmail}
               t={t}
+              isLoading={donationsLoading}
+              error={donationsError}
             />
             <CampaignPie
               totalGoal={totalGoal}
@@ -329,6 +375,8 @@ export default function MosqueDonation() {
               theme={theme}
               totalsByEmail={totalsByEmail}
               t={t}
+              isLoading={donationsLoading}
+              error={donationsError}
             />
             <CampaignPie
               totalGoal={totalGoal}
@@ -352,8 +400,12 @@ export default function MosqueDonation() {
                   selectedTier={selectedTier}
                   onSelectTier={handleTierSelect}
                   theme={theme}
+                  describedBy="mosque-viz-summary"
                 />
               </div>
+              <p className="sr-only" id="mosque-viz-summary">
+                Interactive mosque fundraising visualization with selectable sections for foundation, walls, arches, and dome.
+              </p>
               <MosqueSideChips
                 localizedTiers={localizedTiers}
                 selectedTier={selectedTier}
@@ -383,6 +435,8 @@ export default function MosqueDonation() {
               theme={theme}
               currencyFirst={currencyFirst}
               t={t}
+              isLoading={tiersLoading}
+              error={tiersError}
             />
 
             <SelectedTierCard
@@ -391,7 +445,10 @@ export default function MosqueDonation() {
               remaining={remaining}
               currencyFirst={currencyFirst}
               t={t}
-              onDonate={() => setShowDonationDialog(true)}
+              onDonate={openDonationDialog}
+              isLoading={tiersLoading}
+              statusMessage={donationFeedback?.message || tiersError}
+              statusTone={donationFeedback?.tone || (tiersError ? 'error' : 'info')}
             />
           </div>
 
@@ -406,6 +463,8 @@ export default function MosqueDonation() {
               theme={theme}
               currencyFirst={currencyFirst}
               t={t}
+              isLoading={tiersLoading}
+              error={tiersError}
             />
 
             <SelectedTierCard
@@ -414,7 +473,10 @@ export default function MosqueDonation() {
               remaining={remaining}
               currencyFirst={currencyFirst}
               t={t}
-              onDonate={() => setShowDonationDialog(true)}
+              onDonate={openDonationDialog}
+              isLoading={tiersLoading}
+              statusMessage={donationFeedback?.message || tiersError}
+              statusTone={donationFeedback?.tone || (tiersError ? 'error' : 'info')}
             />
           </RightSidebar>
         </div>
@@ -426,18 +488,44 @@ export default function MosqueDonation() {
             <div className="donation-dialog-body">
               <button
                 type="button"
-                onClick={() => setShowDonationDialog(false)}
+                onClick={closeDonationDialog}
                 aria-label="Close donation dialog"
                 className="donation-dialog-close"
               >
                 ×
               </button>
               <div className="donation-dialog-form-wrapper">
+                {!donationIframeLoaded && (
+                  <div className="donation-dialog-loading">
+                    <div className="donation-dialog-spinner" aria-hidden="true"></div>
+                    <div className="donation-dialog-loading-title">Preparing secure checkout</div>
+                    <div className="donation-dialog-loading-text">
+                      Your donation form is loading in a protected window.
+                    </div>
+                  </div>
+                )}
                 <iframe
                   title="Donation form powered by Zeffy"
                   src="https://www.zeffy.com/embed/ticketing/travaux-damenagement-dans-le-nouveau-centre"
+                  aria-label="Secure donation form"
+                  onLoad={() => {
+                    setDonationIframeLoaded(true);
+                    setDonationFeedback({
+                      tone: 'success',
+                      message: 'Secure donation form ready.',
+                    });
+                  }}
                 />
               </div>
+              {donationFeedback ? (
+                <div
+                  className={`donation-dialog-feedback donation-dialog-feedback--${donationFeedback.tone}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {donationFeedback.message}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

@@ -1,15 +1,47 @@
 import { memo } from 'react';
 import { THEMES, TIER_CONFIG } from '../constants/config.js';
 
-function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail, t }) {
+function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoading, error }) {
     const th = theme ?? THEMES.dark;
     const dollarFirst = language === "en";
-    const tierByKey = Object.fromEntries(tiers.map((t) => [t.key, t]));
     const tierByName = Object.fromEntries(tiers.map((t) => [t.name.toLowerCase(), t]));
 
     console.log('[DonationsList] totalsByEmail:', totalsByEmail);
     console.log('[DonationsList] tiers:', tiers);
     console.log('[DonationsList] tierByName:', tierByName);
+
+    if (isLoading) {
+        return (
+            <div className="donations-list">
+                <div className="donations-list-title">
+                    {t.donorsList}
+                </div>
+                <div className="donations-list-scroll">
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                        <div key={`donation-skeleton-${idx}`} className="donation-item donation-item--skeleton" aria-hidden="true">
+                            <div className="ui-skeleton ui-skeleton--text donation-skeleton-name"></div>
+                            <div className="ui-skeleton ui-skeleton--text donation-skeleton-amount"></div>
+                            <div className="ui-skeleton ui-skeleton--text donation-skeleton-tier"></div>
+                            <div className="ui-skeleton ui-skeleton--bar"></div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="donations-list">
+                <div className="donations-list-title">
+                    {t.donorsList}
+                </div>
+                <div className="donations-list-status donations-list-status--error">
+                    {error}
+                </div>
+            </div>
+        );
+    }
 
     if (Object.keys(totalsByEmail).length === 0) {
         console.log('[DonationsList] No donors to display');

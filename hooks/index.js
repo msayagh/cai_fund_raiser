@@ -3,6 +3,14 @@ import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE } from '@/lib/tr
 import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
 import { INITIAL_TIERS, MOBILE_BREAKPOINT, TIER_CONFIG } from '@/constants/config.js';
 
+function getSystemThemePreference() {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return 'dark';
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export function useTranslation() {
     // Initialize with default INITIAL_LANGUAGE to avoid SSR issues
     const [language, setLanguageState] = useState(INITIAL_LANGUAGE);
@@ -63,41 +71,63 @@ export function useTranslation() {
 }
 
 export function useThemeMode() {
-    // Initialize with default 'dark' to avoid SSR issues
+    // Initialize with a safe SSR default, then hydrate from saved/system preference
     const [themeMode, setThemeModeState] = useState('dark');
     const [isMounted, setIsMounted] = useState(false);
 
-    // Load theme from localStorage on mount and listen for changes
+    // Load theme from localStorage or system preference on mount, then listen for changes
     useEffect(() => {
         setIsMounted(true);
 
         if (typeof window !== 'undefined') {
-            // Load saved theme from localStorage
-            const savedTheme = localStorage.getItem('themeMode') || 'dark';
-            if (savedTheme !== themeMode) {
-                setThemeModeState(savedTheme);
-            }
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const syncThemeMode = () => {
+                const savedTheme = localStorage.getItem('themeMode');
+                const preferredTheme = savedTheme || getSystemThemePreference();
 
-            // Listen for storage changes from other tabs/windows
-            const handleStorageChange = (e) => {
-                if (e.key === 'themeMode' && e.newValue) {
-                    setThemeModeState(e.newValue);
+                setThemeModeState((prevTheme) => (
+                    prevTheme === preferredTheme ? prevTheme : preferredTheme
+                ));
+            };
+
+            syncThemeMode();
+
+            const handleSystemThemeChange = () => {
+                if (!localStorage.getItem('themeMode')) {
+                    syncThemeMode();
                 }
             };
 
+            const handleStorageChange = (e) => {
+                if (e.key === 'themeMode') {
+                    syncThemeMode();
+                }
+            };
+
+            mediaQuery.addEventListener('change', handleSystemThemeChange);
             window.addEventListener('storage', handleStorageChange);
-            return () => window.removeEventListener('storage', handleStorageChange);
+
+            return () => {
+                mediaQuery.removeEventListener('change', handleSystemThemeChange);
+                window.removeEventListener('storage', handleStorageChange);
+            };
         }
     }, []);
 
-    // Custom setThemeMode that can handle both string values and updater functions
     const setThemeMode = useCallback((modeOrUpdater) => {
         setThemeModeState((prevMode) => {
-            const newMode = typeof modeOrUpdater === 'function' ? modeOrUpdater(prevMode) : modeOrUpdater;
+            const nextMode = typeof modeOrUpdater === 'function' ? modeOrUpdater(prevMode) : modeOrUpdater;
+            const resolvedMode = nextMode === 'system' ? getSystemThemePreference() : nextMode;
+
             if (typeof window !== 'undefined') {
-                localStorage.setItem('themeMode', newMode);
+                if (nextMode === 'system') {
+                    localStorage.removeItem('themeMode');
+                } else {
+                    localStorage.setItem('themeMode', resolvedMode);
+                }
             }
-            return newMode;
+
+            return resolvedMode;
         });
     }, []);
 
@@ -108,6 +138,8 @@ export function useTiers() {
     const [tiers, setTiers] = useState(INITIAL_TIERS);
     const [selectedTier, setSelectedTier] = useState(0);
     const [isMounted, setIsMounted] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -126,17 +158,36 @@ export function useTiers() {
     }, []);
 
     useEffect(() => {
-        const pollFunded = () => fetchFundedFromSheet().then(updateFundedTiers);
+        const pollFunded = async ({ background = false } = {}) => {
+            if (!background) {
+                setIsLoading(true);
+            }
+
+            try {
+                const funded = await fetchFundedFromSheet();
+                if (!funded) {
+                    setError('Unable to load tier progress right now.');
+                    return;
+                }
+
+                updateFundedTiers(funded);
+                setError(null);
+            } catch {
+                setError('Unable to load tier progress right now.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
         pollFunded();
-        const fundedIntervalId = setInterval(pollFunded, 60 * 1000);
+        const fundedIntervalId = setInterval(() => pollFunded({ background: true }), 60 * 1000);
 
         return () => {
             clearInterval(fundedIntervalId);
         };
     }, [updateFundedTiers]);
 
-    return { tiers, setTiers, selectedTier, setSelectedTier, updateFundedTiers, isMounted };
+    return { tiers, setTiers, selectedTier, setSelectedTier, updateFundedTiers, isMounted, isLoading, error };
 }
 
 export function useDonations() {
@@ -145,6 +196,8 @@ export function useDonations() {
     const [engagementAmount, setEngagementAmount] = useState(0);
     const [totalsByEmail, setTotalsByEmail] = useState({});
     const [isMounted, setIsMounted] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -222,10 +275,19 @@ export function useDonations() {
     }, [getTierAmount]);
 
     useEffect(() => {
-        const pollDonations = () =>
-            fetchDonationsFromSheet().then((rows) => {
+        const pollDonations = async ({ background = false } = {}) => {
+            if (!background) {
+                setIsLoading(true);
+            }
+
+            try {
+                const rows = await fetchDonationsFromSheet();
+                if (!Array.isArray(rows)) {
+                    setError('Unable to load donations right now.');
+                    return;
+                }
+
                 console.log('[useDonations] Fetched donations:', rows.length);
-                if (!Array.isArray(rows)) return;
                 setDonations((prev) => {
                     if (prev.length === rows.length && prev.every((d, i) => d.id === rows[i].id && d.donated === rows[i].donated)) {
                         return prev;
@@ -235,10 +297,16 @@ export function useDonations() {
                 setTotalsByEmail(getTotalsByEmail(rows));
                 setRamadanRaised(getRamadanRaised(rows));
                 setEngagementAmount(getEngagementAmount(rows));
-            });
+                setError(null);
+            } catch {
+                setError('Unable to load donations right now.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
         pollDonations();
-        const donationsIntervalId = setInterval(pollDonations, 60 * 1000);
+        const donationsIntervalId = setInterval(() => pollDonations({ background: true }), 60 * 1000);
 
         return () => {
             clearInterval(donationsIntervalId);
@@ -255,6 +323,8 @@ export function useDonations() {
         setEngagementAmount,
         setTotalsByEmail,
         isMounted,
+        isLoading,
+        error,
     };
 }
 

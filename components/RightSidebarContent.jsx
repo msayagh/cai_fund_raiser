@@ -1,7 +1,23 @@
 import { THEMES } from '@/constants/config.js';
 import { languageCurrency } from '@/lib/translationUtils.js';
 
-export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, theme, currencyFirst, t }) {
+function TierCardSkeleton() {
+    return (
+        <div className="tier-card tier-card--skeleton" aria-hidden="true">
+            <div className="tier-card-header">
+                <span className="ui-skeleton ui-skeleton--text tier-card-skeleton-label"></span>
+                <span className="ui-skeleton ui-skeleton--text tier-card-skeleton-amount"></span>
+            </div>
+            <div className="ui-skeleton ui-skeleton--bar"></div>
+            <div className="tier-card-stats">
+                <span className="ui-skeleton ui-skeleton--text tier-card-skeleton-meta"></span>
+                <span className="ui-skeleton ui-skeleton--text tier-card-skeleton-pct"></span>
+            </div>
+        </div>
+    );
+}
+
+export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, theme, currencyFirst, t, isLoading, error }) {
     const th = theme ?? THEMES.dark;
 
     return (
@@ -9,15 +25,19 @@ export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, t
             <div className="tier-selection-title">
                 {t.selectTier}
             </div>
-            {[...localizedTiers].reverse().map((tier) => {
-                const remaining = tier.total - tier.funded;
+            {isLoading ? Array.from({ length: 4 }).map((_, idx) => (
+                <TierCardSkeleton key={`tier-skeleton-${idx}`} />
+            )) : [...localizedTiers].reverse().map((tier) => {
                 const pct = tier.total > 0 ? Math.round((tier.funded / tier.total) * 100) : 0;
                 const isSelected = selectedTier === tier.id;
                 return (
-                    <div
+                    <button
+                        type="button"
                         key={tier.id}
                         onClick={() => setSelectedTier(tier.id)}
                         className={`tier-card ${isSelected ? 'selected' : ''}`}
+                        aria-pressed={isSelected}
+                        aria-label={`${tier.label}, ${languageCurrency(tier.amount, currencyFirst)}, ${t.brickCount(tier.funded, tier.total)}, ${pct}% funded`}
                         style={{
                             borderColor: isSelected ? tier.color : undefined,
                             background: isSelected ? th.bgCardSelected : undefined,
@@ -41,19 +61,36 @@ export function TierSelection({ localizedTiers, selectedTier, setSelectedTier, t
                                 {pct}%
                             </span>
                         </div>
-                    </div>
+                    </button>
                 );
             })}
+            {error ? (
+                <div className="tier-selection-status tier-selection-status--error">
+                    {error}
+                </div>
+            ) : null}
         </div>
     );
 }
 
-export function SelectedTierCard({ sel, pct, remaining, currencyFirst, t, onDonate }) {
+export function SelectedTierCard({ sel, pct, remaining, currencyFirst, t, onDonate, isLoading, statusMessage, statusTone }) {
     const handleDonateClick = () => {
         if (onDonate) {
             onDonate();
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="selected-tier-card selected-tier-card--loading" aria-hidden="true">
+                <div className="ui-skeleton ui-skeleton--text selected-tier-skeleton-label"></div>
+                <div className="ui-skeleton ui-skeleton--text selected-tier-skeleton-amount"></div>
+                <div className="ui-skeleton ui-skeleton--text selected-tier-skeleton-note"></div>
+                <div className="ui-skeleton ui-skeleton--bar selected-tier-skeleton-progress"></div>
+                <div className="ui-skeleton ui-skeleton--button"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="selected-tier-card" style={{ '--sel-color': sel.color }}>
@@ -92,6 +129,11 @@ export function SelectedTierCard({ sel, pct, remaining, currencyFirst, t, onDona
             <p className="selected-tier-note">
                 {t.zeffyNote}
             </p>
+            {statusMessage ? (
+                <div className={`selected-tier-status selected-tier-status--${statusTone || 'info'}`}>
+                    {statusMessage}
+                </div>
+            ) : null}
         </div>
     );
 }

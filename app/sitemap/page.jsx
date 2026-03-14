@@ -6,23 +6,12 @@ import '../page.scss';
 import './page.scss';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
+import SitePreloader from '@/components/SitePreloader.jsx';
 import { useTranslation, useThemeMode } from '@/hooks/index.js';
+import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
-
-const sitemapLinks = [
-    {
-        href: '/',
-        label: 'Home',
-        description: 'Main fundraising page and campaign overview.',
-    },
-    {
-        href: '/login',
-        label: 'Login',
-        description: 'Upcoming secure login entry point.',
-    },
-];
 
 export default function SitemapPage() {
     const { language, setLanguage, t, isMounted } = useTranslation();
@@ -30,6 +19,8 @@ export default function SitemapPage() {
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
     const languageDropdownRef = useRef(null);
     const theme = THEMES[themeMode] ?? THEMES.dark;
+    const appReady = isMounted && themeMounted;
+    const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
     const isRTL = language === 'ar' || language === 'ur';
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/sitemap?lang=${language}`, siteUrl);
@@ -40,6 +31,18 @@ export default function SitemapPage() {
     );
     const locale = t.locale ?? language;
     const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
+    const sitemapLinks = [
+        {
+            href: '/',
+            label: t.sitemapHomeLabel || 'Home',
+            description: t.sitemapHomeDescription || 'Main fundraising page and campaign overview.',
+        },
+        {
+            href: '/login',
+            label: t.loginTitle || 'Login',
+            description: t.sitemapLoginDescription || 'Upcoming secure login entry point.',
+        },
+    ];
 
     useEffect(() => {
         if (languageDropdownRef.current && showLanguageMenu) {
@@ -73,7 +76,7 @@ export default function SitemapPage() {
         });
     }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
-    if (!isMounted || !themeMounted) {
+    if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div
                 className="sitemap-page-wrapper"
@@ -81,7 +84,7 @@ export default function SitemapPage() {
                 suppressHydrationWarning
                 style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
             >
-                <div style={{ minHeight: '100vh', width: '100%' }} />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading sitemap" />
             </div>
         );
     }

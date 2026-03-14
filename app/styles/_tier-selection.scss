@@ -14,9 +14,25 @@
         margin-bottom: 10px;
         text-transform: var(--text-transform-uppercase);
     }
+
+    &-status {
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.5;
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--bg-card-alt) 82%, transparent);
+
+        &--error {
+            border-color: color-mix(in srgb, #ff7676 45%, var(--border));
+            color: #ffb0b0;
+        }
+    }
 }
 
 .tier-card {
+    appearance: none;
     padding: 12px 14px;
     border-radius: 9px;
     margin-bottom: 8px;
@@ -24,10 +40,21 @@
     border: 2px solid var(--border);
     background: var(--bg-card-alt);
     transition: all 0.18s;
+    width: 100%;
+    text-align: left;
+
+    &--skeleton {
+        cursor: default;
+        border-style: solid;
+    }
 
     &.selected {
         border-color: var(--tier-color);
         background: var(--bg-card-selected);
+    }
+
+    &:focus-visible {
+        outline-offset: 2px;
     }
 
     &-header {
@@ -59,6 +86,22 @@
         color: var(--text-muted);
         font-weight: 500;
     }
+}
+
+.tier-card-skeleton-label {
+    width: 42%;
+}
+
+.tier-card-skeleton-amount {
+    width: 26%;
+}
+
+.tier-card-skeleton-meta {
+    width: 44%;
+}
+
+.tier-card-skeleton-pct {
+    width: 14%;
 }
 
 .tier-name {
@@ -93,6 +136,7 @@
 }
 
 .tier-legend-item {
+    appearance: none;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -102,6 +146,12 @@
     transition: all 0.18s;
     font-size: 14px;
     font-weight: 700;
+    border: none;
+    text-align: left;
+
+    &:focus-visible {
+        outline-offset: 2px;
+    }
 }
 
 .tier-legend-color-dot {

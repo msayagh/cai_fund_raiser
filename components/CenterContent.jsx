@@ -1,7 +1,7 @@
 import { THEMES } from '@/constants/config.js';
 import { languageCurrency } from '@/lib/translationUtils.js';
 
-export function HadithSection({ t, isRTL, theme }) {
+export function HadithSection({ t, isRTL }) {
     return (
         <div className="center-content">
             <div className="hadith-section">
@@ -40,13 +40,16 @@ export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier,
                 const isSelected = selectedTier === id;
 
                 return (
-                    <div
+                    <button
+                        type="button"
                         key={id}
                         onClick={() => {
                             setSelectedTier(id);
                             setShowRightSidebar(true);
                         }}
                         className={`mosque-side-chip ${isSelected ? "selected" : ""}`}
+                        aria-pressed={isSelected}
+                        aria-label={`${tier.label}, ${languageCurrency(tier.amount, currencyFirst)}, ${t.sideChip(tierRemaining)}`}
                         style={{
                             right: isRTL ? "auto" : "8px",
                             left: isRTL ? "8px" : "auto",
@@ -67,7 +70,7 @@ export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier,
                         <span className="mosque-side-chip-remaining" style={{ color: isSelected ? "#00000099" : tier.color }}>
                             {t.sideChip(tierRemaining)}
                         </span>
-                    </div>
+                    </button>
                 );
             })}
         </div>
@@ -80,10 +83,13 @@ export function TierLegend({ localizedTiers, selectedTier, handleTierSelect, the
     return (
         <div className="tier-legend-wrapper">
             {[...localizedTiers].reverse().map((tier) => (
-                <div
+                <button
+                    type="button"
                     key={tier.id}
                     onClick={() => handleTierSelect(tier.id)}
                     className="tier-legend-item"
+                    aria-pressed={selectedTier === tier.id}
+                    aria-label={t.legendLabel(tier.label, tier.amount)}
                     style={{
                         border: `2px solid ${selectedTier === tier.id ? tier.color : th.border}`,
                         background: selectedTier === tier.id ? th.bgCardSelected : th.bgCardAlt,
@@ -92,7 +98,7 @@ export function TierLegend({ localizedTiers, selectedTier, handleTierSelect, the
                 >
                     <span className="tier-legend-color-dot" style={{ background: tier.color }} />
                     {t.legendLabel(tier.label, tier.amount)}
-                </div>
+                </button>
             ))}
         </div>
     );

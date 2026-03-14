@@ -40,6 +40,11 @@
     &:hover {
         background: var(--bg-card-alt);
     }
+
+    &:focus-visible {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+    }
 }
 
 .sidebar-toggle-icon {
@@ -80,6 +85,11 @@
 
     &:hover {
         background: var(--bg-card-alt);
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+    }
+
+    &:focus-visible {
         border-color: var(--accent-gold);
         color: var(--accent-gold);
     }

@@ -1,6 +1,7 @@
 import { LANGUAGE_OPTIONS, languageCurrency } from '@/lib/translationUtils.js';
 import Link from 'next/link';
 import { useEffect } from 'react';
+import AccessibilityWidget from '@/components/AccessibilityWidget.jsx';
 
 export function Header({
     language,
@@ -125,12 +126,15 @@ export function Header({
 
                 <div className="header-right">
                     <Link href="/login" className="login-button" title="Login">
-                        <i className="fas fa-user"></i>
+                        <i className="fas fa-user" aria-hidden="true"></i>
+                        <span className="login-button-text">{t.loginTitle}</span>
                     </Link>
+                    <AccessibilityWidget compact />
                     <button
                         onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
                         title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                         className="theme-toggle-button"
+                        aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                     >
                         {themeMode === "dark" ? "☀" : "☾"}
                     </button>

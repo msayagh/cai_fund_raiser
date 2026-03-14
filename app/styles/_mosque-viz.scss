@@ -52,6 +52,7 @@
 }
 
 .mosque-side-chip {
+    appearance: none;
     position: absolute;
     display: flex;
     flex-direction: column;
@@ -66,10 +67,15 @@
     pointer-events: auto;
     transform: translateY(-50%);
     box-sizing: border-box;
+    text-align: center;
 
     &.selected {
         border-color: var(--tier-color);
         background: var(--tier-color);
+    }
+
+    &:focus-visible {
+        outline-offset: 4px;
     }
 
     &-amount {

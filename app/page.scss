@@ -16,6 +16,8 @@
    - _variables.scss: Theme variables and CSS custom properties
    - _animations.scss: Keyframe animations and animation utilities
    - _global.scss: Global styles and foundation
+   - _accessibility-widget.scss: Floating zoom controls
+   - _preloader.scss: Site preloader overlay
    - _header.scss: Header and navigation layout
    - _progress-bar.scss: Ramadan progress bar styling
    - _theme-toggle.scss: Theme toggle and language menu controls
@@ -39,6 +41,8 @@
 @import 'styles/variables';
 @import 'styles/animations';
 @import 'styles/global';
+@import 'styles/accessibility-widget';
+@import 'styles/preloader';
 
 // ──── Header & Navigation ────
 @import 'styles/header';

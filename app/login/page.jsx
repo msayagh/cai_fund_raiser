@@ -5,7 +5,9 @@ import { useState, useRef, useEffect } from 'react';
 import '../page.scss';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
+import SitePreloader from '@/components/SitePreloader.jsx';
 import { useTranslation, useThemeMode } from '@/hooks/index.js';
+import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
@@ -17,6 +19,8 @@ export default function LoginPage() {
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
     const languageDropdownRef = useRef(null);
     const theme = THEMES[themeMode] ?? THEMES.dark;
+    const appReady = isMounted && themeMounted;
+    const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
     const isRTL = language === 'ar' || language === 'ur';
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/login?lang=${language}`, siteUrl);
@@ -60,7 +64,7 @@ export default function LoginPage() {
     }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
     // Don't render until theme and language are loaded
-    if (!isMounted || !themeMounted) {
+    if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div
                 className="login-page-wrapper"
@@ -68,7 +72,7 @@ export default function LoginPage() {
                 suppressHydrationWarning
                 style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
             >
-                <div style={{ minHeight: '100vh', width: '100%' }} />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading site" />
             </div>
         );
     }

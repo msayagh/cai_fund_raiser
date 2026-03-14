@@ -22,12 +22,18 @@
         color: var(--accent-gold);
         border-color: var(--accent-gold);
     }
+
+    &:focus-visible {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+    }
 }
 
 .login-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     padding: 6px 10px;
     border-radius: 6px;
     border: 1px solid var(--border);
@@ -37,14 +43,24 @@
     font-size: 16px;
     text-decoration: none;
     transition: all 0.2s ease;
-    width: 32px;
-    height: 32px;
+    min-height: 32px;
 
     &:hover {
         background: var(--bg-card-alt);
         color: var(--accent-gold);
         border-color: var(--accent-gold);
     }
+
+    &:focus-visible {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+    }
+}
+
+.login-button-text {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .language-label {
@@ -80,6 +96,11 @@
     &:hover {
         background: var(--bg-card-alt);
         border-color: var(--accent-gold);
+    }
+
+    &:focus-visible {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
     }
 }
 
@@ -125,6 +146,11 @@
             border-color: var(--accent-gold);
             color: var(--accent-gold);
         }
+
+        &:focus-visible {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
     }
 
     &-text {
@@ -166,6 +192,11 @@
 
         &:hover {
             background: var(--bg-card-alt);
+        }
+
+        &:focus-visible {
+            background: var(--bg-card-alt);
+            color: var(--accent-gold);
         }
     }
 }

@@ -54,13 +54,13 @@
     .layout-main {
         flex: 1;
         width: 100%;
-        padding: 24px 16px;
+        padding: 20px 14px 84px;
     }
 
     .layout-main-inner {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: 20px;
         padding: 0;
         max-width: 100%;
     }
@@ -81,6 +81,15 @@
         justify-content: flex-start;
         align-items: center;
         min-width: 0;
+    }
+
+    .tier-legend-wrapper {
+        gap: 10px;
+    }
+
+    .tier-legend-item {
+        padding: 9px 12px;
+        font-size: 13px;
     }
 
     // Sidebar styles
@@ -207,6 +216,19 @@
         }
     }
 
+    .sidebar-toggle-left {
+        left: 12px;
+    }
+
+    .sidebar-toggle-right {
+        right: 12px;
+    }
+
+    .sidebar-toggle-prayer {
+        right: 74px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    }
+
     .sidebar-toggle-icon {
         width: 24px;
         height: 24px;
@@ -233,6 +255,10 @@
 
 // Tablet adjustments (@768px)
 @media (max-width: 768px) {
+    .layout-main {
+        padding: 16px 12px 92px;
+    }
+
     .donation-dialog-overlay {
         padding: 18px;
     }
@@ -257,10 +283,34 @@
         border-radius: 0;
         padding: 18px;
     }
+
+    .selected-tier-card {
+        padding: 18px 16px;
+    }
+
+    .selected-tier-amount {
+        font-size: 32px;
+    }
+
+    .tier-card {
+        padding: 12px;
+    }
+
+    .donations-list-scroll {
+        max-height: 420px;
+    }
+
+    .qr-help {
+        max-width: 240px;
+    }
 }
 
 // Mobile phone adjustments (@480px)
 @media (max-width: 480px) {
+    .layout-main {
+        padding: 14px 10px 96px;
+    }
+
     .donation-dialog-overlay {
         padding: 16px;
     }
@@ -283,6 +333,48 @@
 
     .donation-dialog-form-wrapper {
         min-height: 400px;
+    }
+
+    .selected-tier-card {
+        border-radius: 10px;
+    }
+
+    .selected-tier-label {
+        font-size: 13px;
+    }
+
+    .selected-tier-amount {
+        font-size: 28px;
+    }
+
+    .tier-card-header,
+    .tier-card-stats {
+        gap: 8px;
+    }
+
+    .tier-name,
+    .tier-amount {
+        font-size: 14px;
+    }
+
+    .tier-legend-wrapper {
+        justify-content: stretch;
+    }
+
+    .tier-legend-item {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .donation-dialog-feedback {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        font-size: 12px;
+    }
+
+    .sidebar-toggle-prayer {
+        right: 68px;
     }
 }
 

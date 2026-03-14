@@ -7,6 +7,11 @@
     border-radius: 12px;
     border: 2px solid var(--sel-color);
     background: var(--bg-card-alt-dark);
+
+    &--loading {
+        border-color: var(--border);
+        background: var(--bg-card-alt);
+    }
 }
 
 .selected-tier-label {
@@ -78,4 +83,49 @@
     margin: 12px 0 0 0;
     line-height: 1.5;
     text-align: center;
+}
+
+.selected-tier-status {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+    background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+
+    &--info {
+        color: var(--text-secondary);
+    }
+
+    &--success {
+        color: #96f0c8;
+        border-color: color-mix(in srgb, #6dd6a7 45%, var(--border));
+    }
+
+    &--error {
+        color: #ffb0b0;
+        border-color: color-mix(in srgb, #ff7676 45%, var(--border));
+    }
+}
+
+.selected-tier-skeleton-label {
+    width: 38%;
+    margin: 0 auto 10px;
+}
+
+.selected-tier-skeleton-amount {
+    width: 52%;
+    height: 34px;
+    margin: 0 auto 12px;
+}
+
+.selected-tier-skeleton-note {
+    width: 32%;
+    margin: 0 auto 20px;
+}
+
+.selected-tier-skeleton-progress {
+    margin-bottom: 18px;
 }

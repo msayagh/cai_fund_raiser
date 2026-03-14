@@ -5,6 +5,7 @@ export function SidebarBackdrop({ isVisible, onClose }) {
         <div
             className={`sidebar-backdrop ${isVisible ? "visible" : ""}`}
             onClick={onClose}
+            aria-hidden="true"
         ></div>
     );
 }
@@ -26,7 +27,12 @@ export function SidebarToggleButton({ position, onClick, ariaLabel, title, child
 
 export function PrayerSidebar({ isOpen, onClose, t, prayerIframeSrc }) {
     return (
-        <aside className={`layout-prayer-sidebar ${isOpen ? "open" : ""}`} aria-label={t.prayerTimes}>
+        <aside
+            id="prayer-sidebar"
+            className={`layout-prayer-sidebar ${isOpen ? "open" : ""}`}
+            aria-label={t.prayerTimes}
+            aria-hidden={!isOpen}
+        >
             <button
                 className="close-button"
                 onClick={onClose}
@@ -50,7 +56,7 @@ export function PrayerSidebar({ isOpen, onClose, t, prayerIframeSrc }) {
 
 export function LeftSidebar({ isOpen, onClose, children }) {
     return (
-        <div className={`layout-left--mobile ${isOpen ? "open" : ""}`}>
+        <div className={`layout-left--mobile ${isOpen ? "open" : ""}`} aria-hidden={!isOpen}>
             <button
                 className="close-button"
                 onClick={onClose}
@@ -67,7 +73,7 @@ export function LeftSidebar({ isOpen, onClose, children }) {
 
 export function RightSidebar({ isOpen, onClose, children }) {
     return (
-        <div className={`layout-right--mobile ${isOpen ? "open" : ""}`}>
+        <div className={`layout-right--mobile ${isOpen ? "open" : ""}`} aria-hidden={!isOpen}>
             <button
                 className="close-button"
                 onClick={onClose}
