@@ -81,7 +81,8 @@ const ur = {
   reached: "حاصل شدہ",
   donorsList: "عطیہ دہندگان کی فہرست",
   prayerTimes: "اوقات نماز",
-  ramadanObjective: "رمضان کا ہدف",
+  ramadanObjective: "مہم کی شرکت",
+  engagement: "موصول رقم",
   prepositionOf: "میں سے",
   donationDialogTitle: "مسجد کی معاونت کریں",
   hadithArabic:

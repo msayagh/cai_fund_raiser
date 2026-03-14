@@ -79,7 +79,8 @@ const es = {
   reached: "alcanzado",
   donorsList: "Lista de donantes",
   prayerTimes: "Horarios de oracion",
-  ramadanObjective: "Objetivo de Ramadan",
+  ramadanObjective: "Compromiso de Campaña",
+  engagement: "Cantidad Recibida",
   prepositionOf: "de",
   donationDialogTitle: "Apoya la mezquita",
   hadithArabic:

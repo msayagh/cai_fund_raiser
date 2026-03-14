@@ -81,7 +81,8 @@ const ar = {
   reached: "محقق",
   donorsList: "قائمة المتبرعين",
   prayerTimes: "أوقات الصلاة",
-  ramadanObjective: "هدف رمضان",
+  ramadanObjective: "مشاركة الحملة",
+  engagement: "ما تم جمعه",
   prepositionOf: "من",
   donationDialogTitle: "التبرع للمسجد",
   hadithArabic:

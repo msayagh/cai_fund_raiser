@@ -79,7 +79,8 @@ const tr = {
     reached: "ulaşıldı",
     donorsList: "Bağışçılar listesi",
     prayerTimes: "Namaz Saatleri",
-    ramadanObjective: "Ramazan hedefi",
+    ramadanObjective: "Kampanya Katılımı",
+    engagement: "Alınan Tutar",
     prepositionOf: "of",
     donationDialogTitle: "Camiye destek olun",
     hadithArabic:

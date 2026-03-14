@@ -79,7 +79,8 @@ const en = {
   reached: "reached",
   donorsList: "List of donors",
   prayerTimes: "Prayer Times",
-  ramadanObjective: "Ramadan objective",
+  ramadanObjective: "Campaign Engagement",
+  engagement: "Campaign Received",
   prepositionOf: "of",
   donationDialogTitle: "Support the masjid",
   hadithArabic:

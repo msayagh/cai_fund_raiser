@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE } from '@/lib/translationUtils.js';
 import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
-import { INITIAL_TIERS, MOBILE_BREAKPOINT } from '@/constants/config.js';
+import { INITIAL_TIERS, MOBILE_BREAKPOINT, TIER_CONFIG } from '@/constants/config.js';
 
 export function useTranslation() {
     // Initialize with default INITIAL_LANGUAGE to avoid SSR issues
@@ -142,6 +142,7 @@ export function useTiers() {
 export function useDonations() {
     const [donations, setDonations] = useState([]);
     const [ramadanRaised, setRamadanRaised] = useState(0);
+    const [engagementAmount, setEngagementAmount] = useState(0);
     const [totalsByEmail, setTotalsByEmail] = useState({});
     const [isMounted, setIsMounted] = useState(false);
 
@@ -156,7 +157,7 @@ export function useDonations() {
             const email = donation["courriel"];
             const tier = String(donation["tier"]);
             const price = parseInt(donation["montant total"]);
-            const donorLabel = donation[Object.keys(donation)[23]];
+            const donorLabel = donation["donorLabel"] || donation["prénom"] || donation["nom"] || "";
             const details = String(donation["détails"]);
 
             if (!summary[email]) {
@@ -173,7 +174,7 @@ export function useDonations() {
             summary[email].totalDonated += price;
             summary[email].ticketCount += 1;
 
-            if (summary[email].donorLabel !== donorLabel) {
+            if (!summary[email].donorLabel && donorLabel) {
                 summary[email].donorLabel = donorLabel;
             }
         });
@@ -182,12 +183,48 @@ export function useDonations() {
     }, []);
 
     const getRamadanRaised = useCallback((donations) => {
-        return donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0);
+        const total = donations.reduce((sum, donation) => {
+            const amount = parseInt(donation["montant total"], 10) || 0;
+            return sum + amount;
+        }, 0);
+        console.log(`[getRamadanRaised] Calculated total from ${donations.length} donations: ${total}`);
+        return total;
     }, []);
+
+    const getTierAmount = useCallback((donation) => {
+        const tierText = String(donation?.tier || donation?.["tier"] || donation?.["détails"] || "").toLowerCase();
+
+        const matchedTier = Object.values(TIER_CONFIG).find((tier) => {
+            return (
+                tierText.includes(tier.key.toLowerCase()) ||
+                tierText.includes(tier.name.toLowerCase())
+            );
+        });
+
+        return matchedTier?.amount ?? 0;
+    }, []);
+
+    const getEngagementAmount = useCallback((donations) => {
+        const seenObjectives = new Set();
+
+        return donations.reduce((sum, donation, index) => {
+            const email = String(donation?.["courriel"] || "").trim().toLowerCase();
+            const details = String(donation?.["détails"] || donation?.tier || "").trim().toLowerCase();
+            const objectiveKey = `${email}::${details || index}`;
+
+            if (seenObjectives.has(objectiveKey)) {
+                return sum;
+            }
+
+            seenObjectives.add(objectiveKey);
+            return sum + getTierAmount(donation);
+        }, 0);
+    }, [getTierAmount]);
 
     useEffect(() => {
         const pollDonations = () =>
             fetchDonationsFromSheet().then((rows) => {
+                console.log('[useDonations] Fetched donations:', rows.length);
                 if (!Array.isArray(rows)) return;
                 setDonations((prev) => {
                     if (prev.length === rows.length && prev.every((d, i) => d.id === rows[i].id && d.donated === rows[i].donated)) {
@@ -197,6 +234,7 @@ export function useDonations() {
                 });
                 setTotalsByEmail(getTotalsByEmail(rows));
                 setRamadanRaised(getRamadanRaised(rows));
+                setEngagementAmount(getEngagementAmount(rows));
             });
 
         pollDonations();
@@ -205,9 +243,19 @@ export function useDonations() {
         return () => {
             clearInterval(donationsIntervalId);
         };
-    }, [getTotalsByEmail, getRamadanRaised]);
+    }, [getEngagementAmount, getTotalsByEmail, getRamadanRaised]);
 
-    return { donations, ramadanRaised, totalsByEmail, setDonations, setRamadanRaised, setTotalsByEmail, isMounted };
+    return {
+        donations,
+        ramadanRaised,
+        engagementAmount,
+        totalsByEmail,
+        setDonations,
+        setRamadanRaised,
+        setEngagementAmount,
+        setTotalsByEmail,
+        isMounted,
+    };
 }
 
 export function useMediaQuery(query) {

@@ -19,7 +19,7 @@ import DonationDialog from "@/components/DonationDialog.jsx";
 import { useTranslation, useThemeMode, useTiers, useDonations, useResponsiveSidebars } from "@/hooks/index.js";
 
 // Utilities
-import { truncateText, getSiteUrl, getAbsoluteUrl, languageCurrency, getPrayerEmbedMode, AVAILABLE_LANGUAGE_CODES } from "@/lib/translationUtils.js";
+import { truncateText, getSiteUrl, getAbsoluteUrl } from "@/lib/translationUtils.js";
 import { setupSEOMetaTags } from "@/lib/seoUtils.js";
 
 // Constants
@@ -30,10 +30,21 @@ export default function MosqueDonation() {
   const { language, setLanguage, t, isMounted: translationMounted } = useTranslation();
 
   // Tier management
-  const { tiers, setTiers, selectedTier, setSelectedTier, isMounted: tiersMounted } = useTiers();
+  const { tiers, selectedTier, setSelectedTier } = useTiers();
 
   // Donations data
-  const { donations, ramadanRaised, totalsByEmail, isMounted: donationsMounted } = useDonations();
+  const { donations, ramadanRaised, engagementAmount, totalsByEmail } = useDonations();
+
+  // Log data availability
+  useEffect(() => {
+    console.log('[page.jsx] Data status:', {
+      donations: donations.length,
+      ramadanRaised,
+      engagementAmount,
+      tiers: tiers.length,
+      tiersWithFunded: tiers.map(t => ({ key: t.key, funded: t.funded, total: t.total })),
+    });
+  }, [donations, ramadanRaised, engagementAmount, tiers]);
 
   // Theme management
   const { themeMode, setThemeMode, isMounted: themeMounted } = useThemeMode();
@@ -110,6 +121,12 @@ export default function MosqueDonation() {
   const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + PRE_RAISED;
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
   const headerRamadanPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((ramadanRaised / RAMADAN_TARGET) * 100)) : 0;
+
+  // Engagement = sum of pledged pillar objectives, Received = actual payments collected.
+  const tierCollectedAmount = engagementAmount;
+  const tierEngagementTarget = RAMADAN_TARGET;
+  const tierEngagementPct = RAMADAN_TARGET > 0 ? Math.min(100, Math.round((engagementAmount / RAMADAN_TARGET) * 100)) : 0;
+  const receivedTarget = RAMADAN_TARGET;
 
   const currencyFirst = language === "en";
   const siteUrl = getSiteUrl();
@@ -200,9 +217,16 @@ export default function MosqueDonation() {
         setThemeMode={setThemeMode}
         ramadanRaised={ramadanRaised}
         headerRamadanPct={headerRamadanPct}
+        tierCollectedAmount={tierCollectedAmount}
+        tierEngagementPct={tierEngagementPct}
+        tierEngagementTarget={tierEngagementTarget}
+        receivedAmount={ramadanRaised}
+        receivedTarget={receivedTarget}
+        selectedTierLabel={sel.label}
         showLanguageMenu={showLanguageMenu}
         setShowLanguageMenu={setShowLanguageMenu}
         languageDropdownRef={languageDropdownRef}
+        currencyFirst={currencyFirst}
       />
 
       <div className="layout-main">

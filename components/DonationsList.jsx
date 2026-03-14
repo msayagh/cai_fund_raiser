@@ -5,7 +5,16 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail, t })
     const th = theme ?? THEMES.dark;
     const dollarFirst = language === "en";
     const tierByKey = Object.fromEntries(tiers.map((t) => [t.key, t]));
-    if (Object.keys(totalsByEmail).length === 0) return null;
+    const tierByName = Object.fromEntries(tiers.map((t) => [t.name.toLowerCase(), t]));
+
+    console.log('[DonationsList] totalsByEmail:', totalsByEmail);
+    console.log('[DonationsList] tiers:', tiers);
+    console.log('[DonationsList] tierByName:', tierByName);
+
+    if (Object.keys(totalsByEmail).length === 0) {
+        console.log('[DonationsList] No donors to display');
+        return null;
+    }
 
     return (
         <div className="donations-list">
@@ -14,14 +23,15 @@ function DonationsListInner({ tiers, language, isRTL, theme, totalsByEmail, t })
             </div>
             <div className="donations-list-scroll">
                 {Object.values(totalsByEmail).map((d, idx) => {
-                    const block = String(d.details).split("1x ")[1];
-                    const tier = Object.values(tierByKey).find((value) => value.name.toLowerCase() === block.toLowerCase());
+                    // Try to match tier by name from donation data
+                    const tier = d.tier ? tierByName[d.tier.toLowerCase()] : null;
                     const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
                     const amount = tier ? tier.amount : 500;
                     const progressPct = amount > 0 ? Math.min(100, (d.totalDonated / amount) * 100) : 0;
                     const displayName = d.donorLabel.replace('"', '') || "Anonymous";
-                    const tierLabel = tier ? tier.label : d.tier;
+                    const tierLabel = tier ? tier.label : d.tier || "Unknown";
                     const donated = d.totalDonated;
+                    console.log(`[DonationsList] Donor ${idx}:`, { displayName, donated, amount, progressPct, tierName: d.tier, tier: tier?.key });
                     return (
                         <div
                             key={`donation-${d.email}-${idx}`}

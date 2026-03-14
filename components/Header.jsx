@@ -1,24 +1,42 @@
 import { LANGUAGE_OPTIONS, languageCurrency } from '@/lib/translationUtils.js';
-import { THEMES } from '@/constants/config.js';
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 export function Header({
     language,
     setLanguage,
     t,
-    theme,
     themeMode,
     setThemeMode,
     ramadanRaised,
     headerRamadanPct,
+    tierCollectedAmount = 0,
+    tierEngagementPct = 0,
+    tierEngagementTarget = 0,
+    receivedAmount = 0,
+    receivedTarget = 0,
     showLanguageMenu,
     setShowLanguageMenu,
     languageDropdownRef,
+    currencyFirst = false,
     isLoginPage = false,
 }) {
-    const th = theme ?? THEMES.dark;
-    const currencyFirst = language === "en";
-    const RAMADAN_TARGET = 200000;
+    const isCurrencyFirst = currencyFirst || language === "en";
+    const engagementPct = tierEngagementTarget > 0 ? Math.min(100, Math.round((tierCollectedAmount / tierEngagementTarget) * 100)) : tierEngagementPct;
+    const receivedPct = receivedTarget > 0 ? Math.min(100, Math.round((receivedAmount / receivedTarget) * 100)) : 0;
+
+    useEffect(() => {
+        console.log('[Header] Global campaign metrics:', {
+            ramadanRaised,
+            headerRamadanPct,
+            engagementAmount: tierCollectedAmount,
+            engagementTarget: tierEngagementTarget,
+            engagementPct,
+            receivedAmount,
+            receivedTarget,
+            receivedPct,
+        });
+    }, [ramadanRaised, headerRamadanPct, tierCollectedAmount, tierEngagementTarget, engagementPct, receivedAmount, receivedTarget, receivedPct]);
 
     return (
         <header className="mosque-donation-header">
@@ -51,25 +69,56 @@ export function Header({
                             </div>
 
                             <div className="progress-raised-line">
-                                {languageCurrency(ramadanRaised, currencyFirst)}{" "}
+                                {languageCurrency(tierCollectedAmount, isCurrencyFirst)}{" "}
                                 <span className="progress-raised-of">
                                     {t.prepositionOf}
                                 </span>{" "}
-                                {languageCurrency(RAMADAN_TARGET, currencyFirst)}
+                                {languageCurrency(tierEngagementTarget, isCurrencyFirst)}
                             </div>
 
                             <div className="progress-bar-row">
                                 <div className="progress-bar-track">
                                     <div
                                         className="progress-bar-fill"
-                                        style={{ width: `${headerRamadanPct}%` }}
+                                        style={{ width: `${engagementPct}%` }}
                                         aria-hidden="true"
                                     ></div>
                                 </div>
                                 <span className="progress-bar-value">
-                                    {headerRamadanPct}%
+                                    {engagementPct}%
                                 </span>
                             </div>
+
+                            {receivedAmount !== undefined && receivedAmount >= 0 && (
+                                <>
+                                    <div className="progress-objective-title" style={{ marginTop: '16px' }}>
+                                        <span className="progress-objective-text">
+                                            {t.engagement}
+                                        </span>
+                                    </div>
+
+                                    <div className="progress-raised-line">
+                                        {languageCurrency(receivedAmount, isCurrencyFirst)}{" "}
+                                        <span className="progress-raised-of">
+                                            {t.prepositionOf}
+                                        </span>{" "}
+                                        {languageCurrency(receivedTarget, isCurrencyFirst)}
+                                    </div>
+
+                                    <div className="progress-bar-row">
+                                        <div className="progress-bar-track">
+                                            <div
+                                                className="progress-bar-fill"
+                                                style={{ width: `${receivedPct}%` }}
+                                                aria-hidden="true"
+                                            ></div>
+                                        </div>
+                                        <span className="progress-bar-value">
+                                            {receivedPct}%
+                                        </span>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
