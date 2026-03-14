@@ -88,7 +88,7 @@ const es = {
   donorsList: "Lista de donantes",
   prayerTimes: "Horarios de oracion",
   ramadanObjective: "Compromiso de Campaña",
-  engagement: "Cantidad Recibida",
+  engagement: "Compromiso Recibido",
   prepositionOf: "de",
   donationDialogTitle: "Apoya la mezquita",
   hadithArabic:

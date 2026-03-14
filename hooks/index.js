@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES } from '@/lib/translationUtils.js';
+import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES, clearTranslationCache } from '@/lib/translationUtils.js';
 import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
 import { getCachedValue, setCachedValue } from '@/lib/clientCache.js';
 import { captureException, captureMessage } from '@/lib/monitoring.js';
@@ -83,6 +83,7 @@ export function useTranslation() {
     }, [language, isInitialized]);
 
     const setLanguage = useCallback((lang) => {
+        clearTranslationCache();
         setLanguageState(lang);
     }, []);
 

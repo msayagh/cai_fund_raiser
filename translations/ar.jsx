@@ -90,7 +90,7 @@ const ar = {
   donorsList: "قائمة المتبرعين",
   prayerTimes: "أوقات الصلاة",
   ramadanObjective: "مشاركة الحملة",
-  engagement: "ما تم جمعه",
+  engagement: "الالتزام المحقق",
   prepositionOf: "من",
   donationDialogTitle: "التبرع للمسجد",
   hadithArabic:

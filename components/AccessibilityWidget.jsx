@@ -90,7 +90,7 @@ export default function AccessibilityWidget({ compact = false }) {
                 aria-expanded={isOpen}
                 aria-label={labels.group}
             >
-                <span className="accessibility-widget-trigger-label">{labels.short}</span>
+                <i className="fas fa-universal-access" aria-hidden="true"></i>
                 <span className="accessibility-widget-trigger-value">{Math.round(zoom * 100)}%</span>
             </button>
             {isOpen && (

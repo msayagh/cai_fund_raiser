@@ -88,7 +88,7 @@ const fr = {
   donorsList: "Liste des donateurs",
   prayerTimes: "Heures de priere",
   ramadanObjective: "Campagne engagement",
-  engagement: "Campagne reçue",
+  engagement: "Engagement reçu",
   prepositionOf: "de",
   donationDialogTitle: "Faire un don au centre",
   hadithArabic:

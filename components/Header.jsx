@@ -173,6 +173,7 @@ export function Header({
                             >
                                 <span className="language-flag">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.flag ?? '🌐'}</span>
                                 <span className="language-dropdown-text">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.label ?? language.toUpperCase()}</span>
+                                <i className="fas fa-chevron-down" aria-hidden="true"></i>
                             </button>
                             {showLanguageMenu && (
                                 <div className="language-dropdown-menu" role="menu">

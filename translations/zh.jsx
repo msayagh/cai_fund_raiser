@@ -88,7 +88,7 @@ const zh = {
     donorsList: "捐助者名单",
     prayerTimes: "祈祷时间",
     ramadanObjective: "活动参与",
-    engagement: "已收到",
+    engagement: "参与承诺已收到",
     prepositionOf: "的",
     donationDialogTitle: "支持清真寺",
     hadithArabic:

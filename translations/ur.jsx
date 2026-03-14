@@ -90,7 +90,7 @@ const ur = {
   donorsList: "عطیہ دہندگان کی فہرست",
   prayerTimes: "اوقات نماز",
   ramadanObjective: "مہم کی شرکت",
-  engagement: "موصول رقم",
+  engagement: "وعدہ شدہ رقم",
   prepositionOf: "میں سے",
   donationDialogTitle: "مسجد کی معاونت کریں",
   hadithArabic:
