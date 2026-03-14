@@ -23,9 +23,11 @@ export default function Footer({ t }) {
                 </div>
 
                 <div className="footer-contact">
-                    <div className="footer-contact-item">
+                    <div className="footer-contact-item footer-contact-item--address">
                         <i className="fa-solid fa-location-dot footer-contact-icon" aria-hidden="true"></i>
-                        287 12e Avenue, Saint-Jean-sur-Richelieu, QC J2X 1E4
+                        <span className="footer-contact-text">
+                            287 12e Avenue, Saint-Jean-sur-Richelieu, QC J2X 1E4
+                        </span>
                     </div>
                     <div className="footer-contact-item">
                         <i className="fa-solid fa-phone footer-contact-icon" aria-hidden="true"></i>
@@ -41,6 +43,12 @@ export default function Footer({ t }) {
                         <i className="fa-brands fa-facebook footer-contact-icon" aria-hidden="true"></i>
                         <a href="https://www.facebook.com/centre.alimane.sjsr/" target="_blank" rel="noopener noreferrer" className="footer-contact-link">
                             facebook.com/centre.alimane.sjsr
+                        </a>
+                    </div>
+                    <div className="footer-contact-item">
+                        <i className="fa-solid fa-sitemap footer-contact-icon" aria-hidden="true"></i>
+                        <a href="/sitemap" className="footer-contact-link">
+                            {t.sitemap || "Sitemap"}
                         </a>
                     </div>
 

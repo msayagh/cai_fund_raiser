@@ -1,7 +1,9 @@
 import React from 'react';
 import './page.scss';
+import { DEFAULT_SITE_URL } from '@/constants/config.js';
 
 export const metadata = {
+    metadataBase: new URL(DEFAULT_SITE_URL),
     title: 'Centre Zad Al-Imane - Support Our Mosque',
     description:
         'Support the Centre Zad Al-Imane masjid establishment campaign and help fund the foundation, walls, arches, and dome for a new community mosque.',
