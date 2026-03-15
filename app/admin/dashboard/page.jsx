@@ -66,7 +66,9 @@ const getTranslation = (t, key, fallback) => {
 
 export default function AdminDashboardPage() {
     const router = useRouter();
-    const hydratedRef = useRef(false);
+    // hydratedRef removed — Next.js router cache keeps component instances alive across
+    // navigations, so a useRef guard would stay true and prevent boot from re-running
+    // after login → redirect → login again. Use only the `alive` closure pattern.
     const { language, setLanguage, t, isMounted: translationMounted } = useTranslation();
     const { themeMode, setThemeMode, isMounted: themeMounted } = useThemeMode();
     const theme = THEMES[themeMode] ?? THEMES.dark;
@@ -174,9 +176,6 @@ export default function AdminDashboardPage() {
     }
 
     useEffect(() => {
-        if (hydratedRef.current) return;
-        hydratedRef.current = true;
-
         let active = true;
 
         async function loadDashboard() {

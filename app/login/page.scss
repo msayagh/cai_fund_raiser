@@ -1,102 +1,321 @@
+// ═══════════════════════════════════════════════════════════
+// AUTH PAGES — shared styles for login + forgot-password
+// Backup of previous version: page.scss.backup2
+//
+// All colours come from CSS custom properties so both
+// dark (default) and light (data-theme="light") work
+// automatically without overrides.
+// ═══════════════════════════════════════════════════════════
+
+// ── Page wrapper ────────────────────────────────────────────
 .login-page-wrapper {
     background: var(--bg-page);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     color: var(--text-primary);
+    font-family: var(--font-family);
 }
 
+// ── Main area — centres the two-column shell ────────────────
 .login-container {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1;
     width: 100%;
-    max-width: var(--page-max-width);
-    margin: 0 auto;
-    padding: 24px 24px 40px;
+    padding: 40px 24px 64px;
 }
+
+// ── Two-column shell ────────────────────────────────────────
+.login-shell {
+    width: 100%;
+    max-width: 1040px;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 56px;
+    align-items: center;
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEFT PANEL — showcase
+// ══════════════════════════════════════════════════════════════
+
+.login-showcase {
+    min-width: 0;
+}
+
+// Shared container — used by both login showcase and
+// forgot-password showcase
+.login-showcase-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-showcase-kicker {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--accent-gold);
+}
+
+.login-showcase-title {
+    margin: 4px 0 0;
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+}
+
+.login-showcase-copy {
+    margin: 4px 0 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+// ── Numbered steps (login page) ─────────────────────────────
+
+.login-steps {
+    display: flex;
+    flex-direction: column;
+    margin-top: 32px;
+}
+
+.login-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    position: relative;
+
+    &:not(:last-child) {
+        padding-bottom: 24px;
+
+        // Vertical connector line between steps
+        &::before {
+            content: '';
+            position: absolute;
+            left: 19px;   // centre of 40 px circle minus 1 px (half of 2 px line)
+            top: 40px;    // bottom edge of the circle
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+    }
+}
+
+.login-step-num {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f6e09c 0%, #dcb060 50%, #f8e3a0 100%);
+    color: #111;
+    font-size: 15px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+    position: relative;
+    z-index: 1; // sits above the connector line
+}
+
+.login-step-text {
+    flex: 1;
+    margin: 10px 0 0;   // optically aligns with the number centre
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text-muted);
+}
+
+// ── Showcase list — used by forgot-password ──────────────────
+// (simple bullet list; kept for backward-compatibility)
+
+.login-showcase-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.login-showcase-item {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text-muted);
+    padding: 13px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+}
+
+[data-theme='light'] .login-showcase-item {
+    background: var(--bg-card);
+}
+
+// ══════════════════════════════════════════════════════════════
+// RIGHT PANEL — auth card
+// ══════════════════════════════════════════════════════════════
 
 .login-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 48px 40px;
-    max-width: 400px;
-    width: 100%;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    text-align: center;
+    border-radius: 20px;
+    padding: 36px 32px;
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 22px;
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.18),
+        0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
-.login-card--wide {
-    max-width: 560px;
-}
+// .login-card--wide — no overrides needed; width is controlled by the grid column
+
+// ── Card header ──────────────────────────────────────────────
 
 .login-content {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 8px;
 }
 
 .login-eyebrow {
-    font-size: 12px;
+    margin: 0;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.2em;
     color: var(--accent-gold);
-    font-weight: 700;
 }
 
 .login-title {
-    font-size: 32px;
-    font-weight: 700;
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
     color: var(--text-primary);
-    margin: 0;
-    font-family: var(--font-serif);
-    letter-spacing: var(--letter-spacing-tight);
-}
-
-.login-message {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--accent-gold);
-    margin: 0;
-    letter-spacing: 1px;
 }
 
 .login-description {
-    font-size: 15px;
-    color: var(--text-muted);
     margin: 0;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-muted);
 }
+
+// ── Role tab switcher ────────────────────────────────────────
 
 .login-role-switcher {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    padding: 8px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.03);
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 5px;
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+[data-theme='light'] .login-role-switcher {
+    background: var(--bg-card-alt);
 }
 
 .login-role-button {
-    border: none;
-    border-radius: 12px;
-    padding: 12px 16px;
+    padding: 11px 14px;
+    border: 1px solid transparent;
+    border-radius: 10px;
     background: transparent;
-    color: var(--text-primary);
-    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
     font-weight: 600;
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+    &.active {
+        background: var(--accent-gold);
+        color: #fff;
+        font-weight: 700;
+    }
+
+    &:not(.active):hover {
+        color: var(--accent-gold);
+    }
 }
 
-.login-role-button.active {
-    background: var(--accent-gold);
-    color: #111;
+// ── Feedback banners ─────────────────────────────────────────
+
+.login-alert {
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.5;
 }
+
+.login-alert--error {
+    background: rgba(176, 52, 52, 0.12);
+    border: 1px solid rgba(224, 96, 96, 0.4);
+    color: #ffb4b4;
+}
+
+.login-alert--success {
+    background: rgba(82, 154, 106, 0.12);
+    border: 1px solid rgba(126, 184, 160, 0.4);
+    color: #a8f0c2;
+}
+
+[data-theme='light'] {
+    .login-alert--error {
+        background: rgba(180, 40, 40, 0.07);
+        border-color: rgba(200, 60, 60, 0.28);
+        color: #9a2020;
+    }
+
+    .login-alert--success {
+        background: rgba(50, 120, 70, 0.07);
+        border-color: rgba(80, 160, 100, 0.28);
+        color: #1f5c35;
+    }
+}
+
+// ── Session card (already-signed-in state) ───────────────────
+
+.login-session-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.login-session-label {
+    margin: 0 0 4px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-gold);
+}
+
+.login-session-name {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.login-session-meta {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+// ── Form ─────────────────────────────────────────────────────
 
 .login-form {
     display: grid;
@@ -105,184 +324,204 @@
 
 .login-label {
     display: grid;
-    gap: 8px;
-    color: var(--text-primary);
+    gap: 7px;
     font-size: 14px;
-    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .login-input {
     width: 100%;
-    border-radius: 14px;
+    padding: 12px 14px;
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text-primary);
-    padding: 14px 16px;
     font-size: 15px;
+    font-family: var(--font-family);
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:focus {
+        outline: none;
+        border-color: var(--accent-gold);
+        box-shadow: 0 0 0 3px rgba(212, 169, 110, 0.14);
+    }
+
+    &::placeholder {
+        color: var(--text-muted);
+        opacity: 0.6;
+    }
 }
 
-.login-primary-button {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    padding: 14px 20px;
-    border-radius: 14px;
-    border: none;
-    background: var(--accent-gold);
-    color: #111;
-    font-weight: 700;
-    cursor: pointer;
+[data-theme='light'] .login-input {
+    background: #f9f8f5;
 }
 
-.login-primary-button:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-}
+// ── Remember-me row ──────────────────────────────────────────
 
-.login-primary-button--secondary {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-}
-
-.login-alert {
-    border-radius: 14px;
-    padding: 14px 16px;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.login-alert--error {
-    background: rgba(176, 52, 52, 0.12);
-    border: 1px solid rgba(224, 96, 96, 0.45);
-    color: #ffb4b4;
-}
-
-.login-alert--success {
-    background: rgba(82, 154, 106, 0.12);
-    border: 1px solid rgba(126, 184, 160, 0.45);
-    color: #b5f0c4;
-}
-
-.login-session-card {
+.login-form-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 18px;
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.03);
-    text-align: left;
-}
-
-.login-session-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--accent-gold);
-    margin-bottom: 8px;
-}
-
-.login-session-name {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.login-session-meta {
-    color: var(--text-muted);
-    font-size: 14px;
-    margin-top: 4px;
-}
-
-.login-links {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
 }
 
+.login-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.login-checkbox {
+    accent-color: var(--accent-gold);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
 .login-inline-link {
+    font-size: 14px;
+    font-weight: 600;
     color: var(--accent-gold);
     text-decoration: none;
-    font-weight: 600;
+
+    &:hover {
+        text-decoration: underline;
+    }
 }
 
-.login-back-button {
-    display: inline-block;
-    padding: 12px 24px;
-    background: var(--accent-gold);
-    color: var(--text-primary);
+// ── Primary CTA ──────────────────────────────────────────────
+
+.login-primary-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 13px 20px;
     border: none;
-    border-radius: 12px;
-    font-weight: 600;
+    border-radius: 10px;
+    background: var(--accent-gold);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--font-family);
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.3s ease;
-    font-size: 15px;
+    transition: opacity 0.15s, transform 0.15s;
+
+    &:hover:not(:disabled) {
+        opacity: 0.88;
+        transform: translateY(-1px);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
 }
 
-.login-back-button:hover {
-    background: linear-gradient(135deg, var(--accent-gold), #e6c86e);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(212, 175, 55, 0.3);
+// Outline / ghost variant
+.login-primary-button--secondary {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    width: auto;
+
+    &:hover:not(:disabled) {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+        opacity: 1;
+        transform: none;
+    }
 }
 
-@media (max-width: 768px) {
+// ── Secondary action (create account link) ───────────────────
+
+.login-secondary-action {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--accent-gold);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: var(--font-family);
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover {
+        background: rgba(212, 169, 110, 0.07);
+        border-color: var(--accent-gold);
+    }
+}
+
+// ── Footer hint ──────────────────────────────────────────────
+
+// .login-links — wrapper class kept for compatibility with forgot-password page
+
+.login-links--footer {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+}
+
+.login-footer-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--text-muted);
+}
+
+// ══════════════════════════════════════════════════════════════
+// RESPONSIVE
+// ══════════════════════════════════════════════════════════════
+
+@media (max-width: 860px) {
+    .login-shell {
+        grid-template-columns: 1fr;
+        max-width: 460px;
+        gap: 28px;
+    }
+
+    // Show the form first on small screens
+    .login-showcase { order: 2; }
+    .login-card     { order: 1; }
+
+    .login-showcase-title {
+        font-size: 28px;
+    }
+
+    .login-showcase-kicker,
+    .login-showcase-copy {
+        display: none; // Keep it tight on mobile — steps speak for themselves
+    }
+}
+
+@media (max-width: 520px) {
     .login-container {
-        padding: 20px 20px 32px;
+        padding: 20px 16px 48px;
     }
 
     .login-card {
-        padding: 40px 24px;
-        gap: 24px;
-    }
-
-    .login-title {
-        font-size: 26px;
-    }
-
-    .login-message {
-        font-size: 18px;
-    }
-
-    .login-session-card {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
-
-@media (max-width: 480px) {
-    .login-container {
-        padding: 16px 14px 24px;
-    }
-
-    .login-card {
-        padding: 32px 20px;
-        gap: 20px;
+        padding: 28px 20px;
         border-radius: 16px;
     }
 
-    .login-title {
+    .login-showcase-title {
         font-size: 22px;
     }
 
-    .login-message {
-        font-size: 16px;
-    }
-
-    .login-description {
-        font-size: 13px;
-    }
-
-    .login-back-button {
-        padding: 10px 20px;
-        font-size: 13px;
-    }
-
-    .login-links {
-        flex-direction: column;
-        align-items: stretch;
+    .login-showcase-kicker,
+    .login-showcase-copy {
+        display: none;
     }
 }

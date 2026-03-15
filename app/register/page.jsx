@@ -12,9 +12,52 @@ import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
-import { donorLogin } from '@/lib/auth.js';
-import { apiFetch } from '@/lib/apiClient.js';
+import { apiFetch, setAccessToken, setRefreshToken } from '@/lib/apiClient.js';
+import { setStoredSession } from '@/lib/session.js';
 import '../login/page.scss';
+
+// ── English fallbacks — merged with t.auth at render time ──────────────
+const DEFAULT_AUTH_TEXT = {
+    registerSeoDescription: 'Create a new donor account to support the Centre Zad Al-Imane.',
+    registerPageTitle: 'Register',
+    registerKicker: 'Create Account',
+    registerTitle: 'Register as a Donor',
+    registerDescription: 'Link your donations by email, verify your code, then set your password and an optional engagement.',
+    registerStep1: 'Identity',
+    registerStep2: 'Verify OTP',
+    registerStep3: 'Account',
+    fullName: 'Full Name',
+    sendVerificationCode: 'Send verification code',
+    sendingCode: 'Sending code\u2026',
+    verificationCodeSent: 'Verification code sent. Please check your email.',
+    invalidNameLength: 'Please enter a valid name (minimum 2 characters).',
+    unableToSendCode: 'Unable to send verification code right now.',
+    invalidOtpCode: 'Please enter the 6-digit code sent to your email.',
+    emailVerified: 'Email verified. You can now create your account.',
+    unableToVerifyCode: 'Unable to verify the code right now.',
+    resending: 'Resending\u2026',
+    resendCode: 'Resend code',
+    optionalEngagement: 'Optional engagement',
+    optionalEngagementHint: 'Leave these fields empty to create the account without an engagement.',
+    engagementAmount: 'Engagement amount ($)',
+    targetEndDate: 'Target end date (optional)',
+    creatingAccount: 'Creating account\u2026',
+    createAccount: 'Create account',
+    accountCreated: 'Account created successfully! Redirecting to dashboard\u2026',
+    invalidEngagementAmount: 'Engagement amount must be a positive number.',
+    unableToRegister: 'Unable to register right now.',
+    alreadyHaveAccount: 'Already have an account? Sign in',
+    back: 'Back',
+    emailLabel: 'Email',
+    passwordLabel: 'Password',
+    confirmPassword: 'Confirm password',
+    verificationCode: 'Verification code',
+    otpPlaceholder: '6-digit code',
+    verifying: 'Verifying\u2026',
+    verifyCode: 'Verify code',
+    passwordMinLength: 'Password must be at least 8 characters.',
+    passwordsDoNotMatch: 'Passwords do not match.',
+};
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -29,19 +72,42 @@ export default function RegisterPage() {
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/register?lang=${language}`, siteUrl);
     const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
-    const pageTitle = `Register | ${t.centerName || 'Centre Zad Al-Imane'}`;
-    const pageDescription = truncateText(
-        'Create a new donor account to support the Centre Zad Al-Imane'
-    );
+    const auth = { ...DEFAULT_AUTH_TEXT, ...(t.auth ?? {}) };
+    const pageTitle = `${auth.registerPageTitle} | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const pageDescription = truncateText(auth.registerSeoDescription);
     const locale = t.locale ?? language;
     const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
 
+    const [step, setStep] = useState('identity'); // identity -> otp -> account
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [otpCode, setOtpCode] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [pledgeAmount, setPledgeAmount] = useState('');
+    const [pledgeEndDate, setPledgeEndDate] = useState('');
+    const [verifiedEmail, setVerifiedEmail] = useState('');
     const [status, setStatus] = useState({ loading: false, error: '', success: '' });
+    const [sendingOtp, setSendingOtp] = useState(false);
+    const [verifyingOtp, setVerifyingOtp] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    const normalizeOtpInput = (value) => {
+        const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+        const easternArabicIndic = '۰۱۲۳۴۵۶۷۸۹';
+        return String(value || '')
+            .split('')
+            .map((char) => {
+                const ai = arabicIndic.indexOf(char);
+                if (ai >= 0) return String(ai);
+                const eai = easternArabicIndic.indexOf(char);
+                if (eai >= 0) return String(eai);
+                return char;
+            })
+            .join('')
+            .replace(/\D/g, '')
+            .slice(0, 6);
+    };
 
     useEffect(() => {
         if (languageDropdownRef.current && showLanguageMenu) {
@@ -74,55 +140,155 @@ export default function RegisterPage() {
         });
     }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const cachedEmail = window.sessionStorage.getItem('registerEmail');
+        if (!cachedEmail) return;
+        setEmail(cachedEmail);
+        window.sessionStorage.removeItem('registerEmail');
+    }, []);
+
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div
                 className="login-page-wrapper"
                 data-theme="dark"
                 suppressHydrationWarning
-                style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
             >
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading site" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading" />
             </div>
         );
     }
 
-    async function handleSubmit(event) {
+    async function handleSendOtp(event) {
+        event.preventDefault();
+        setSendingOtp(true);
+        setStatus((prev) => ({ ...prev, error: '', success: '' }));
+
+        try {
+            const normalizedName = name.trim();
+            const normalizedEmail = email.trim().toLowerCase();
+
+            if (normalizedName.length < 2) {
+                throw new Error(auth.invalidNameLength);
+            }
+
+            await apiFetch('/api/auth/donor/register/send-otp', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: normalizedEmail,
+                }),
+            });
+
+            setStep('otp');
+            setVerifiedEmail(normalizedEmail);
+            setStatus({
+                loading: false,
+                error: '',
+                success: auth.verificationCodeSent,
+            });
+        } catch (error) {
+            setStatus((prev) => ({
+                ...prev,
+                loading: false,
+                error: error?.message || auth.unableToSendCode,
+            }));
+        } finally {
+            setSendingOtp(false);
+        }
+    }
+
+    async function handleVerifyOtp(event) {
+        event.preventDefault();
+        setVerifyingOtp(true);
+        setStatus((prev) => ({ ...prev, error: '', success: '' }));
+
+        try {
+            const normalizedCode = normalizeOtpInput(otpCode);
+            if (!/^\d{6}$/.test(normalizedCode)) {
+                throw new Error(auth.invalidOtpCode);
+            }
+
+            await apiFetch('/api/auth/donor/register/verify-otp', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: verifiedEmail || email.trim().toLowerCase(),
+                    code: normalizedCode,
+                }),
+            });
+
+            setStep('account');
+            setStatus({ loading: false, error: '', success: auth.emailVerified });
+        } catch (error) {
+            setStatus((prev) => ({
+                ...prev,
+                loading: false,
+                error: error?.message || auth.unableToVerifyCode,
+            }));
+        } finally {
+            setVerifyingOtp(false);
+        }
+    }
+
+    async function handleCompleteRegistration(event) {
         event.preventDefault();
         setSubmitting(true);
         setStatus((prev) => ({ ...prev, error: '', success: '' }));
 
-        // Validate passwords match
-        if (password !== confirmPassword) {
-            setStatus((prev) => ({
-                ...prev,
-                error: 'Passwords do not match',
-            }));
+        if (password.length < 8) {
+            setStatus((prev) => ({ ...prev, error: auth.passwordMinLength }));
             setSubmitting(false);
             return;
         }
 
+        if (password !== confirmPassword) {
+            setStatus((prev) => ({ ...prev, error: auth.passwordsDoNotMatch }));
+            setSubmitting(false);
+            return;
+        }
+
+        let pledge = undefined;
+        const normalizedPledge = pledgeAmount.trim();
+        if (normalizedPledge !== '') {
+            const numericPledge = Number(normalizedPledge);
+            if (!Number.isFinite(numericPledge) || numericPledge <= 0) {
+                setStatus((prev) => ({ ...prev, error: auth.invalidEngagementAmount }));
+                setSubmitting(false);
+                return;
+            }
+
+            pledge = { totalPledge: numericPledge };
+            if (pledgeEndDate) {
+                pledge.endDate = new Date(`${pledgeEndDate}T00:00:00`).toISOString();
+            }
+        }
+
         try {
-            await apiFetch('/api/auth/donor/register/complete', {
+            const normalizedEmail = (verifiedEmail || email).trim().toLowerCase();
+
+            const data = await apiFetch('/api/auth/donor/register/complete', {
                 method: 'POST',
                 body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
+                    email: normalizedEmail,
                     name: name.trim(),
-                    password
+                    password,
+                    ...(pledge ? { pledge } : {}),
                 }),
             });
 
-            // After registration, attempt login
-            await donorLogin(email.trim().toLowerCase(), password);
+            // Registration already returns an authenticated donor session.
+            if (data?.tokens?.accessToken) setAccessToken(data.tokens.accessToken);
+            if (data?.tokens?.refreshToken) setRefreshToken(data.tokens.refreshToken);
+            if (data?.donor) setStoredSession({ ...data.donor, role: 'donor' });
 
             setStatus({
                 loading: false,
                 error: '',
-                success: 'Account created successfully! Redirecting to dashboard...',
+                success: auth.accountCreated,
             });
 
             // Save email for "Remember me"
-            localStorage.setItem('rememberedEmail', email.trim().toLowerCase());
+            localStorage.setItem('rememberedEmail', normalizedEmail);
 
             // Redirect to dashboard
             setTimeout(() => router.replace('/donor/dashboard'), 1500);
@@ -130,7 +296,7 @@ export default function RegisterPage() {
             setStatus((prev) => ({
                 ...prev,
                 loading: false,
-                error: error?.message || 'Unable to register right now.',
+                error: error?.message || auth.unableToRegister,
             }));
         } finally {
             setSubmitting(false);
@@ -143,20 +309,12 @@ export default function RegisterPage() {
             data-theme={themeMode}
             dir={isRTL ? 'rtl' : 'ltr'}
             suppressHydrationWarning
-            style={{
-                '--bg-primary': theme['bg-primary'],
-                '--bg-page': theme['bg-page'],
-                '--text-primary': theme['text-primary'],
-                '--border': theme['border'],
-                '--bg-card': theme['bg-card'],
-                '--accent-gold': theme['accent-gold'],
-            }}
         >
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
-                *{box-sizing:border-box;margin:0;padding:0}
-                ::-webkit-scrollbar{width:4px}
-                ::-webkit-scrollbar-thumb{background:${theme.scrollbarThumb};border-radius:4px}
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                *, *::before, *::after { box-sizing: border-box; }
+                ::-webkit-scrollbar { width: 4px; }
+                ::-webkit-scrollbar-thumb { background: rgba(200,169,110,.22); border-radius: 4px; }
             `}</style>
             <Header
                 language={language}
@@ -175,73 +333,231 @@ export default function RegisterPage() {
             <div className="login-container">
                 <div className="login-card login-card--wide">
                     <div className="login-content">
-                        <div className="login-eyebrow">Create Account</div>
-                        <h1 className="login-title">Register as a Donor</h1>
-                        <p className="login-description">Join us and support the Centre Zad Al-Imane campaign</p>
+                        <p className="login-eyebrow">{auth.registerKicker}</p>
+                        <h2 className="login-title">{auth.registerTitle}</h2>
+                        <p className="login-description">{auth.registerDescription}</p>
+                        <div className="register-steps" aria-label="Registration progress">
+                            <span className={`register-step${step === 'identity' ? ' active' : ''}`}>1. {auth.registerStep1}</span>
+                            <span className={`register-step${step === 'otp' ? ' active' : ''}`}>2. {auth.registerStep2}</span>
+                            <span className={`register-step${step === 'account' ? ' active' : ''}`}>3. {auth.registerStep3}</span>
+                        </div>
                     </div>
 
                     {status.error ? <div className="login-alert login-alert--error">{status.error}</div> : null}
                     {status.success ? <div className="login-alert login-alert--success">{status.success}</div> : null}
 
-                    <form className="login-form" onSubmit={handleSubmit}>
-                        <label className="login-label">
-                            <span>Full Name</span>
-                            <input
-                                className="login-input"
-                                type="text"
-                                autoComplete="name"
-                                value={name}
-                                onChange={(event) => setName(event.target.value)}
-                                required
-                            />
-                        </label>
+                    {step === 'identity' && (
+                        <form className="login-form" onSubmit={handleSendOtp} noValidate>
+                            <label className="login-label">
+                                <span>{auth.fullName}</span>
+                                <input
+                                    className="login-input"
+                                    type="text"
+                                    autoComplete="name"
+                                    value={name}
+                                    onChange={(event) => setName(event.target.value)}
+                                    required
+                                />
+                            </label>
 
-                        <label className="login-label">
-                            <span>Email</span>
-                            <input
-                                className="login-input"
-                                type="email"
-                                autoComplete="email"
-                                value={email}
-                                onChange={(event) => setEmail(event.target.value)}
-                                required
-                            />
-                        </label>
+                            <label className="login-label">
+                                <span>{auth.emailLabel}</span>
+                                <input
+                                    className="login-input"
+                                    type="email"
+                                    autoComplete="email"
+                                    value={email}
+                                    onChange={(event) => setEmail(event.target.value)}
+                                    required
+                                />
+                            </label>
 
-                        <label className="login-label">
-                            <span>Password</span>
-                            <input
-                                className="login-input"
-                                type="password"
-                                autoComplete="new-password"
-                                value={password}
-                                onChange={(event) => setPassword(event.target.value)}
-                                required
-                            />
-                        </label>
+                            <button type="submit" className="login-primary-button" disabled={sendingOtp || status.loading}>
+                                {sendingOtp ? auth.sendingCode : auth.sendVerificationCode}
+                            </button>
+                        </form>
+                    )}
 
-                        <label className="login-label">
-                            <span>Confirm Password</span>
-                            <input
-                                className="login-input"
-                                type="password"
-                                autoComplete="new-password"
-                                value={confirmPassword}
-                                onChange={(event) => setConfirmPassword(event.target.value)}
-                                required
-                            />
-                        </label>
+                    {step === 'otp' && (
+                        <form className="login-form" onSubmit={handleVerifyOtp} noValidate>
+                            <label className="login-label">
+                                <span>{auth.verificationCode}</span>
+                                <input
+                                    className="login-input"
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    autoComplete="one-time-code"
+                                    value={otpCode}
+                                    onChange={(event) => setOtpCode(normalizeOtpInput(event.target.value))}
+                                    placeholder={auth.otpPlaceholder}
+                                    required
+                                />
+                            </label>
 
-                        <button type="submit" className="login-primary-button" disabled={submitting || status.loading}>
-                            {submitting ? 'Creating account...' : 'Create Account'}
-                        </button>
-                    </form>
+                            <div className="register-actions-row">
+                                <button type="submit" className="login-primary-button" disabled={verifyingOtp || status.loading}>
+                                    {verifyingOtp ? auth.verifying : auth.verifyCode}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="login-primary-button login-primary-button--secondary"
+                                    onClick={(event) => handleSendOtp(event)}
+                                    disabled={sendingOtp || status.loading}
+                                >
+                                    {sendingOtp ? auth.resending : auth.resendCode}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="login-primary-button login-primary-button--secondary"
+                                    onClick={() => {
+                                        setStep('identity');
+                                        setOtpCode('');
+                                        setStatus({ loading: false, error: '', success: '' });
+                                    }}
+                                >
+                                    {auth.back}
+                                </button>
+                            </div>
+                        </form>
+                    )}
 
-                    <div className="login-links">
+                    {step === 'account' && (
+                        <form className="login-form" onSubmit={handleCompleteRegistration} noValidate>
+                            <label className="login-label">
+                                <span>{auth.passwordLabel}</span>
+                                <input
+                                    className="login-input"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    value={password}
+                                    onChange={(event) => setPassword(event.target.value)}
+                                    minLength={8}
+                                    required
+                                />
+                            </label>
+
+                            <label className="login-label">
+                                <span>{auth.confirmPassword}</span>
+                                <input
+                                    className="login-input"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    value={confirmPassword}
+                                    onChange={(event) => setConfirmPassword(event.target.value)}
+                                    minLength={8}
+                                    required
+                                />
+                            </label>
+
+                            <div className="register-optional-block">
+                                <p className="register-optional-title">{auth.optionalEngagement}</p>
+                                <p className="register-optional-copy">{auth.optionalEngagementHint}</p>
+
+                                <label className="login-label">
+                                    <span>{auth.engagementAmount}</span>
+                                    <input
+                                        className="login-input"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={pledgeAmount}
+                                        onChange={(event) => setPledgeAmount(event.target.value)}
+                                        placeholder="500"
+                                    />
+                                </label>
+
+                                <label className="login-label">
+                                    <span>{auth.targetEndDate}</span>
+                                    <input
+                                        className="login-input"
+                                        type="date"
+                                        value={pledgeEndDate}
+                                        onChange={(event) => setPledgeEndDate(event.target.value)}
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="register-actions-row">
+                                <button type="submit" className="login-primary-button" disabled={submitting || status.loading}>
+                                    {submitting ? auth.creatingAccount : auth.createAccount}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="login-primary-button login-primary-button--secondary"
+                                    onClick={() => {
+                                        setStep('otp');
+                                        setStatus({ loading: false, error: '', success: '' });
+                                    }}
+                                >
+                                    {auth.back}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    <div className="login-links login-links--footer">
+                        <Link href="/login" className="login-inline-link">{auth.alreadyHaveAccount}</Link>
                     </div>
                 </div>
             </div>
             <Footer t={isMounted ? t : {}} />
+
+            <style jsx>{`
+                .register-steps {
+                    margin-top: 12px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                }
+                .register-step {
+                    border: 1px solid var(--border);
+                    background: var(--bg-card);
+                    color: var(--text-primary);
+                    border-radius: 999px;
+                    padding: 4px 10px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    opacity: 0.75;
+                }
+                .register-step.active {
+                    border-color: var(--accent-gold);
+                    color: var(--accent-gold);
+                    opacity: 1;
+                }
+                .register-actions-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                .register-optional-block {
+                    border: 1px solid var(--border);
+                    border-radius: 14px;
+                    padding: 14px;
+                    background: var(--bg-card);
+                }
+                .register-optional-title {
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin-bottom: 6px;
+                }
+                .register-optional-copy {
+                    margin: 0 0 10px;
+                    font-size: 12px;
+                    opacity: 0.8;
+                }
+                [data-theme="light"] .login-alert--success {
+                    background: rgba(42, 122, 70, 0.10);
+                    border: 1px solid rgba(42, 122, 70, 0.36);
+                    color: #1f6a3a;
+                }
+                [data-theme="light"] .login-alert--error {
+                    background: rgba(176, 52, 52, 0.10);
+                    border: 1px solid rgba(176, 52, 52, 0.32);
+                    color: #8b2626;
+                }
+            `}</style>
         </div>
     );
 }

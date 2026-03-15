@@ -1,0 +1,1194 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Header } from '@/components/Header.jsx';
+import Footer from '@/components/Footer.jsx';
+import SitePreloader from '@/components/SitePreloader.jsx';
+import { useTranslation, useThemeMode } from '@/hooks/index.js';
+import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
+import { THEMES } from '@/constants/config.js';
+import { setupSEOMetaTags } from '@/lib/seoUtils.js';
+import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
+import { createEngagement, getMe, getMyPayments, getMyRequests, updateEngagement, updateMe, updateMyPassword } from '@/lib/donorApi.js';
+import { createRequest } from '@/lib/requestsApi.js';
+import { clearTokens, tryAutoLogin } from '@/lib/auth.js';
+import { clearStoredSession, getStoredSession, setStoredSession } from '@/lib/session.js';
+
+export default function DonorDashboardPage() {
+    const router = useRouter();
+    const hydratedRef = useRef(false);
+    const { language, setLanguage, t, isMounted: translationMounted } = useTranslation();
+    const { themeMode, setThemeMode, isMounted: themeMounted } = useThemeMode();
+    const theme = THEMES[themeMode] ?? THEMES.dark;
+    const languageDropdownRef = useRef(null);
+    const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+    const [profile, setProfile] = useState(null);
+    const [payments, setPayments] = useState([]);
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [activeModal, setActiveModal] = useState(null);
+    const [profileForm, setProfileForm] = useState({ name: '', email: '' });
+    const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [engagementForm, setEngagementForm] = useState({ totalPledge: '', endDate: '' });
+    const [requestForm, setRequestForm] = useState({ type: 'other', message: '' });
+    const [requestFiles, setRequestFiles] = useState([]);
+    const [cashPaymentForm, setCashPaymentForm] = useState({ amount: '', message: '' });
+    const appReady = translationMounted && themeMounted;
+    const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
+    const isRTL = ['ar', 'ur'].includes(language);
+
+    const siteUrl = getSiteUrl();
+    const pageUrl = getAbsoluteUrl(`/donor/dashboard?lang=${language}`, siteUrl);
+    const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
+    const pageTitle = `Donor Dashboard | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const pageDescription = truncateText('Manage your donor profile, engagement, payments, and support requests.');
+
+    const ui = useMemo(() => {
+        const isFrench = String(language || '').toLowerCase().startsWith('fr');
+        return isFrench
+            ? {
+                welcome: 'Bienvenue',
+                settings: 'Parametres',
+                contactAdmin: "Contacter l'administrateur",
+                logout: 'Se deconnecter',
+                yourEngagement: 'Votre engagement',
+                editEngagement: "Modifier l'engagement",
+                paymentHistory: 'Historique des paiements',
+                makePayment: 'Effectuer un paiement',
+                paidSoFar: "Paye jusqu'ici",
+                totalPledged: 'Don total engage',
+                remaining: 'Restant',
+                deadline: 'Date limite',
+                daysRemaining: 'jours restants',
+                statusInProgress: 'Engagement en cours',
+                statusOverdue: 'Engagement en retard',
+                statusCompleted: 'Engagement accompli',
+                noPayments: 'Aucun paiement enregistre.',
+                profile: 'Profil',
+                password: 'Mot de passe',
+                saveProfile: 'Sauvegarder le profil',
+                updatePassword: 'Mettre a jour le mot de passe',
+                currentPassword: 'Mot de passe actuel',
+                newPassword: 'Nouveau mot de passe',
+                confirmPassword: 'Confirmer le mot de passe',
+                pledgeAmount: 'Montant engage',
+                updateEngagement: "Mettre a jour l'engagement",
+                createEngagement: 'Creer un engagement',
+                requestType: 'Type de demande',
+                yourMessage: 'Votre message',
+                yourName: 'Votre nom',
+                yourEmail: 'Votre e-mail',
+                paymentViaZeffy: 'Payer via Zeffy',
+                cashPayment: 'Paiement en especes',
+                submitCashRequest: 'Soumettre un recu de paiement',
+                amount: 'Montant',
+                notes: 'Note',
+                back: 'Retour',
+                submitRequest: 'Envoyer la demande',
+                optionalFiles: 'Joindre des fichiers (optionnel)',
+                zeffySoon: 'Paiement en ligne Zeffy - bientot disponible',
+                paymentModalDescription: 'Payez votre engagement en ligne ou soumettez un recu pour un paiement en especes.',
+                contactDescription: 'Envoyez un message pour toute aide ou probleme.',
+                cashRequestSuccess: 'Demande de paiement en especes envoyee.',
+                inProgress: 'En cours',
+                overdue: 'En retard',
+                completed: 'Accompli',
+            }
+            : {
+                welcome: 'Welcome',
+                settings: 'Settings',
+                contactAdmin: 'Contact admin',
+                logout: 'Log out',
+                yourEngagement: 'Your engagement',
+                editEngagement: 'Edit engagement',
+                paymentHistory: 'Payment history',
+                makePayment: 'Make a payment',
+                paidSoFar: 'Paid so far',
+                totalPledged: 'Total pledged',
+                remaining: 'Remaining',
+                deadline: 'Deadline',
+                daysRemaining: 'days remaining',
+                statusInProgress: 'Engagement in progress',
+                statusOverdue: 'Engagement overdue',
+                statusCompleted: 'Engagement completed',
+                noPayments: 'No payments recorded.',
+                profile: 'Profile',
+                password: 'Password',
+                saveProfile: 'Save profile',
+                updatePassword: 'Update password',
+                currentPassword: 'Current password',
+                newPassword: 'New password',
+                confirmPassword: 'Confirm password',
+                pledgeAmount: 'Pledge amount',
+                updateEngagement: 'Update engagement',
+                createEngagement: 'Create engagement',
+                requestType: 'Request type',
+                yourMessage: 'Your message',
+                yourName: 'Your name',
+                yourEmail: 'Your e-mail',
+                paymentViaZeffy: 'Pay via Zeffy',
+                cashPayment: 'Cash payment',
+                submitCashRequest: 'Submit payment receipt',
+                amount: 'Amount',
+                notes: 'Note',
+                back: 'Back',
+                submitRequest: 'Submit request',
+                optionalFiles: 'Attach files (optional)',
+                zeffySoon: 'Zeffy online payment - coming soon',
+                paymentModalDescription: 'Pay your pledge online or submit a receipt for a cash payment.',
+                contactDescription: 'Send a message for support or any issue.',
+                cashRequestSuccess: 'Cash payment request submitted.',
+                inProgress: 'In progress',
+                overdue: 'Overdue',
+                completed: 'Completed',
+            };
+    }, [language]);
+
+    useEffect(() => {
+        if (!translationMounted) return;
+        setupSEOMetaTags({
+            language,
+            isRTL,
+            pageTitle,
+            pageDescription,
+            pageUrl,
+            socialImageUrl,
+            logoAlt: `${t.centerName || 'Centre Zad Al-Imane'} logo`,
+            locale: t.locale ?? language,
+            siteUrl,
+            t,
+            pagePath: '/donor/dashboard',
+            pageType: 'profile',
+        });
+    }, [translationMounted, language, isRTL, pageTitle, pageDescription, pageUrl, socialImageUrl, siteUrl, t]);
+
+    useEffect(() => {
+        if (hydratedRef.current) return;
+        hydratedRef.current = true;
+
+        let active = true;
+
+        async function loadDashboard() {
+            const session = getStoredSession();
+            if (!session || session.role !== 'donor') {
+                if (active) {
+                    setLoading(false);
+                }
+                router.replace('/login');
+                return;
+            }
+
+            try {
+                const refreshed = await tryAutoLogin();
+                if (!refreshed) {
+                    clearTokens();
+                    clearStoredSession();
+                    if (active) {
+                        setError('Your session has expired. Please log in again.');
+                    }
+                    router.replace('/login');
+                    return;
+                }
+
+                const [me, myPayments, myRequests] = await Promise.all([
+                    getMe(),
+                    getMyPayments(),
+                    getMyRequests(),
+                ]);
+                if (!active) return;
+
+                setProfile(me);
+                setPayments(myPayments);
+                setRequests(myRequests);
+                setProfileForm({ name: me.name || '', email: me.email || '' });
+                setEngagementForm({
+                    totalPledge: me.engagement?.totalPledge ? String(me.engagement.totalPledge) : '',
+                    endDate: me.engagement?.endDate ? String(me.engagement.endDate).slice(0, 10) : '',
+                });
+                setStoredSession({ ...session, ...me, role: 'donor' });
+                setError('');
+            } catch (err) {
+                if (!active) return;
+                clearTokens();
+                clearStoredSession();
+                setError(err?.message || 'Unable to load donor dashboard.');
+                router.replace('/login');
+                return;
+            } finally {
+                if (active) setLoading(false);
+            }
+        }
+
+        loadDashboard();
+        return () => {
+            active = false;
+        };
+    }, [router]);
+
+    const paymentTotal = useMemo(
+        () => payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+        [payments]
+    );
+    const engagementTarget = Number(profile?.engagement?.totalPledge || 0);
+    const progressPct = engagementTarget > 0 ? Math.min(100, Math.round((paymentTotal / engagementTarget) * 100)) : 0;
+    const remainingAmount = Math.max(0, engagementTarget - paymentTotal);
+    const engagementEndDate = profile?.engagement?.endDate ? new Date(profile.engagement.endDate) : null;
+    const daysRemaining = engagementEndDate
+        ? Math.max(0, Math.ceil((engagementEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        : 0;
+    const startDate = profile?.engagement?.createdAt ? new Date(profile.engagement.createdAt) : null;
+    const totalDays = startDate && engagementEndDate
+        ? Math.max(1, Math.ceil((engagementEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+    const elapsedDays = totalDays > 0 ? Math.max(0, totalDays - daysRemaining) : 0;
+    const timeProgressPct = totalDays > 0 ? Math.min(100, Math.round((elapsedDays / totalDays) * 100)) : 0;
+
+    const isCompleted = engagementTarget > 0 && progressPct >= 100;
+    const isOverdue = !isCompleted && engagementEndDate && engagementEndDate.getTime() < Date.now();
+    const engagementState = isCompleted ? 'completed' : isOverdue ? 'overdue' : 'in-progress';
+    const stateMeta = {
+        'in-progress': { color: '#d2a864', soft: 'rgba(210,168,100,.18)', label: ui.statusInProgress, chip: ui.inProgress },
+        overdue: { color: '#e46767', soft: 'rgba(228,103,103,.18)', label: ui.statusOverdue, chip: ui.overdue },
+        completed: { color: '#7fc6a7', soft: 'rgba(127,198,167,.18)', label: ui.statusCompleted, chip: ui.completed },
+    };
+    const currentState = stateMeta[engagementState];
+
+    const ringRadius = 70;
+    const ringCircumference = 2 * Math.PI * ringRadius;
+    const ringOffset = ringCircumference * (1 - progressPct / 100);
+
+    async function refreshRequests() {
+        const myRequests = await getMyRequests();
+        setRequests(myRequests);
+    }
+
+    function handleLogout() {
+        clearTokens();
+        clearStoredSession();
+        router.replace('/login');
+    }
+
+    function openEngagementModal() {
+        setEngagementForm({
+            totalPledge: profile?.engagement?.totalPledge ? String(profile.engagement.totalPledge) : '',
+            endDate: profile?.engagement?.endDate ? String(profile.engagement.endDate).slice(0, 10) : '',
+        });
+        setActiveModal('engagement');
+    }
+
+    function openContactModal(defaultType = 'other') {
+        setRequestForm((prev) => ({ ...prev, type: defaultType }));
+        setActiveModal('request');
+    }
+
+    function openPaymentModal() {
+        setCashPaymentForm({ amount: remainingAmount > 0 ? String(remainingAmount) : '', message: '' });
+        setRequestFiles([]);
+        setActiveModal('payment');
+    }
+
+    async function handleProfileUpdate(event) {
+        event.preventDefault();
+        setError('');
+        setSuccess('');
+        try {
+            const updated = await updateMe({
+                name: profileForm.name.trim(),
+                email: profileForm.email.trim().toLowerCase(),
+            });
+            setProfile((prev) => ({ ...prev, ...updated }));
+            setStoredSession({ ...(getStoredSession() || {}), ...updated, role: 'donor' });
+            setSuccess('Profile updated.');
+        } catch (err) {
+            setError(err?.message || 'Unable to update profile.');
+        }
+    }
+
+    async function handlePasswordUpdate(event) {
+        event.preventDefault();
+        setError('');
+        setSuccess('');
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+            setError('Passwords do not match.');
+            return;
+        }
+        try {
+            await updateMyPassword({
+                currentPassword: passwordForm.currentPassword,
+                newPassword: passwordForm.newPassword,
+            });
+            setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            setSuccess('Password updated.');
+        } catch (err) {
+            setError(err?.message || 'Unable to update password.');
+        }
+    }
+
+    async function handleEngagementUpdate(event) {
+        event.preventDefault();
+        setError('');
+        setSuccess('');
+
+        const body = {
+            totalPledge: Number(engagementForm.totalPledge),
+            endDate: engagementForm.endDate ? new Date(engagementForm.endDate).toISOString() : null,
+        };
+
+        try {
+            const updated = profile?.engagement
+                ? await updateEngagement(body)
+                : await createEngagement({
+                    totalPledge: body.totalPledge,
+                    ...(body.endDate ? { endDate: body.endDate } : {}),
+                });
+
+            setProfile((prev) => ({ ...prev, engagement: updated }));
+            setSuccess('Engagement updated.');
+        } catch (err) {
+            setError(err?.message || 'Unable to update engagement.');
+        }
+    }
+
+    async function handleRequestCreate(event) {
+        event.preventDefault();
+        setError('');
+        setSuccess('');
+        try {
+            await createRequest({
+                type: requestForm.type,
+                name: profile?.name || '',
+                email: profile?.email || '',
+                message: requestForm.message.trim(),
+            });
+            setRequestForm({ type: 'other', message: '' });
+            await refreshRequests();
+            setSuccess('Support request submitted.');
+        } catch (err) {
+            setError(err?.message || 'Unable to submit request.');
+        }
+    }
+
+    async function handleCashPaymentRequest(event) {
+        event.preventDefault();
+        setError('');
+        setSuccess('');
+
+        const amount = Number(cashPaymentForm.amount || 0);
+        if (!amount || amount <= 0) {
+            setError('Please enter a valid amount.');
+            return;
+        }
+
+        const fileNames = requestFiles.map((file) => file.name).join(', ');
+        const messageParts = [
+            `Cash payment request`,
+            `Amount: $${amount.toLocaleString()}`,
+            cashPaymentForm.message ? `Message: ${cashPaymentForm.message.trim()}` : '',
+            fileNames ? `Attached files: ${fileNames}` : '',
+        ].filter(Boolean);
+
+        try {
+            await createRequest({
+                type: 'payment_upload',
+                name: profile?.name || '',
+                email: profile?.email || '',
+                message: messageParts.join('\n'),
+            });
+            setSuccess(ui.cashRequestSuccess);
+            setCashPaymentForm({ amount: '', message: '' });
+            setRequestFiles([]);
+            await refreshRequests();
+            setActiveModal(null);
+        } catch (err) {
+            setError(err?.message || 'Unable to submit cash payment request.');
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return '---';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '---';
+        return date.toISOString().slice(0, 10);
+    }
+
+    function getMethodInfo(method) {
+        const raw = String(method || '').toLowerCase();
+        const isZeffy = raw.includes('zeffy') || raw.includes('card') || raw.includes('stripe');
+        return isZeffy
+            ? {
+                key: 'zeffy',
+                label: 'Zeffy',
+                icon: (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="2" y="6" width="20" height="12" rx="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                        <path d="M2 10h20" stroke="currentColor" strokeWidth="1.8" />
+                    </svg>
+                ),
+            }
+            : {
+                key: 'cash',
+                label: 'Cash',
+                icon: (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="2" y="5" width="20" height="14" rx="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                    </svg>
+                ),
+            };
+    }
+
+    if (!appReady && shouldShowPreloader && preloaderResolved) {
+        return (
+            <div className="mosque-donation" data-theme="dark" style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
+                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading dashboard" />
+            </div>
+        );
+    }
+
+    return (
+        <div
+            dir={isRTL ? 'rtl' : 'ltr'}
+            className="mosque-donation"
+            data-theme={themeMode}
+            suppressHydrationWarning
+        >
+            <style>{`
+                /* ── Reset ── */
+                *{box-sizing:border-box}
+
+                /* ── Shell & CSS custom props ── */
+                .donor-shell{
+                    width:100%;max-width:1480px;margin:0 auto;
+                    padding:28px 28px 72px;
+                    display:grid;gap:22px;
+                    --donor-surface:var(--bg-card);
+                    --donor-soft:var(--bg-card-alt);
+                    --donor-border:var(--border);
+                    --donor-track:color-mix(in srgb,var(--border) 75%,transparent);
+                    --donor-muted:var(--text-muted);
+                }
+
+                /* ── Two-column layout ── */
+                .donor-layout{display:grid;grid-template-columns:248px minmax(0,1fr);gap:24px;align-items:start}
+
+                /* ── Side navigation ── */
+                .donor-side-menu{
+                    display:grid;gap:6px;
+                    position:sticky;top:16px;
+                    padding:18px 14px 20px;
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 30%,var(--donor-border));
+                    border-radius:18px;
+                    background:linear-gradient(160deg,
+                        color-mix(in srgb,var(--donor-surface) 50%,#18254e 50%),
+                        color-mix(in srgb,var(--donor-surface) 78%,#0f1c40 22%) 80%
+                    );
+                    box-shadow:0 20px 52px rgba(2,6,24,.55),inset 0 1px 0 rgba(255,255,255,.055)
+                }
+                .donor-side-menu-label{
+                    font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;
+                    color:var(--accent-gold);padding:0 6px 6px;opacity:.8
+                }
+                .donor-side-menu-divider{height:1px;background:color-mix(in srgb,var(--accent-gold) 22%,var(--donor-border));margin:2px 0 8px}
+
+                /* Base btn-outline for sidebar */
+                .donor-side-menu .btn-outline{
+                    width:100%;justify-content:flex-start;gap:11px;
+                    background:rgba(255,255,255,.045);
+                    border:1px solid rgba(255,255,255,.07);
+                    border-radius:13px;padding:13px 14px;
+                    font-size:14px;font-weight:600;
+                    color:var(--text-secondary);
+                    transition:background .18s,border-color .18s,color .18s,transform .18s
+                }
+                .donor-side-menu .btn-outline:hover{
+                    background:rgba(255,255,255,.09);
+                    border-color:color-mix(in srgb,var(--accent-gold) 50%,rgba(255,255,255,.15));
+                    color:var(--text-primary);
+                    transform:translateX(4px)
+                }
+                .donor-side-menu .btn-danger{color:color-mix(in srgb,#e07b7b 75%,var(--text-secondary))}
+                .donor-side-menu .btn-danger:hover{
+                    background:rgba(224,100,100,.1);
+                    border-color:rgba(220,80,80,.38);
+                    color:#ffbaba
+                }
+
+                /* ── Main content area ── */
+                .donor-main-content{display:grid;gap:18px}
+                .donor-welcome{display:grid;gap:5px;padding:4px 0 2px}
+                .donor-title{
+                    margin:0;font-family:var(--font-family);
+                    font-size:28px;line-height:1.15;font-weight:700;
+                    color:var(--text-primary);letter-spacing:-.015em
+                }
+                .donor-email{font-size:13px;color:var(--donor-muted)}
+
+                /* ── Generic buttons ── */
+                .btn-outline{
+                    display:inline-flex;align-items:center;gap:8px;
+                    border:1px solid var(--donor-border);color:var(--text-primary);
+                    background:var(--donor-surface);padding:9px 13px;
+                    border-radius:10px;font-size:13px;line-height:1;
+                    cursor:pointer;font-family:var(--font-family);
+                    transition:border-color .18s,background .18s,color .18s,transform .15s
+                }
+                .btn-outline:hover{border-color:var(--accent-gold);transform:translateY(-1px)}
+                .btn-danger{
+                    border-color:color-mix(in srgb,#cc6a6a 38%,var(--donor-border));
+                    color:color-mix(in srgb,#e07b7b 55%,var(--text-primary))
+                }
+                .icon-btn{display:inline-flex;align-items:center;gap:8px}
+                .icon-btn svg{width:15px;height:15px;display:block}
+                .donor-side-menu .icon-btn svg{width:16px;height:16px}
+
+                /* ── Cards / panels ── */
+                .panel{
+                    background:var(--donor-surface);
+                    border:1px solid var(--donor-border);
+                    border-radius:18px;padding:22px;
+                    box-shadow:0 4px 18px rgba(0,0,0,.12)
+                }
+                .panel-engagement{
+                    background:linear-gradient(
+                        148deg,
+                        color-mix(in srgb,var(--donor-surface) 65%,#1e3060 35%) 0%,
+                        color-mix(in srgb,var(--donor-surface) 90%,#0e1a42 10%) 55%,
+                        var(--donor-surface) 100%
+                    );
+                    border-color:color-mix(in srgb,var(--accent-gold) 28%,var(--donor-border));
+                    box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.04)
+                }
+                .panel-header{
+                    display:flex;justify-content:space-between;align-items:center;
+                    gap:10px;flex-wrap:wrap;margin-bottom:18px
+                }
+                .panel-title{
+                    margin:0;font-family:var(--font-family);
+                    font-size:15px;line-height:1.2;color:var(--text-primary);font-weight:700
+                }
+                .panel-engagement .panel-title{
+                    font-size:18px;font-weight:800;
+                    color:color-mix(in srgb,var(--accent-gold) 68%,var(--text-primary))
+                }
+                .panel-title-with-icon{display:inline-flex;align-items:center;gap:8px}
+                .title-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:var(--accent-gold)}
+                .title-icon svg{width:18px;height:18px;display:block}
+
+                /* ── Panel action buttons ── */
+                .btn-gold-outline{
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 45%,var(--donor-border));
+                    border-radius:10px;background:rgba(255,255,255,.03);
+                    padding:9px 15px;color:var(--accent-gold);
+                    font-size:13px;font-family:var(--font-family);
+                    cursor:pointer;font-weight:600;
+                    transition:background .18s,border-color .18s,transform .15s
+                }
+                .btn-gold-outline:hover{
+                    background:color-mix(in srgb,var(--accent-gold) 11%,transparent);
+                    border-color:var(--accent-gold);transform:translateY(-1px)
+                }
+                .btn-gold-solid{
+                    border:none;border-radius:10px;
+                    background:var(--accent-gold);color:#111;
+                    padding:10px 14px;font-size:13px;
+                    font-family:var(--font-family);font-weight:700;cursor:pointer;
+                    transition:filter .18s,transform .15s
+                }
+                .btn-gold-solid:hover{filter:brightness(1.08);transform:translateY(-1px)}
+
+                /* ── Make payment CTA button ── */
+                .btn-make-payment{
+                    position:relative;
+                    background:linear-gradient(135deg,#f8e09a 0%,#ddb25e 45%,#f7e3a2 100%);
+                    border:none;color:#130e03;
+                    padding:11px 20px;border-radius:12px;
+                    font-size:14px;font-weight:800;letter-spacing:.015em;cursor:pointer;
+                    box-shadow:0 8px 24px rgba(210,165,58,.38),0 0 0 1px rgba(248,224,140,.22);
+                    transition:transform .2s,box-shadow .2s;
+                    animation:payPulse 2.6s ease-in-out infinite
+                }
+                .btn-make-payment:hover{
+                    transform:translateY(-2px);
+                    box-shadow:0 14px 32px rgba(210,165,58,.52)
+                }
+                @keyframes payPulse{
+                    0%,100%{box-shadow:0 8px 24px rgba(210,165,58,.3),0 0 0 1px rgba(248,224,140,.18)}
+                    50%{box-shadow:0 12px 30px rgba(210,165,58,.5),0 0 0 1px rgba(248,224,140,.32)}
+                }
+
+                /* ── Status chip ── */
+                .status-chip{
+                    display:inline-flex;align-items:center;gap:7px;
+                    padding:7px 13px;border-radius:999px;
+                    font-size:12px;font-weight:700;letter-spacing:.025em;
+                    border:1px solid transparent;width:max-content;margin-bottom:16px
+                }
+                .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+                /* ── Engagement ring + side layout ── */
+                .engagement-body{display:grid;grid-template-columns:214px 1fr;gap:22px;align-items:center}
+                .ring-wrap{display:flex;align-items:center;justify-content:center}
+                .ring-glow{filter:drop-shadow(0 0 10px var(--ring-color,rgba(210,168,100,.5)))}
+                .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+                .ring-pct{font-size:42px;font-weight:800;line-height:1;color:var(--text-primary);letter-spacing:-.025em}
+                .ring-sub{font-size:12px;font-weight:600;color:var(--accent-gold);line-height:1.3;text-align:center;opacity:.9}
+                .engagement-side{display:grid;gap:12px}
+
+                /* ── Metric cards ── */
+                .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+                .metric{
+                    padding:18px 14px;border-radius:14px;
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 14%,var(--donor-border));
+                    background:color-mix(in srgb,var(--donor-soft) 78%,#0c1330 22%);
+                    text-align:center;
+                    transition:border-color .2s,transform .18s,box-shadow .18s
+                }
+                .metric:hover{
+                    border-color:color-mix(in srgb,var(--accent-gold) 35%,var(--donor-border));
+                    transform:translateY(-2px);
+                    box-shadow:0 8px 20px rgba(0,0,0,.18)
+                }
+                .metric-label{
+                    font-size:10px;line-height:1.3;letter-spacing:.07em;
+                    text-transform:uppercase;color:var(--donor-muted);
+                    display:flex;align-items:center;justify-content:center;
+                    gap:6px;min-height:26px
+                }
+                .metric-label svg{width:12px;height:12px;opacity:.8;color:var(--accent-gold)}
+                .metric-value{margin-top:8px;font-size:26px;font-weight:800;color:var(--text-primary);letter-spacing:-.015em}
+
+                /* ── Deadline box ── */
+                .deadline{
+                    padding:15px 16px;border-radius:14px;
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 14%,var(--donor-border));
+                    background:color-mix(in srgb,var(--donor-soft) 78%,#0c1330 22%);
+                    display:grid;gap:10px
+                }
+                .deadline-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+                .deadline-label{font-size:11.5px;color:var(--donor-muted);display:inline-flex;align-items:center;gap:6px;font-weight:500}
+                .deadline-label svg{width:13px;height:13px}
+                .deadline-date{font-size:13px;color:var(--text-secondary);font-weight:600}
+                .deadline-remaining{font-size:15px;font-weight:700;letter-spacing:-.01em}
+                .deadline-track{height:8px;background:var(--donor-track);border-radius:999px;overflow:hidden}
+                .deadline-fill{height:100%;border-radius:999px;transition:width .5s ease}
+
+                /* ── Payment table ── */
+                .payments-empty{padding:32px 8px;text-align:center;font-size:15px;color:var(--donor-muted);opacity:.8}
+                .payments-head{
+                    display:grid;grid-template-columns:1.4fr 1fr 1fr .8fr;gap:10px;
+                    padding:0 10px 10px;
+                    border-bottom:1px solid var(--donor-border);
+                    color:var(--donor-muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700
+                }
+                .head-cell{display:inline-flex;align-items:center;gap:6px}
+                .head-cell svg{width:11px;height:11px;opacity:.75}
+                .payments-list{display:grid;gap:2px;margin-top:6px}
+                .payment-item{
+                    padding:12px 10px;border-radius:10px;
+                    display:grid;grid-template-columns:1.4fr 1fr 1fr .8fr;gap:10px;
+                    align-items:center;
+                    transition:background .15s
+                }
+                .payment-item:hover{background:rgba(255,255,255,.045)}
+                .payment-main{font-size:15px;font-weight:700;color:var(--text-primary)}
+                .payment-sub{font-size:13px;color:var(--text-secondary)}
+                .method-pill{
+                    display:inline-flex;align-items:center;gap:5px;
+                    padding:4px 10px;border-radius:999px;
+                    font-size:11px;font-weight:600;width:max-content
+                }
+                .method-pill svg{width:12px;height:12px;display:block}
+                .method-pill.zeffy{
+                    background:rgba(100,140,220,.14);
+                    border:1px solid rgba(100,140,220,.28);
+                    color:color-mix(in srgb,#85aae8 70%,#fff)
+                }
+                .method-pill.cash{
+                    background:rgba(210,168,100,.12);
+                    border:1px solid rgba(210,168,100,.28);
+                    color:color-mix(in srgb,var(--accent-gold) 78%,#fff)
+                }
+
+                /* ── Alert banners ── */
+                .alert{padding:13px 16px;border-radius:12px;font-size:14px;line-height:1.5}
+                .alert.error{background:rgba(176,52,52,.12);border:1px solid rgba(224,96,96,.38);color:#ffb4b4}
+                .alert.success{background:rgba(82,154,106,.12);border:1px solid rgba(126,184,160,.38);color:#aaedc0}
+
+                /* ── Modal overlay (fixed, full-screen, above header) ── */
+                .modal-overlay{
+                    position:fixed;inset:0;
+                    background:rgba(2,5,18,.72);
+                    backdrop-filter:blur(7px) saturate(130%);
+                    -webkit-backdrop-filter:blur(7px) saturate(130%);
+                    display:flex;align-items:center;justify-content:center;
+                    padding:20px;z-index:9999;
+                    animation:overlayIn .18s ease
+                }
+                @keyframes overlayIn{from{opacity:0}to{opacity:1}}
+
+                /* ── Modal surface ── */
+                .modal{
+                    width:100%;max-width:510px;max-height:90vh;overflow-y:auto;
+                    background:linear-gradient(
+                        155deg,
+                        color-mix(in srgb,var(--donor-surface) 60%,#1c2c5c 40%),
+                        color-mix(in srgb,var(--donor-surface) 84%,#101e45 16%) 55%,
+                        var(--donor-surface) 100%
+                    );
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 32%,var(--donor-border));
+                    border-radius:20px;padding:26px;
+                    display:grid;gap:18px;
+                    box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04);
+                    animation:modalIn .2s cubic-bezier(.22,.8,.42,1)
+                }
+                @keyframes modalIn{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+                .modal-header{
+                    display:flex;align-items:center;justify-content:space-between;gap:12px;
+                    padding-bottom:16px;
+                    border-bottom:1px solid color-mix(in srgb,var(--accent-gold) 20%,var(--donor-border))
+                }
+                .modal-title{
+                    margin:0;font-size:17px;font-family:var(--font-family);
+                    color:var(--text-primary);font-weight:800;letter-spacing:.01em
+                }
+                .modal-description{font-size:13.5px;color:var(--donor-muted);line-height:1.65;margin-top:-6px}
+                .close-btn{
+                    flex-shrink:0;width:36px;height:36px;border-radius:10px;
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 22%,var(--donor-border));
+                    background:rgba(255,255,255,.05);
+                    color:var(--text-primary);cursor:pointer;font-size:19px;
+                    display:grid;place-items:center;line-height:1;
+                    transition:background .15s,border-color .15s
+                }
+                .close-btn:hover{background:rgba(255,255,255,.1);border-color:color-mix(in srgb,var(--accent-gold) 48%,var(--donor-border))}
+
+                /* ── Form elements (inside modals) ── */
+                .form{display:grid;gap:14px}
+                .field{
+                    width:100%;padding:11px 14px;border-radius:11px;
+                    border:1px solid var(--donor-border);
+                    background:color-mix(in srgb,var(--donor-soft) 80%,#0b1028 20%);
+                    color:var(--text-primary);font-size:14px;font-family:var(--font-family);
+                    transition:border-color .18s,box-shadow .18s
+                }
+                .field:focus{outline:none;border-color:var(--accent-gold);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-gold) 16%,transparent)}
+                .form-group{display:grid;gap:12px}
+                .form-label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--donor-muted);font-weight:700;padding-left:2px}
+                .form-section{
+                    display:grid;gap:12px;padding:16px;
+                    border-radius:13px;
+                    background:rgba(255,255,255,.03);
+                    border:1px solid rgba(255,255,255,.065)
+                }
+                .form-section-title{
+                    font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+                    color:color-mix(in srgb,var(--accent-gold) 65%,var(--text-secondary));
+                    padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06)
+                }
+                .submit-btn{
+                    border:none;border-radius:11px;background:var(--accent-gold);
+                    color:#111;padding:13px 16px;
+                    font-weight:700;font-size:14px;cursor:pointer;font-family:var(--font-family);
+                    transition:filter .18s,transform .15s
+                }
+                .submit-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+                .outline-btn{
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 38%,var(--donor-border));
+                    background:rgba(210,168,100,.06);color:var(--accent-gold);
+                    border-radius:11px;padding:13px 16px;
+                    font-weight:700;font-size:14px;cursor:pointer;font-family:var(--font-family);
+                    transition:background .18s,border-color .18s,transform .15s
+                }
+                .outline-btn:hover{background:rgba(210,168,100,.12);border-color:var(--accent-gold);transform:translateY(-1px)}
+
+                /* ── Payment modal specific ── */
+                .payment-choice{display:grid;gap:14px}
+                .payment-remaining-badge{
+                    display:flex;align-items:center;justify-content:space-between;
+                    padding:14px 16px;border-radius:12px;
+                    background:color-mix(in srgb,var(--accent-gold) 8%,var(--donor-soft));
+                    border:1px solid color-mix(in srgb,var(--accent-gold) 28%,var(--donor-border))
+                }
+                .payment-remaining-label{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--donor-muted)}
+                .payment-remaining-value{font-size:24px;font-weight:800;color:var(--accent-gold);letter-spacing:-.02em}
+                .payment-note{font-size:12.5px;color:var(--donor-muted);text-align:center;font-style:italic}
+                .split-row{
+                    display:flex;align-items:center;gap:12px;
+                    color:var(--donor-muted);font-size:12px;font-weight:700;letter-spacing:.05em
+                }
+                .split-row:before,.split-row:after{content:'';height:1px;background:color-mix(in srgb,var(--donor-border) 70%,transparent);flex:1}
+
+                /* ── Responsive ── */
+                @media (max-width:1320px){
+                    .donor-shell{max-width:1200px;padding:22px 18px 58px}
+                    .donor-layout{grid-template-columns:220px minmax(0,1fr);gap:18px}
+                }
+                @media (max-width:980px){
+                    .donor-layout{grid-template-columns:1fr}
+                    .donor-side-menu{
+                        position:static;grid-template-columns:repeat(3,minmax(0,1fr));
+                        padding:0;border:none;background:transparent;box-shadow:none;gap:8px
+                    }
+                    .donor-side-menu-label,.donor-side-menu-divider{display:none}
+                    .donor-title{font-size:24px}
+                    .metric-value{font-size:22px}
+                }
+                @media (max-width:760px){
+                    .donor-shell{padding:16px 12px 50px}
+                    .donor-side-menu{grid-template-columns:1fr}
+                    .btn-outline,.btn-gold-outline,.btn-gold-solid{width:100%}
+                    .engagement-body{grid-template-columns:1fr;justify-items:center}
+                    .engagement-side{width:100%}
+                    .metrics{grid-template-columns:1fr}
+                    .panel{padding:16px}
+                    .donor-title{font-size:21px}
+                    .payments-head{display:none}
+                    .payment-item{grid-template-columns:1fr;gap:6px;padding:12px 4px}
+                }
+            `}</style>
+            <Header
+                language={language}
+                setLanguage={setLanguage}
+                t={t}
+                theme={theme}
+                themeMode={themeMode}
+                setThemeMode={setThemeMode}
+                showLanguageMenu={showLanguageMenu}
+                setShowLanguageMenu={setShowLanguageMenu}
+                languageDropdownRef={languageDropdownRef}
+                isLoginPage={false}
+                showHeaderCenter={false}
+            />
+            <main className="donor-shell">
+                {loading ? <div className="panel" style={{ textAlign: 'center', fontSize: 24 }}>Loading dashboard...</div> : null}
+                {!loading ? (
+                    <div className="donor-layout">
+                        <aside className="donor-side-menu">
+                            <div className="donor-side-menu-label">Menu</div>
+                            <div className="donor-side-menu-divider"></div>
+                            <button type="button" className="btn-outline icon-btn" onClick={() => setActiveModal('settings')}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4a7.7 7.7 0 01-.08 1l2.02 1.57-2 3.46-2.42-.97a8.6 8.6 0 01-1.74 1.01l-.37 2.56h-4l-.37-2.56a8.6 8.6 0 01-1.74-1.01l-2.42.97-2-3.46 2.02-1.57A7.7 7.7 0 013 12c0-.34.03-.67.08-1L1.06 9.43l2-3.46 2.42.97c.54-.42 1.12-.75 1.74-1.01l.37-2.56h4l.37 2.56c.62.26 1.2.59 1.74 1.01l2.42-.97 2 3.46-2.02 1.57c.05.33.08.66.08 1z" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>
+                                {ui.settings}
+                            </button>
+                            <button type="button" className="btn-outline icon-btn" onClick={() => openContactModal('other')}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3z" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M3 7l9 6 9-6" fill="none" stroke="currentColor" strokeWidth="1.6"/></svg>
+                                {ui.contactAdmin}
+                            </button>
+                            <button type="button" className="btn-outline btn-danger icon-btn" onClick={handleLogout}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5" fill="none" stroke="currentColor" strokeWidth="1.7"/><path d="M15 12H3" fill="none" stroke="currentColor" strokeWidth="1.7"/><path d="M20 4v16" fill="none" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                {ui.logout}
+                            </button>
+                        </aside>
+                        <div className="donor-main-content">
+                            <section className="donor-welcome">
+                                <h1 className="donor-title">{ui.welcome}, {profile?.name || profile?.email || ''}</h1>
+                            </section>
+
+                            {error ? <div className="alert error">{error}</div> : null}
+                            {success ? <div className="alert success">{success}</div> : null}
+
+                            <section className="panel panel-engagement">
+                                <div className="panel-header">
+                                    <h2 className="panel-title panel-title-with-icon">
+                                        <span className="title-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l3-4 3 2 5-7 1 1-6 9-3-2-2 3z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                        </span>
+                                        {ui.yourEngagement}
+                                    </h2>
+                                    <button type="button" className="btn-gold-outline" onClick={openEngagementModal}>
+                                        {ui.editEngagement}
+                                    </button>
+                                </div>
+                                <div className="status-chip" style={{ borderColor: currentState.color, color: currentState.color, background: currentState.soft, marginBottom: 10 }}>
+                                    <span className="status-dot" style={{ background: currentState.color }}></span>
+                                    {currentState.label}
+                                </div>
+                                <div className="engagement-body">
+                                    <div className="ring-wrap">
+                                        <div style={{ position: 'relative', width: 210, height: 210 }}>
+                                            <svg width="210" height="210" viewBox="0 0 190 190" aria-hidden="true">
+                                                <defs>
+                                                    <filter id="ring-glow" x="-20%" y="-20%" width="140%" height="140%">
+                                                        <feGaussianBlur stdDeviation="5" result="blur" />
+                                                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                                    </filter>
+                                                </defs>
+                                                <circle cx="95" cy="95" r={ringRadius} fill="none" stroke="var(--donor-track)" strokeWidth="14" />
+                                                <circle
+                                                    cx="95"
+                                                    cy="95"
+                                                    r={ringRadius}
+                                                    fill="none"
+                                                    stroke={currentState.color}
+                                                    strokeWidth="14"
+                                                    filter="url(#ring-glow)"
+                                                    strokeLinecap="round"
+                                                    strokeDasharray={ringCircumference}
+                                                    strokeDashoffset={ringOffset}
+                                                    transform="rotate(-90 95 95)"
+                                                    style={{ transition: 'stroke-dashoffset .45s ease' }}
+                                                />
+                                            </svg>
+                                            <div className="ring-center">
+                                                <div className="ring-pct">{progressPct}%</div>
+                                                <div className="ring-sub">${paymentTotal.toLocaleString()} / ${engagementTarget.toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="engagement-side">
+                                        <div className="metrics">
+                                            <div className="metric">
+                                                <div className="metric-label">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M12 8v8M8 12h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                    {ui.totalPledged}
+                                                </div>
+                                                <div className="metric-value">${engagementTarget.toLocaleString()}</div>
+                                            </div>
+                                            <div className="metric">
+                                                <div className="metric-label">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M8 12h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                    {ui.paidSoFar}
+                                                </div>
+                                                <div className="metric-value">${paymentTotal.toLocaleString()}</div>
+                                            </div>
+                                            <div className="metric">
+                                                <div className="metric-label">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                                    {ui.remaining}
+                                                </div>
+                                                <div className="metric-value">${remainingAmount.toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="deadline">
+                                            <div className="deadline-row">
+                                                <span className="deadline-label">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3v4M16 3v4M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                                    {ui.deadline}
+                                                </span>
+                                                <span className="deadline-date">{formatDate(engagementEndDate)}</span>
+                                            </div>
+                                            <div className="deadline-remaining" style={{ color: currentState.color }}>
+                                                {isCompleted ? currentState.label : `${daysRemaining} ${ui.daysRemaining}`}
+                                            </div>
+                                            <div className="deadline-track">
+                                                <div className="deadline-fill" style={{ width: `${timeProgressPct}%`, background: currentState.color }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="panel">
+                                <div className="panel-header">
+                                    <h2 className="panel-title panel-title-with-icon">
+                                        <span className="title-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M4 10h16M8 14h4" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                        </span>
+                                        {ui.paymentHistory}
+                                    </h2>
+                                    <button type="button" className="btn-gold-solid btn-make-payment icon-btn" onClick={openPaymentModal}>
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M2 10h20" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                        {ui.makePayment}
+                                    </button>
+                                </div>
+                                {payments.length === 0 ? (
+                                    <div className="payments-empty">{ui.noPayments}</div>
+                                ) : (
+                                    <>
+                                        <div className="payments-head">
+                                            <span className="head-cell">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3v4M16 3v4M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                                Date
+                                            </span>
+                                            <span className="head-cell">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M8 12h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                Montant
+                                            </span>
+                                            <span className="head-cell">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M9 12h6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                Methode
+                                            </span>
+                                            <span className="head-cell">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M8 9h8M8 13h8M8 17h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                Note
+                                            </span>
+                                        </div>
+                                        <div className="payments-list">
+                                        {payments.map((payment) => (
+                                            <article key={payment.id} className="payment-item">
+                                                <div className="payment-sub">{formatDate(payment.date)}</div>
+                                                <div className="payment-main">${Number(payment.amount || 0).toLocaleString()}</div>
+                                                <div>
+                                                    {(() => {
+                                                        const method = getMethodInfo(payment.method);
+                                                        return (
+                                                            <span className={`method-pill ${method.key}`}>
+                                                                {method.icon}
+                                                                {method.label}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </div>
+                                                <div className="payment-sub">{payment.note || '-'}</div>
+                                            </article>
+                                        ))}
+                                        </div>
+                                    </>
+                                )}
+                            </section>
+                        </div>
+                    </div>
+                ) : null}
+            </main>
+            <Footer t={t} />
+
+            {activeModal === 'settings' ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={ui.settings} onClick={(event) => {
+                    if (event.target === event.currentTarget) setActiveModal(null);
+                }}>
+                    <div className="modal">
+                        <div className="modal-header">
+                            <h3 className="modal-title">{ui.settings}</h3>
+                            <button type="button" className="close-btn" onClick={() => setActiveModal(null)} aria-label="Close modal">&times;</button>
+                        </div>
+                        <div className="form-section">
+                            <div className="form-section-title">{ui.profile}</div>
+                            <form className="form" onSubmit={handleProfileUpdate}>
+                                <div className="form-group">
+                                    <label className="form-label">{ui.yourName}</label>
+                                    <input className="field" value={profileForm.name} onChange={(event) => setProfileForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Full name" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">{ui.yourEmail}</label>
+                                    <input className="field" type="email" value={profileForm.email} onChange={(event) => setProfileForm((prev) => ({ ...prev, email: event.target.value }))} placeholder="Email" />
+                                </div>
+                                <button className="submit-btn" type="submit">{ui.saveProfile}</button>
+                            </form>
+                        </div>
+                        <div className="form-section">
+                            <div className="form-section-title">{ui.password}</div>
+                            <form className="form" onSubmit={handlePasswordUpdate}>
+                                <input className="field" type="password" value={passwordForm.currentPassword} onChange={(event) => setPasswordForm((prev) => ({ ...prev, currentPassword: event.target.value }))} placeholder={ui.currentPassword} />
+                                <input className="field" type="password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))} placeholder={ui.newPassword} />
+                                <input className="field" type="password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))} placeholder={ui.confirmPassword} />
+                                <button className="submit-btn" type="submit">{ui.updatePassword}</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {activeModal === 'engagement' ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={ui.editEngagement} onClick={(event) => {
+                    if (event.target === event.currentTarget) setActiveModal(null);
+                }}>
+                    <div className="modal">
+                        <div className="modal-header">
+                            <h3 className="modal-title">{ui.editEngagement}</h3>
+                            <button type="button" className="close-btn" onClick={() => setActiveModal(null)} aria-label="Close modal">&times;</button>
+                        </div>
+                        <form className="form" onSubmit={handleEngagementUpdate}>
+                            <div className="form-group">
+                                <label className="form-label">{ui.pledgeAmount}</label>
+                                <input className="field" type="number" min="1" value={engagementForm.totalPledge} onChange={(event) => setEngagementForm((prev) => ({ ...prev, totalPledge: event.target.value }))} placeholder="0" />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">{ui.deadline}</label>
+                                <input className="field" type="date" value={engagementForm.endDate} onChange={(event) => setEngagementForm((prev) => ({ ...prev, endDate: event.target.value }))} />
+                            </div>
+                            <button className="submit-btn" type="submit">{profile?.engagement ? ui.updateEngagement : ui.createEngagement}</button>
+                        </form>
+                    </div>
+                </div>
+            ) : null}
+
+            {activeModal === 'payment' ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={ui.makePayment} onClick={(event) => {
+                    if (event.target === event.currentTarget) setActiveModal(null);
+                }}>
+                    <div className="modal">
+                        <div className="modal-header">
+                            <h3 className="modal-title">{ui.makePayment}</h3>
+                            <button type="button" className="close-btn" onClick={() => setActiveModal(null)} aria-label="Close modal">&times;</button>
+                        </div>
+                        <p className="modal-description">{ui.paymentModalDescription}</p>
+                        <div className="payment-remaining-badge">
+                            <span className="payment-remaining-label">{ui.remaining}</span>
+                            <span className="payment-remaining-value">${remainingAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="payment-choice">
+                            <button type="button" className="submit-btn icon-btn" onClick={() => setSuccess(ui.zeffySoon)}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M2 10h20" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                {ui.paymentViaZeffy}
+                            </button>
+                            <div className="payment-note">{ui.zeffySoon}</div>
+                            <div className="split-row">ou</div>
+                            <form className="form" onSubmit={handleCashPaymentRequest}>
+                                <div className="form-group">
+                                    <label className="form-label">{ui.amount}</label>
+                                    <input className="field" type="number" min="1" value={cashPaymentForm.amount} onChange={(event) => setCashPaymentForm((prev) => ({ ...prev, amount: event.target.value }))} placeholder="0" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">{ui.notes}</label>
+                                    <textarea className="field" style={{ minHeight: 90, resize: 'vertical' }} value={cashPaymentForm.message} onChange={(event) => setCashPaymentForm((prev) => ({ ...prev, message: event.target.value }))} placeholder={ui.yourMessage} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">{ui.optionalFiles}</label>
+                                    <input className="field" type="file" multiple onChange={(event) => setRequestFiles(Array.from(event.target.files || []))} />
+                                </div>
+                                <button className="outline-btn" type="submit">{ui.submitCashRequest}</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {activeModal === 'request' ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={ui.contactAdmin} onClick={(event) => {
+                    if (event.target === event.currentTarget) setActiveModal(null);
+                }}>
+                    <div className="modal">
+                        <div className="modal-header">
+                            <h3 className="modal-title">{ui.contactAdmin}</h3>
+                            <button type="button" className="close-btn" onClick={() => setActiveModal(null)} aria-label="Close modal">&times;</button>
+                        </div>
+                        <p className="modal-description">{ui.contactDescription}</p>
+                        <form className="form" onSubmit={handleRequestCreate}>
+                            <div className="form-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div className="form-group">
+                                    <label className="form-label">{ui.yourName}</label>
+                                    <input className="field" value={profile?.name || ''} readOnly style={{ opacity: .75 }} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">{ui.yourEmail}</label>
+                                    <input className="field" value={profile?.email || ''} readOnly style={{ opacity: .75 }} />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">{ui.requestType}</label>
+                                <select className="field" value={requestForm.type} onChange={(event) => setRequestForm((prev) => ({ ...prev, type: event.target.value }))}>
+                                    <option value="other">General request</option>
+                                    <option value="payment_upload">Payment upload</option>
+                                    <option value="engagement_change">Engagement change</option>
+                                    <option value="account_creation">Account help</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">{ui.yourMessage}</label>
+                                <textarea className="field" style={{ minHeight: 120, resize: 'vertical' }} value={requestForm.message} onChange={(event) => setRequestForm((prev) => ({ ...prev, message: event.target.value }))} placeholder={ui.yourMessage} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">{ui.optionalFiles}</label>
+                                <input className="field" type="file" multiple onChange={(event) => setRequestFiles(Array.from(event.target.files || []))} />
+                            </div>
+                            <button className="submit-btn" type="submit">{ui.submitRequest}</button>
+                        </form>
+                    </div>
+                </div>
+            ) : null}
+        </div>
+    );
+}

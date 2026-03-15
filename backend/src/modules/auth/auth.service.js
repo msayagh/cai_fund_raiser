@@ -19,15 +19,22 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
 const storeRefreshToken = async (token, userType, userId) => {
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  await prisma.refreshToken.create({
-    data: {
-      tokenHash,
-      userType,
-      donorId: userType === 'donor' ? userId : null,
-      adminId: userType === 'admin' ? userId : null,
-      expiresAt,
-    },
-  });
+  try {
+    await prisma.refreshToken.create({
+      data: {
+        tokenHash,
+        userType,
+        donorId: userType === 'donor' ? userId : null,
+        adminId: userType === 'admin' ? userId : null,
+        expiresAt,
+      },
+    });
+  } catch (err) {
+    // Rare collision: if exactly the same refresh token was already stored,
+    // keep flow successful instead of failing auth/register UX.
+    if (err?.code === 'P2002') return;
+    throw err;
+  }
 };
 
 const buildTokenPair = (userId, type) => ({

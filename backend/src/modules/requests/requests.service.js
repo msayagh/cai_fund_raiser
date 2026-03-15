@@ -296,11 +296,20 @@ const holdRequest = async (adminId, adminName, id) => {
   return updated;
 };
 
+const getAttachment = async (requestId, attachmentId) => {
+  const att = await prisma.requestAttachment.findFirst({
+    where: { id: attachmentId, requestId },
+  });
+  if (!att) throw new AppError('Attachment not found', 404, 'NOT_FOUND');
+  return att;
+};
+
 module.exports = {
   listRequests,
   getRequestById,
   createRequest,
   addAttachments,
+  getAttachment,
   approveRequest,
   declineRequest,
   holdRequest,
