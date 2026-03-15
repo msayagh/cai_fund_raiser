@@ -26,6 +26,7 @@ const optionalDonor = (req, res, next) => {
 
 publicRouter.post('/', optionalDonor, validate(createRequestSchema), ctrl.create);
 publicRouter.post('/:id/attachments', upload.array('files', 5), ctrl.addAttachments);
+publicRouter.get('/:id/attachments/:attachmentId', ctrl.serveAttachment);
 
 // ─── Admin routes (/api/admin/requests) ───────────────────────────────────────
 const adminRequestRouter = Router();

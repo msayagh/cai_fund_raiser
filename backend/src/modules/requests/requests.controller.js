@@ -29,6 +29,15 @@ const create = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const serveAttachment = async (req, res, next) => {
+  try {
+    const att = await service.getAttachment(req.params.id, req.params.attachmentId);
+    res.setHeader('Content-Type', att.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${att.filename}"`);
+    res.sendFile(att.filePath);
+  } catch (err) { next(err); }
+};
+
 const addAttachments = async (req, res, next) => {
   try {
     if (!req.files || req.files.length === 0) {
@@ -60,4 +69,4 @@ const hold = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { list, getById, create, addAttachments, approve, decline, hold };
+module.exports = { list, getById, create, addAttachments, serveAttachment, approve, decline, hold };
