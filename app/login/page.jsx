@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
@@ -60,7 +60,7 @@ const DEFAULT_AUTH_TEXT = {
     unableToSignIn: 'Unable to sign in right now.',
 };
 
-export default function LoginPage() {
+function LoginPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const hydratedRef = useRef(false);
@@ -416,5 +416,13 @@ export default function LoginPage() {
 
             <Footer t={isMounted ? t : {}} />
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={null}>
+            <LoginPageContent />
+        </Suspense>
     );
 }

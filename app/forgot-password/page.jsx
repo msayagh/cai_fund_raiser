@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import '../page.scss';
 import { Header } from '@/components/Header.jsx';
@@ -51,7 +51,7 @@ const DEFAULT_AUTH_TEXT = {
     resetSeoDescription: 'Recover donor or admin access with a secure OTP reset flow.',
 };
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { language, setLanguage, t, isMounted } = useTranslation();
@@ -360,5 +360,13 @@ export default function ForgotPasswordPage() {
 
             <Footer t={isMounted ? t : {}} />
         </div>
+    );
+}
+
+export default function ForgotPasswordPage() {
+    return (
+        <Suspense fallback={null}>
+            <ForgotPasswordPageContent />
+        </Suspense>
     );
 }
