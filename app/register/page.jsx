@@ -18,7 +18,6 @@ import '../login/page.scss';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const hydratedRef = useRef(false);
     const { language, setLanguage, t, isMounted } = useTranslation();
     const { themeMode, setThemeMode, isMounted: themeMounted } = useThemeMode();
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
@@ -114,7 +113,7 @@ export default function RegisterPage() {
             });
 
             // After registration, attempt login
-            const user = await donorLogin(email.trim().toLowerCase(), password);
+            await donorLogin(email.trim().toLowerCase(), password);
 
             setStatus({
                 loading: false,

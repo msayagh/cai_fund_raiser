@@ -29,7 +29,6 @@ import {
     updateDonor,
     addPayment,
     bulkUploadDonors,
-    exportDonors,
 } from '@/lib/adminApi.js';
 import { clearTokens, logout, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession } from '@/lib/session.js';
@@ -465,26 +464,6 @@ export default function AdminDashboardPage() {
             setMessage('Donor password reset.');
         } catch (err) {
             setError(err?.message || 'Unable to reset donor password.');
-        }
-    }
-
-    async function handleSelectDonor(donorId) {
-        setSelectedDonorId(donorId);
-        setIsDonorModalOpen(true);
-        setSelectedDonorLoading(true);
-        setError('');
-        try {
-            const donor = await getDonor(donorId);
-            setSelectedDonor(donor);
-            setSelectedDonorForm({
-                name: donor.name || '',
-                email: donor.email || '',
-            });
-        } catch (err) {
-            setSelectedDonor(null);
-            setError(err?.message || 'Unable to load donor details.');
-        } finally {
-            setSelectedDonorLoading(false);
         }
     }
 

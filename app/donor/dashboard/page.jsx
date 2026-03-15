@@ -1,6 +1,6 @@
 'use client';
 
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';

@@ -13,7 +13,7 @@ import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import { adminLogin, clearTokens, donorLogin, logout, tryAutoLogin } from '@/lib/auth.js';
-import { apiFetch, hasRefreshToken } from '@/lib/apiClient.js';
+import { hasRefreshToken } from '@/lib/apiClient.js';
 import { getStoredSession } from '@/lib/session.js';
 import './page.scss';
 
