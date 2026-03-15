@@ -56,8 +56,15 @@ export function useTranslation() {
 
     // Update translation when language changes
     useEffect(() => {
-        const loaded = loadTranslation(language);
-        setT(loaded);
+        let active = true;
+
+        loadTranslation(language).then((loaded) => {
+            if (active) setT(loaded);
+        });
+
+        return () => {
+            active = false;
+        };
     }, [language]);
 
     // Save language to localStorage and update URL

@@ -55,25 +55,19 @@ export default function StatisticsScreen({
             key: 'received',
             label: t.engagement || 'Campaign Received',
             value: campaignReceived,
-            total: campaignEngagement,
+            total: campaignGoal,
             color: selected?.color || theme.accentGold,
         },
     ];
 
     return (
-        <div
-            className="statistics-screen-overlay"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t.statisticsModalLabel || 'Campaign statistics'}
-            onClick={onClose}
-        >
+        <div className="statistics-screen-overlay" role="dialog" aria-modal="true" aria-label={t.campaignOverview || 'Campaign statistics'} onClick={onClose}>
             <div className="statistics-screen" onClick={(event) => event.stopPropagation()}>
                 <button
                     type="button"
                     className="statistics-screen-close"
                     onClick={onClose}
-                    aria-label={t.closeStatistics || 'Close statistics'}
+                    aria-label="Close statistics"
                 >
                     ×
                 </button>
@@ -82,7 +76,7 @@ export default function StatisticsScreen({
                     <div className="statistics-screen-eyebrow">{t.campaignOverview || 'Campaign overview'}</div>
                     <h2 className="statistics-screen-title">{t.campaignOverview || 'Campaign overview'}</h2>
                     <p className="statistics-screen-description">
-                        {t.aboutCampaignText || 'Campaign details'}
+                        {t.aboutCampaignText}
                     </p>
                 </div>
 
@@ -90,7 +84,7 @@ export default function StatisticsScreen({
                     <section className="statistics-panel statistics-panel--metrics">
                         <div className="statistics-metrics-stack">
                             <div className="statistics-metrics-group">
-                                <div className="statistics-section-title">{t.statisticsGlobalGoal || 'Global goal'}</div>
+                                <div className="statistics-section-title">Global goal</div>
                                 <div className="statistics-metrics-grid">
                                     <StatCard
                                         label={t.collectedFundsLabel || 'Collected funds'}
@@ -115,14 +109,14 @@ export default function StatisticsScreen({
                                         value={`${fundedBricks}/${totalBricks}`}
                                     />
                                     <StatCard
-                                        label={t.averageSupport || 'Avg. support'}
+                                        label={'Avg. support'}
                                         value={languageCurrency(averageDonation, currencyFirst)}
                                     />
                                 </div>
                             </div>
 
                             <div className="statistics-metrics-group">
-                                <div className="statistics-section-title">{t.statisticsCurrentGoal || 'Current goal'}</div>
+                                <div className="statistics-section-title">Current goal</div>
                                 <div className="statistics-metrics-grid">
                                     <StatCard
                                         label={t.collectedFundsLabel || 'Collected funds'}
@@ -143,11 +137,11 @@ export default function StatisticsScreen({
                                         tone="accent"
                                     />
                                     <StatCard
-                                        label={t.currentTarget || 'Current target'}
+                                        label={'Current target'}
                                         value={languageCurrency(campaignGoal, currencyFirst)}
                                     />
                                     <StatCard
-                                        label={t.engagement || 'Campaign Received'}
+                                        label={t.engagement || 'Campaign received'}
                                         value={languageCurrency(campaignReceived, currencyFirst)}
                                     />
                                 </div>
@@ -168,7 +162,7 @@ export default function StatisticsScreen({
                     </section>
 
                     <section className="statistics-panel statistics-panel--tier-breakdown">
-                        <div className="statistics-section-title">{t.tierBreakdown || 'Tier breakdown'}</div>
+                        <div className="statistics-section-title">Tier breakdown</div>
                         <div className="statistics-tier-list">
                             {localizedTiers.map((tier) => {
                                 const pct = tier.total > 0 ? Math.round((tier.funded / tier.total) * 100) : 0;

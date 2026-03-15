@@ -1,3 +1,5 @@
+import React from "react";
+
 const es = {
   locale: "es_ES",
   centerName: "Centro Zad Al-Imane",
@@ -74,19 +76,11 @@ const es = {
   collectedFundsLabel: "Fondos recaudados",
   remainingGoalLabel: "Meta restante",
   campaignOverview: "Resumen de la campana",
-  statisticsModalLabel: "Estadisticas de la campana",
-  closeStatistics: "Cerrar estadisticas",
-  statisticsGlobalGoal: "Meta global",
-  statisticsCurrentGoal: "Meta actual",
-  averageSupport: "Apoyo promedio",
-  currentTarget: "Objetivo actual",
-  tierBreakdown: "Desglose por categoria",
-  campaignComparison: "Comparacion de la campana",
   reached: "alcanzado",
   donorsList: "Lista de donantes",
   prayerTimes: "Horarios de oracion",
   ramadanObjective: "Compromiso de Campaña",
-  engagement: "Campaña Recibida",
+  engagement: "Cantidad Recibida",
   prepositionOf: "de",
   donationDialogTitle: "Apoya la mezquita",
   hadithArabic:

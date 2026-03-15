@@ -1,3 +1,5 @@
+import React from "react";
+
 const ur = {
   locale: "ur_PK",
   centerName: "مرکز زاد الایمان",
@@ -76,19 +78,11 @@ const ur = {
   collectedFundsLabel: "جمع شدہ فنڈز",
   remainingGoalLabel: "باقی ہدف",
   campaignOverview: "مہم کا جائزہ",
-  statisticsModalLabel: "مہم کے اعدادوشمار",
-  closeStatistics: "اعدادوشمار بند کریں",
-  statisticsGlobalGoal: "مجموعی ہدف",
-  statisticsCurrentGoal: "موجودہ ہدف",
-  averageSupport: "اوسط معاونت",
-  currentTarget: "موجودہ ہدف",
-  tierBreakdown: "درجہ وار تفصیل",
-  campaignComparison: "مہم کا تقابلی جائزہ",
   reached: "حاصل شدہ",
   donorsList: "عطیہ دہندگان کی فہرست",
   prayerTimes: "اوقات نماز",
   ramadanObjective: "مہم کی شرکت",
-  engagement: "مہم موصول",
+  engagement: "موصول رقم",
   prepositionOf: "میں سے",
   donationDialogTitle: "مسجد کی معاونت کریں",
   hadithArabic:

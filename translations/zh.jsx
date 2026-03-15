@@ -1,3 +1,5 @@
+import React from "react";
+
 const zh = {
     locale: "zh_CN",
     centerName: "Centre Zad Al-Imane",
@@ -74,19 +76,11 @@ const zh = {
     collectedFundsLabel: "已收集资金",
     remainingGoalLabel: "剩余目标",
     campaignOverview: "活动概览",
-    statisticsModalLabel: "活动统计",
-    closeStatistics: "关闭统计",
-    statisticsGlobalGoal: "总目标",
-    statisticsCurrentGoal: "当前目标",
-    averageSupport: "平均支持额",
-    currentTarget: "当前目标",
-    tierBreakdown: "等级明细",
-    campaignComparison: "活动对比",
     reached: "已达到",
     donorsList: "捐助者名单",
     prayerTimes: "祈祷时间",
     ramadanObjective: "活动参与",
-    engagement: "活动已收到",
+    engagement: "已收到",
     prepositionOf: "的",
     donationDialogTitle: "支持清真寺",
     hadithArabic:

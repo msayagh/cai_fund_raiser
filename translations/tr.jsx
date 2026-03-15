@@ -1,3 +1,5 @@
+import React from "react";
+
 const tr = {
     locale: "tr_TR",
     centerName: "Centre Zad Al-Imane",
@@ -74,19 +76,11 @@ const tr = {
     collectedFundsLabel: "Toplanan fonlar",
     remainingGoalLabel: "Kalan hedef",
     campaignOverview: "Kampanyaya genel bakış",
-    statisticsModalLabel: "Kampanya istatistikleri",
-    closeStatistics: "Istatistikleri kapat",
-    statisticsGlobalGoal: "Genel hedef",
-    statisticsCurrentGoal: "Mevcut hedef",
-    averageSupport: "Ortalama destek",
-    currentTarget: "Mevcut hedef tutari",
-    tierBreakdown: "Seviye dagilimi",
-    campaignComparison: "Kampanya karsilastirmasi",
     reached: "ulaşıldı",
     donorsList: "Bağışçılar listesi",
     prayerTimes: "Namaz Saatleri",
     ramadanObjective: "Kampanya Katılımı",
-    engagement: "Kampanya Alınan",
+    engagement: "Alınan Tutar",
     prepositionOf: "of",
     donationDialogTitle: "Camiye destek olun",
     hadithArabic:
