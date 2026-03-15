@@ -1,6 +1,7 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
+const { randomUUID } = require('crypto');
 const config = require('../config/env');
 const AppError = require('./AppError');
 
@@ -16,7 +17,7 @@ const signAccessToken = (payload) =>
  * @param {{ sub: string, type: 'donor' | 'admin' }} payload
  */
 const signRefreshToken = (payload) =>
-  jwt.sign(payload, config.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  jwt.sign(payload, config.JWT_REFRESH_SECRET, { expiresIn: '7d', jwtid: randomUUID() });
 
 /**
  * Verifies an access token. Throws AppError 401 on failure.

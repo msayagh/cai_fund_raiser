@@ -6,7 +6,7 @@ const prisma = require('../../db/client');
 const AppError = require('../../utils/AppError');
 const { createLog } = require('../logs/logs.service');
 const mailService = require('../mail/mail.service');
-const { calculateTotalFromPillars, validatePillars, initializePillars } = require('../../config/pillars');
+const { calculateTotalFromPillars, validatePillars } = require('../../config/pillars');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -87,14 +87,11 @@ const createEngagement = async (donorId, { totalPledge, pillars, startDate, endD
 
   // Calculate total from pillars if provided; otherwise use totalPledge
   let finalTotal = totalPledge;
-  let finalPillars = {};
-
   if (pillars && Object.keys(pillars).length > 0) {
     if (!validatePillars(pillars)) {
       throw new AppError('Invalid pillars data', 400, 'INVALID_PILLARS');
     }
     finalTotal = calculateTotalFromPillars(pillars);
-    finalPillars = pillars;
   } else if (!totalPledge) {
     throw new AppError('Either totalPledge or pillars must be provided', 400, 'MISSING_PLEDGE_DATA');
   }
@@ -103,7 +100,6 @@ const createEngagement = async (donorId, { totalPledge, pillars, startDate, endD
     data: {
       donorId,
       totalPledge: finalTotal,
-      pillars: Object.keys(finalPillars).length > 0 ? finalPillars : null,
       startDate: startDate ? new Date(startDate) : new Date(),
       endDate: endDate ? new Date(endDate) : null,
     },
@@ -145,7 +141,6 @@ const updateEngagement = async (donorId, { totalPledge, pillars, endDate }) => {
       throw new AppError('Invalid pillars data', 400, 'INVALID_PILLARS');
     }
     updateData.totalPledge = calculateTotalFromPillars(pillars);
-    updateData.pillars = pillars;
   } else if (totalPledge !== undefined) {
     updateData.totalPledge = totalPledge;
   }
@@ -369,14 +364,11 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pi
 
   // Calculate total from pillars if provided; otherwise use totalPledge
   let finalTotal = totalPledge;
-  let finalPillars = {};
-
   if (pillars && Object.keys(pillars).length > 0) {
     if (!validatePillars(pillars)) {
       throw new AppError('Invalid pillars data', 400, 'INVALID_PILLARS');
     }
     finalTotal = calculateTotalFromPillars(pillars);
-    finalPillars = pillars;
   } else if (!totalPledge) {
     throw new AppError('Either totalPledge or pillars must be provided', 400, 'MISSING_PLEDGE_DATA');
   }
@@ -388,7 +380,6 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pi
       where: { donorId },
       data: {
         totalPledge: finalTotal,
-        pillars: Object.keys(finalPillars).length > 0 ? finalPillars : null,
         startDate: startDate ? new Date(startDate) : existing.startDate,
         endDate: endDate ? new Date(endDate) : existing.endDate,
       },
@@ -399,7 +390,6 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pi
       data: {
         donorId,
         totalPledge: finalTotal,
-        pillars: Object.keys(finalPillars).length > 0 ? finalPillars : null,
         startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
       },
