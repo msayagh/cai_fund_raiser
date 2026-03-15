@@ -1,5 +1,3 @@
-import React from "react";
-
 const en = {
   locale: "en_CA",
   centerName: "Centre Zad Al-Imane",
@@ -76,6 +74,14 @@ const en = {
   collectedFundsLabel: "Collected funds",
   remainingGoalLabel: "Remaining goal",
   campaignOverview: "Campaign overview",
+  statisticsModalLabel: "Campaign statistics",
+  closeStatistics: "Close statistics",
+  statisticsGlobalGoal: "Global goal",
+  statisticsCurrentGoal: "Current goal",
+  averageSupport: "Avg. support",
+  currentTarget: "Current target",
+  tierBreakdown: "Tier breakdown",
+  campaignComparison: "Campaign comparison",
   reached: "reached",
   donorsList: "List of donors",
   prayerTimes: "Prayer Times",

@@ -256,8 +256,8 @@ export default function MosqueDonation() {
         tierCollectedAmount={engagementAmount}
         tierEngagementPct={RAMADAN_TARGET > 0 ? Math.min(100, Math.round((engagementAmount / RAMADAN_TARGET) * 100)) : 0}
         tierEngagementTarget={RAMADAN_TARGET}
-        receivedAmount={ramadanRaised}
-        receivedTarget={RAMADAN_TARGET}
+        receivedAmount={Math.min(engagementAmount, ramadanRaised)}
+        receivedTarget={engagementAmount}
         showLanguageMenu={showLanguageMenu}
         setShowLanguageMenu={setShowLanguageMenu}
         languageDropdownRef={languageDropdownRef}

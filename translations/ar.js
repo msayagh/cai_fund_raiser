@@ -1,5 +1,3 @@
-import React from "react";
-
 const ar = {
   locale: "ar",
   centerName: "مركز زاد الإيمان",
@@ -78,11 +76,19 @@ const ar = {
   collectedFundsLabel: "الأموال المجمعة",
   remainingGoalLabel: "المتبقي من الهدف",
   campaignOverview: "نظرة عامة على الحملة",
+  statisticsModalLabel: "إحصاءات الحملة",
+  closeStatistics: "إغلاق الإحصاءات",
+  statisticsGlobalGoal: "الهدف العام",
+  statisticsCurrentGoal: "الهدف الحالي",
+  averageSupport: "متوسط الدعم",
+  currentTarget: "الهدف الحالي",
+  tierBreakdown: "تفصيل الفئات",
+  campaignComparison: "مقارنة الحملة",
   reached: "محقق",
   donorsList: "قائمة المتبرعين",
   prayerTimes: "أوقات الصلاة",
   ramadanObjective: "مشاركة الحملة",
-  engagement: "ما تم جمعه",
+  engagement: "الحملة المحققة",
   prepositionOf: "من",
   donationDialogTitle: "التبرع للمسجد",
   hadithArabic:
