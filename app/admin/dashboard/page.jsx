@@ -134,13 +134,13 @@ export default function AdminDashboardPage() {
             ]);
 
             const [statsResult, donorsResult, requestsResult, adminsResult, logsResult] = results;
-            
+
             if (statsResult.status === 'fulfilled') setStats(statsResult.value);
             if (donorsResult.status === 'fulfilled') setDonors(donorsResult.value.items ?? []);
             if (requestsResult.status === 'fulfilled') setRequests(requestsResult.value.items ?? []);
             if (adminsResult.status === 'fulfilled') setAdmins(adminsResult.value ?? []);
             if (logsResult.status === 'fulfilled') setLogs(logsResult.value.items ?? []);
-            
+
             // If all failed, throw error; otherwise, silently continue with partial data
             if (results.every(r => r.status === 'rejected')) {
                 throw new Error('Unable to load dashboard data.');
@@ -407,7 +407,7 @@ export default function AdminDashboardPage() {
                 password: newAdmin.password,
             });
             setNewAdmin({ name: '', email: '', password: '' });
-            
+
             try {
                 await loadAllData();
             } catch (err) {
@@ -430,7 +430,7 @@ export default function AdminDashboardPage() {
             } else {
                 await declineRequest(id);
             }
-            
+
             try {
                 await loadAllData();
             } catch (err) {
@@ -548,7 +548,7 @@ export default function AdminDashboardPage() {
             setAddDonorForm({ name: '', email: '', password: '' });
             setIsAddDonorModalOpen(false);
             setMessage(`Donor ${newDonor.name} added successfully.`);
-            
+
             try {
                 await loadAllData();
             } catch (err) {
@@ -623,7 +623,7 @@ export default function AdminDashboardPage() {
             noteInput.value = '';
 
             setMessage('Payment recorded successfully.');
-            
+
             // Reload all data with error handling
             try {
                 await loadAllData();
@@ -702,7 +702,7 @@ export default function AdminDashboardPage() {
 
             setBulkUploadProgress('');
             setMessage(`Successfully uploaded ${parsedDonors.length} donors.`);
-            
+
             try {
                 await loadAllData();
             } catch (err) {
