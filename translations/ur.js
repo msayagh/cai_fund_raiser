@@ -6,6 +6,7 @@ const ur = {
   goal: "ہدف",
   bricks: "اینٹیں",
   scanToDonate: "عطیہ دینے کے لیے اسکین کریں",
+  openDonationFormNewTab: "نیا ٹیب میں کھولیں",
   qrAlt: "عطیہ کے لیے QR کوڈ",
   qrHelp: "براہ راست عطیہ دینے کے لیے اپنے کیمرے کا رخ کریں",
   selectTier: "درجہ منتخب کریں",

@@ -6,6 +6,7 @@ const zh = {
     goal: "目标",
     bricks: "块砖",
     scanToDonate: "扫描捐款",
+    openDonationFormNewTab: "在新标签页中打开",
     qrAlt: "捐款二维码",
     qrHelp: "将相机对准直接捐款",
     selectTier: "选择等级",

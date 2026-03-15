@@ -6,6 +6,7 @@ const en = {
   goal: "goal",
   bricks: "bricks",
   scanToDonate: "Scan to Donate",
+  openDonationFormNewTab: "Open in new tab",
   qrAlt: "Donation QR Code",
   qrHelp: "Point your camera to give directly",
   selectTier: "Select Tier",
