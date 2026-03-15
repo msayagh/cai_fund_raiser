@@ -22,7 +22,9 @@ const requestRoutes = require('./modules/requests/requests.routes');
 const { adminRequestRouter } = require('./modules/requests/requests.routes');
 const logRoutes = require('./modules/logs/logs.routes');
 const publicRoutes = require('./modules/public/public.routes');
+const settingsRoutes = require('./modules/settings/settings.routes');
 const { requireAdmin } = require('./middleware/auth');
+const { requireCapability } = require('./middleware/authorization');
 
 const app = express();
 
@@ -90,6 +92,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/donors', donorRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Admin sub-routes
 app.use('/api/admin/donors', adminDonorRouter);
@@ -98,7 +101,7 @@ app.use('/api/admin/requests', adminRequestRouter);
 app.use('/api/admin/logs', logRoutes);
 
 // Admin stats
-app.get('/api/admin/stats', requireAdmin, async (req, res, next) => {
+app.get('/api/admin/stats', requireAdmin, requireCapability('admin.statistics.view'), async (req, res, next) => {
   try {
     const [totalDonors, totalPaymentsAgg, activeEngagements, pendingRequests] = await Promise.all([
       prisma.donor.count(),

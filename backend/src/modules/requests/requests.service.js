@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../../db/client');
 const AppError = require('../../utils/AppError');
 const { createLog } = require('../logs/logs.service');
+const mailService = require('../mail/mail.service');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -117,6 +118,13 @@ const approveRequest = async (adminId, adminName, id, body) => {
       donorId: donor.id,
       adminId,
     });
+
+    // Send registration confirmation email
+    try {
+      await mailService.sendRegistrationConfirmation(donor.email, donor.name);
+    } catch (error) {
+      console.error('Failed to send registration confirmation email:', error);
+    }
   } else if (request.type === 'payment_upload') {
     const { amount, date, method, note } = body;
     if (!amount || !date || !method) {
@@ -151,6 +159,29 @@ const approveRequest = async (adminId, adminName, id, body) => {
       donorId,
       adminId,
     });
+
+    // Send payment confirmation email
+    try {
+      const donor = await prisma.donor.findUnique({
+        where: { id: donorId },
+        include: { engagement: true },
+      });
+      const allPayments = await prisma.payment.findMany({
+        where: { donorId },
+      });
+      const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+      await mailService.sendPaymentConfirmation(donor.email, donor.name, {
+        amount,
+        date: payment.date,
+        method,
+        paymentId: payment.id,
+        totalPaid,
+        pledgeAmount: donor.engagement?.totalPledge,
+      });
+    } catch (error) {
+      console.error('Failed to send payment confirmation email:', error);
+    }
   } else if (request.type === 'engagement_change') {
     await createLog({
       actor: `Admin: ${adminName}`,
@@ -179,6 +210,17 @@ const approveRequest = async (adminId, adminName, id, body) => {
     include: { attachments: true },
   });
 
+  // Send generic request status update email
+  try {
+    await mailService.sendRequestStatusUpdate(request.email, request.name, {
+      type: request.type,
+      status: 'approved',
+      message: `Your ${request.type.replace(/_/g, ' ')} request has been approved.`,
+    });
+  } catch (error) {
+    console.error('Failed to send request status update email:', error);
+  }
+
   return { request: updated, ...(extraData && { extraData }) };
 };
 
@@ -204,6 +246,17 @@ const declineRequest = async (adminId, adminName, id) => {
     adminId,
   });
 
+  // Send request status update email
+  try {
+    await mailService.sendRequestStatusUpdate(request.email, request.name, {
+      type: request.type,
+      status: 'declined',
+      message: `Your ${request.type.replace(/_/g, ' ')} request has been declined. Please contact us for more information.`,
+    });
+  } catch (error) {
+    console.error('Failed to send request status update email:', error);
+  }
+
   return updated;
 };
 
@@ -228,6 +281,17 @@ const holdRequest = async (adminId, adminName, id) => {
     donorId: request.donorId ?? null,
     adminId,
   });
+
+  // Send request status update email
+  try {
+    await mailService.sendRequestStatusUpdate(request.email, request.name, {
+      type: request.type,
+      status: 'on_hold',
+      message: `Your ${request.type.replace(/_/g, ' ')} request is currently being reviewed. We'll notify you with an update soon.`,
+    });
+  } catch (error) {
+    console.error('Failed to send request status update email:', error);
+  }
 
   return updated;
 };

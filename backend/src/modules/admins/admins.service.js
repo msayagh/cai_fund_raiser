@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../../db/client');
 const AppError = require('../../utils/AppError');
 const { createLog } = require('../logs/logs.service');
+const mailService = require('../mail/mail.service');
 
 const BCRYPT_ROUNDS = 12;
 const stripPassword = ({ passwordHash, ...rest }) => rest;
@@ -33,6 +34,14 @@ const createAdmin = async (requestingAdminId, requestingAdminName, { name, email
     details: `Admin account created for ${email}`,
     adminId: requestingAdminId,
   });
+
+  // Send admin account creation email with credentials
+  try {
+    await mailService.sendAdminAccountCreation(admin.email, admin.name, password);
+  } catch (error) {
+    console.error('Failed to send admin account creation email:', error);
+    // Don't throw error - admin was created successfully
+  }
 
   return stripPassword(admin);
 };

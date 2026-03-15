@@ -5,7 +5,17 @@ const { z } = require('zod');
 const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   email: z.string().email().optional(),
-}).refine((d) => d.name || d.email, { message: 'At least one field required' });
+  phoneNumber: z.string().regex(/^\+?[0-9\s\-()]{10,}$/, 'Invalid phone number format').optional().nullable(),
+  address: z.string().max(255).optional().nullable(),
+  city: z.string().max(100).optional().nullable(),
+  country: z.string().max(100).optional().nullable(),
+  postalCode: z.string().max(20).optional().nullable(),
+  dateOfBirth: z.string().datetime({ offset: true }).optional().nullable(),
+  taxNumber: z.string().max(50).optional().nullable(),
+  companyName: z.string().max(200).optional().nullable(),
+}).refine((d) => Object.values(d).some(v => v !== undefined && v !== null), {
+  message: 'At least one field required'
+});
 
 const updatePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -13,14 +23,26 @@ const updatePasswordSchema = z.object({
 });
 
 const createEngagementSchema = z.object({
-  totalPledge: z.number().positive('Pledge amount must be positive'),
+  totalPledge: z.number().positive('Pledge amount must be positive').optional(),
+  pillars: z.record(z.string(), z.number().nonnegative()).optional(),
   startDate: z.string().datetime({ offset: true }).optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
+}).refine((data) => {
+  // Either totalPledge or pillars must be provided
+  return data.totalPledge !== undefined || (data.pillars && Object.values(data.pillars).some(v => v > 0));
+}, {
+  message: 'Either totalPledge or pillars with amounts must be provided'
 });
 
 const updateEngagementSchema = z.object({
   totalPledge: z.number().positive().optional(),
+  pillars: z.record(z.string(), z.number().nonnegative()).optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
+}).refine((data) => {
+  // At least one field must be provided
+  return data.totalPledge !== undefined || data.pillars !== undefined || data.endDate !== undefined;
+}, {
+  message: 'At least one field (totalPledge, pillars, or endDate) must be provided'
 });
 
 module.exports = {

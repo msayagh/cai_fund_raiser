@@ -5,6 +5,8 @@ const PDFDocument = require('pdfkit');
 const prisma = require('../../db/client');
 const AppError = require('../../utils/AppError');
 const { createLog } = require('../logs/logs.service');
+const mailService = require('../mail/mail.service');
+const { calculateTotalFromPillars, validatePillars, initializePillars } = require('../../config/pillars');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -20,14 +22,27 @@ const getMe = async (donorId) => {
   return stripPassword(donor);
 };
 
-const updateMe = async (donorId, { name, email }) => {
+const updateMe = async (donorId, { name, email, phoneNumber, address, city, country, postalCode, dateOfBirth, taxNumber, companyName }) => {
   if (email) {
     const existing = await prisma.donor.findFirst({ where: { email, NOT: { id: donorId } } });
     if (existing) throw new AppError('Email already in use', 409, 'EMAIL_TAKEN');
   }
+
+  const updateData = {};
+  if (name !== undefined) updateData.name = name;
+  if (email !== undefined) updateData.email = email;
+  if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+  if (address !== undefined) updateData.address = address;
+  if (city !== undefined) updateData.city = city;
+  if (country !== undefined) updateData.country = country;
+  if (postalCode !== undefined) updateData.postalCode = postalCode;
+  if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+  if (taxNumber !== undefined) updateData.taxNumber = taxNumber;
+  if (companyName !== undefined) updateData.companyName = companyName;
+
   const donor = await prisma.donor.update({
     where: { id: donorId },
-    data: { ...(name && { name }), ...(email && { email }) },
+    data: updateData,
   });
 
   await createLog({
@@ -66,14 +81,29 @@ const getMyEngagement = async (donorId) => {
   return engagement;
 };
 
-const createEngagement = async (donorId, { totalPledge, startDate, endDate }) => {
+const createEngagement = async (donorId, { totalPledge, pillars, startDate, endDate }) => {
   const existing = await prisma.engagement.findUnique({ where: { donorId } });
   if (existing) throw new AppError('Engagement already exists. Use PUT to update.', 409, 'CONFLICT');
+
+  // Calculate total from pillars if provided; otherwise use totalPledge
+  let finalTotal = totalPledge;
+  let finalPillars = {};
+
+  if (pillars && Object.keys(pillars).length > 0) {
+    if (!validatePillars(pillars)) {
+      throw new AppError('Invalid pillars data', 400, 'INVALID_PILLARS');
+    }
+    finalTotal = calculateTotalFromPillars(pillars);
+    finalPillars = pillars;
+  } else if (!totalPledge) {
+    throw new AppError('Either totalPledge or pillars must be provided', 400, 'MISSING_PLEDGE_DATA');
+  }
 
   const engagement = await prisma.engagement.create({
     data: {
       donorId,
-      totalPledge,
+      totalPledge: finalTotal,
+      pillars: Object.keys(finalPillars).length > 0 ? finalPillars : null,
       startDate: startDate ? new Date(startDate) : new Date(),
       endDate: endDate ? new Date(endDate) : null,
     },
@@ -85,23 +115,48 @@ const createEngagement = async (donorId, { totalPledge, startDate, endDate }) =>
     actorType: 'donor',
     actorId: donorId,
     action: 'engagement_created',
-    details: `Engagement created with pledge $${totalPledge}`,
+    details: `Engagement created with pledge $${finalTotal}`,
     donorId,
   });
+
+  // Send engagement confirmation email
+  try {
+    await mailService.sendEngagementConfirmation(donor.email, donor.name, {
+      totalPledge: finalTotal,
+      startDate: engagement.startDate,
+      endDate: engagement.endDate,
+    });
+  } catch (error) {
+    console.error('Failed to send engagement confirmation email:', error);
+    // Don't throw error - engagement was created successfully
+  }
 
   return engagement;
 };
 
-const updateEngagement = async (donorId, { totalPledge, endDate }) => {
+const updateEngagement = async (donorId, { totalPledge, pillars, endDate }) => {
   const existing = await prisma.engagement.findUnique({ where: { donorId } });
   if (!existing) throw new AppError('No engagement found', 404, 'NOT_FOUND');
 
+  // If pillars are provided, validate and calculate total
+  let updateData = {};
+  if (pillars !== undefined && Object.keys(pillars).length > 0) {
+    if (!validatePillars(pillars)) {
+      throw new AppError('Invalid pillars data', 400, 'INVALID_PILLARS');
+    }
+    updateData.totalPledge = calculateTotalFromPillars(pillars);
+    updateData.pillars = pillars;
+  } else if (totalPledge !== undefined) {
+    updateData.totalPledge = totalPledge;
+  }
+
+  if (endDate !== undefined) {
+    updateData.endDate = endDate ? new Date(endDate) : null;
+  }
+
   const updated = await prisma.engagement.update({
     where: { donorId },
-    data: {
-      ...(totalPledge !== undefined && { totalPledge }),
-      ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
-    },
+    data: updateData,
   });
 
   const donor = await prisma.donor.findUnique({ where: { id: donorId } });
@@ -113,6 +168,18 @@ const updateEngagement = async (donorId, { totalPledge, endDate }) => {
     details: 'Engagement updated',
     donorId,
   });
+
+  // Send engagement confirmation email
+  try {
+    await mailService.sendEngagementConfirmation(donor.email, donor.name, {
+      totalPledge: updated.totalPledge,
+      startDate: updated.startDate,
+      endDate: updated.endDate,
+    });
+  } catch (error) {
+    console.error('Failed to send engagement confirmation email:', error);
+    // Don't throw error - engagement was updated successfully
+  }
 
   return updated;
 };
@@ -192,7 +259,7 @@ const getDonorById = async (id) => {
   return rest;
 };
 
-const adminUpdateDonor = async (adminId, adminName, id, { name, email, isActive }) => {
+const adminUpdateDonor = async (adminId, adminName, id, { name, email, isActive, phoneNumber, address, city, country, postalCode, dateOfBirth, taxNumber, companyName }) => {
   const donor = await prisma.donor.findUnique({ where: { id } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
@@ -202,9 +269,17 @@ const adminUpdateDonor = async (adminId, adminName, id, { name, email, isActive 
   }
 
   const updateData = {};
-  if (name) updateData.name = name;
-  if (email) updateData.email = email;
+  if (name !== undefined) updateData.name = name;
+  if (email !== undefined) updateData.email = email;
   if (isActive !== undefined) updateData.isActive = isActive;
+  if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+  if (address !== undefined) updateData.address = address;
+  if (city !== undefined) updateData.city = city;
+  if (country !== undefined) updateData.country = country;
+  if (postalCode !== undefined) updateData.postalCode = postalCode;
+  if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+  if (taxNumber !== undefined) updateData.taxNumber = taxNumber;
+  if (companyName !== undefined) updateData.companyName = companyName;
 
   const updated = await prisma.donor.update({
     where: { id },
@@ -223,6 +298,20 @@ const adminUpdateDonor = async (adminId, adminName, id, { name, email, isActive 
     donorId: id,
     adminId,
   });
+
+  // Send deactivation notice email if donor was deactivated
+  if (isActive === false) {
+    try {
+      await mailService.sendDonorDeactivationNotice(
+        updated.email,
+        updated.name,
+        'Your account has been deactivated by an administrator.'
+      );
+    } catch (error) {
+      console.error('Failed to send deactivation notice email:', error);
+      // Don't throw error - donor was updated successfully
+    }
+  }
 
   return stripPassword(updated);
 };
@@ -272,11 +361,25 @@ const adminGetDonorPayments = async (donorId) => {
   });
 };
 
-const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, startDate, endDate }) => {
+const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pillars, startDate, endDate }) => {
   const donor = await prisma.donor.findUnique({ where: { id: donorId } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
   const existing = await prisma.engagement.findUnique({ where: { donorId } });
+
+  // Calculate total from pillars if provided; otherwise use totalPledge
+  let finalTotal = totalPledge;
+  let finalPillars = {};
+
+  if (pillars && Object.keys(pillars).length > 0) {
+    if (!validatePillars(pillars)) {
+      throw new AppError('Invalid pillars data', 400, 'INVALID_PILLARS');
+    }
+    finalTotal = calculateTotalFromPillars(pillars);
+    finalPillars = pillars;
+  } else if (!totalPledge) {
+    throw new AppError('Either totalPledge or pillars must be provided', 400, 'MISSING_PLEDGE_DATA');
+  }
 
   let engagement;
   if (existing) {
@@ -284,7 +387,8 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, st
     engagement = await prisma.engagement.update({
       where: { donorId },
       data: {
-        totalPledge,
+        totalPledge: finalTotal,
+        pillars: Object.keys(finalPillars).length > 0 ? finalPillars : null,
         startDate: startDate ? new Date(startDate) : existing.startDate,
         endDate: endDate ? new Date(endDate) : existing.endDate,
       },
@@ -294,7 +398,8 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, st
     engagement = await prisma.engagement.create({
       data: {
         donorId,
-        totalPledge,
+        totalPledge: finalTotal,
+        pillars: Object.keys(finalPillars).length > 0 ? finalPillars : null,
         startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
       },
@@ -306,10 +411,22 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, st
     actorType: 'admin',
     actorId: adminId,
     action: existing ? 'admin_engagement_updated' : 'admin_engagement_created',
-    details: `Admin ${existing ? 'updated' : 'created'} engagement with pledge $${totalPledge} for donor: ${donor.email}`,
+    details: `Admin ${existing ? 'updated' : 'created'} engagement with pledge $${finalTotal} for donor: ${donor.email}`,
     donorId,
     adminId,
   });
+
+  // Send engagement confirmation email
+  try {
+    await mailService.sendEngagementConfirmation(donor.email, donor.name, {
+      totalPledge: engagement.totalPledge,
+      startDate: engagement.startDate,
+      endDate: engagement.endDate,
+    });
+  } catch (error) {
+    console.error('Failed to send engagement confirmation email:', error);
+    // Don't throw error - engagement was created/updated successfully
+  }
 
   return engagement;
 };
@@ -339,6 +456,28 @@ const adminAddPayment = async (adminId, adminName, donorId, { amount, date, meth
     donorId,
     adminId,
   });
+
+  // Send payment confirmation email
+  try {
+    const allPayments = await prisma.payment.findMany({
+      where: { donorId },
+    });
+    const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const engagement = await prisma.engagement.findUnique({ where: { donorId } });
+
+    await mailService.sendPaymentConfirmation(donor.email, donor.name, {
+      amount,
+      date: payment.date,
+      method,
+      paymentId: payment.id,
+      totalPaid,
+      pledgeAmount: engagement?.totalPledge,
+    });
+  } catch (error) {
+    console.error('Failed to send payment confirmation email:', error);
+    // Don't throw error - payment was recorded successfully
+  }
 
   return payment;
 };
@@ -375,6 +514,14 @@ const adminCreateDonor = async (adminId, adminName, { name, email, password, ple
     donorId: donor.id,
     adminId,
   });
+
+  // Send registration confirmation email
+  try {
+    await mailService.sendRegistrationConfirmation(donor.email, donor.name);
+  } catch (error) {
+    console.error('Failed to send registration confirmation email:', error);
+    // Don't throw error - donor was created successfully
+  }
 
   return stripPassword(donor);
 };

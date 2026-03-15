@@ -2,6 +2,7 @@
 
 const { Router } = require('express');
 const { requireDonor, requireAdmin } = require('../../middleware/auth');
+const { requireCapability } = require('../../middleware/authorization');
 const validate = require('../../middleware/validate');
 const ctrl = require('./donors.controller');
 const {
@@ -58,18 +59,18 @@ const adminEngagementSchema = z.object({
 
 const adminDonorRouter = Router();
 
-adminDonorRouter.get('/', requireAdmin, ctrl.list);
-adminDonorRouter.post('/', requireAdmin, validate(adminCreateDonorSchema), ctrl.adminCreate);
-adminDonorRouter.get('/:id', requireAdmin, ctrl.getById);
-adminDonorRouter.get('/:id/payments', requireAdmin, ctrl.adminGetPayments);
-adminDonorRouter.get('/:id/payments/:paymentId/confirmation', requireAdmin, ctrl.adminGetPaymentConfirmation);
-adminDonorRouter.put('/:id/engagement', requireAdmin, validate(adminEngagementSchema), ctrl.adminSetEngagement);
-adminDonorRouter.put('/:id/deactivate', requireAdmin, ctrl.adminDeactivate);
-adminDonorRouter.put('/:id/reactivate', requireAdmin, ctrl.adminReactivate);
-adminDonorRouter.put('/:id/password', requireAdmin, validate(adminDonorPasswordSchema), ctrl.adminUpdatePassword);
-adminDonorRouter.put('/:id', requireAdmin, validate(adminUpdateDonorSchema), ctrl.adminUpdate);
-adminDonorRouter.delete('/:id', requireAdmin, ctrl.adminDelete);
-adminDonorRouter.post('/:id/payments', requireAdmin, validate(adminPaymentSchema), ctrl.adminAddPayment);
-adminDonorRouter.post('/:id/payments/:paymentId/receipt', requireAdmin, ctrl.uploadPaymentReceipt);
+adminDonorRouter.get('/', requireAdmin, requireCapability('admin.donors.view'), ctrl.list);
+adminDonorRouter.post('/', requireAdmin, requireCapability('admin.donors.create'), validate(adminCreateDonorSchema), ctrl.adminCreate);
+adminDonorRouter.get('/:id', requireAdmin, requireCapability('admin.donors.view'), ctrl.getById);
+adminDonorRouter.get('/:id/payments', requireAdmin, requireCapability('admin.donors.view'), ctrl.adminGetPayments);
+adminDonorRouter.get('/:id/payments/:paymentId/confirmation', requireAdmin, requireCapability('admin.donors.view'), ctrl.adminGetPaymentConfirmation);
+adminDonorRouter.put('/:id/engagement', requireAdmin, requireCapability('admin.donors.edit'), validate(adminEngagementSchema), ctrl.adminSetEngagement);
+adminDonorRouter.put('/:id/deactivate', requireAdmin, requireCapability('admin.donors.deactivate'), ctrl.adminDeactivate);
+adminDonorRouter.put('/:id/reactivate', requireAdmin, requireCapability('admin.donors.deactivate'), ctrl.adminReactivate);
+adminDonorRouter.put('/:id/password', requireAdmin, requireCapability('admin.donors.edit'), validate(adminDonorPasswordSchema), ctrl.adminUpdatePassword);
+adminDonorRouter.put('/:id', requireAdmin, requireCapability('admin.donors.edit'), validate(adminUpdateDonorSchema), ctrl.adminUpdate);
+adminDonorRouter.delete('/:id', requireAdmin, requireCapability('admin.donors.delete'), ctrl.adminDelete);
+adminDonorRouter.post('/:id/payments', requireAdmin, requireCapability('admin.donors.edit'), validate(adminPaymentSchema), ctrl.adminAddPayment);
+adminDonorRouter.post('/:id/payments/:paymentId/receipt', requireAdmin, requireCapability('admin.donors.edit'), ctrl.uploadPaymentReceipt);
 
 module.exports.adminDonorRouter = adminDonorRouter;

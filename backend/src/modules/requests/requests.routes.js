@@ -2,6 +2,7 @@
 
 const { Router } = require('express');
 const { requireAdmin, requireDonor } = require('../../middleware/auth');
+const { requireCapability } = require('../../middleware/authorization');
 const validate = require('../../middleware/validate');
 const upload = require('../../middleware/upload');
 const ctrl = require('./requests.controller');
@@ -29,11 +30,11 @@ publicRouter.post('/:id/attachments', upload.array('files', 5), ctrl.addAttachme
 // ─── Admin routes (/api/admin/requests) ───────────────────────────────────────
 const adminRequestRouter = Router();
 
-adminRequestRouter.get('/', requireAdmin, ctrl.list);
-adminRequestRouter.get('/:id', requireAdmin, ctrl.getById);
-adminRequestRouter.put('/:id/approve', requireAdmin, ctrl.approve);
-adminRequestRouter.put('/:id/decline', requireAdmin, ctrl.decline);
-adminRequestRouter.put('/:id/hold', requireAdmin, ctrl.hold);
+adminRequestRouter.get('/', requireAdmin, requireCapability('admin.requests.view'), ctrl.list);
+adminRequestRouter.get('/:id', requireAdmin, requireCapability('admin.requests.view'), ctrl.getById);
+adminRequestRouter.put('/:id/approve', requireAdmin, requireCapability('admin.requests.approve'), ctrl.approve);
+adminRequestRouter.put('/:id/decline', requireAdmin, requireCapability('admin.requests.reject'), ctrl.decline);
+adminRequestRouter.put('/:id/hold', requireAdmin, requireCapability('admin.requests.view'), ctrl.hold);
 
 module.exports = publicRouter;
 module.exports.adminRequestRouter = adminRequestRouter;

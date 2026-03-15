@@ -30,10 +30,93 @@ async function main() {
   await prisma.request.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.engagement.deleteMany();
+  await prisma.adminRole.deleteMany();
+  await prisma.donorRole.deleteMany();
+  await prisma.roleCapability.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.otpCode.deleteMany();
   await prisma.donor.deleteMany();
   await prisma.admin.deleteMany();
+  await prisma.role.deleteMany();
+  await prisma.capability.deleteMany();
+
+  // ─── Capabilities ───────────────────────────────────────────────────────────
+  const capabilities = await Promise.all([
+    // Admin donor management
+    prisma.capability.create({ data: { name: 'admin.donors.view', module: 'admin.donors', description: 'View donor list and details' } }),
+    prisma.capability.create({ data: { name: 'admin.donors.create', module: 'admin.donors', description: 'Create new donor accounts' } }),
+    prisma.capability.create({ data: { name: 'admin.donors.edit', module: 'admin.donors', description: 'Edit donor profiles' } }),
+    prisma.capability.create({ data: { name: 'admin.donors.delete', module: 'admin.donors', description: 'Delete donor accounts' } }),
+    prisma.capability.create({ data: { name: 'admin.donors.deactivate', module: 'admin.donors', description: 'Deactivate/reactivate donors' } }),
+
+    // Admin request management
+    prisma.capability.create({ data: { name: 'admin.requests.view', module: 'admin.requests', description: 'View all requests' } }),
+    prisma.capability.create({ data: { name: 'admin.requests.approve', module: 'admin.requests', description: 'Approve requests' } }),
+    prisma.capability.create({ data: { name: 'admin.requests.reject', module: 'admin.requests', description: 'Reject requests' } }),
+
+    // Admin management
+    prisma.capability.create({ data: { name: 'admin.admins.view', module: 'admin.admins', description: 'View admin list' } }),
+    prisma.capability.create({ data: { name: 'admin.admins.create', module: 'admin.admins', description: 'Create new admins' } }),
+    prisma.capability.create({ data: { name: 'admin.admins.edit', module: 'admin.admins', description: 'Edit admin profiles' } }),
+    prisma.capability.create({ data: { name: 'admin.admins.delete', module: 'admin.admins', description: 'Delete admins' } }),
+
+    // Statistics & reporting
+    prisma.capability.create({ data: { name: 'admin.statistics.view', module: 'admin.statistics', description: 'View dashboard statistics' } }),
+    prisma.capability.create({ data: { name: 'admin.logs.view', module: 'admin.logs', description: 'View activity logs' } }),
+
+    // Donor capabilities
+    prisma.capability.create({ data: { name: 'donor.profile.view', module: 'donor.profile', description: 'View own profile' } }),
+    prisma.capability.create({ data: { name: 'donor.profile.edit', module: 'donor.profile', description: 'Edit own profile' } }),
+    prisma.capability.create({ data: { name: 'donor.payments.view', module: 'donor.payments', description: 'View own payment history' } }),
+  ]);
+  console.log(`  ✓ Created ${capabilities.length} capabilities`);
+
+  // ─── Roles ──────────────────────────────────────────────────────────────────
+  const role_admin = await prisma.role.create({
+    data: {
+      name: 'admin',
+      description: 'Full administrator access',
+      roleCapabilities: {
+        create: capabilities.map(cap => ({
+          capabilityId: cap.id,
+        })),
+      },
+    },
+  });
+  console.log(`  ✓ Role: ${role_admin.name}`);
+
+  const role_moderator = await prisma.role.create({
+    data: {
+      name: 'moderator',
+      description: 'Moderator with request approval capabilities',
+      roleCapabilities: {
+        create: [
+          { capabilityId: capabilities.find(c => c.name === 'admin.donors.view').id },
+          { capabilityId: capabilities.find(c => c.name === 'admin.requests.view').id },
+          { capabilityId: capabilities.find(c => c.name === 'admin.requests.approve').id },
+          { capabilityId: capabilities.find(c => c.name === 'admin.requests.reject').id },
+          { capabilityId: capabilities.find(c => c.name === 'admin.statistics.view').id },
+        ],
+      },
+    },
+  });
+  console.log(`  ✓ Role: ${role_moderator.name}`);
+
+  const role_donor = await prisma.role.create({
+    data: {
+      name: 'donor',
+      description: 'Donor with limited access to own data',
+      roleCapabilities: {
+        create: [
+          { capabilityId: capabilities.find(c => c.name === 'donor.profile.view').id },
+          { capabilityId: capabilities.find(c => c.name === 'donor.profile.edit').id },
+          { capabilityId: capabilities.find(c => c.name === 'donor.payments.view').id },
+        ],
+      },
+    },
+  });
+  console.log(`  ✓ Role: ${role_donor.name}`);
+
 
   // ─── Admin ──────────────────────────────────────────────────────────────────
   const adminHash = await bcrypt.hash('admin123', BCRYPT_ROUNDS);
@@ -42,9 +125,14 @@ async function main() {
       name: 'Imam Abdallah',
       email: 'admin@masjid.com',
       passwordHash: adminHash,
+      adminRoles: {
+        create: {
+          roleId: role_admin.id,
+        },
+      },
     },
   });
-  console.log(`  ✓ Admin: ${admin.email}`);
+  console.log(`  ✓ Admin: ${admin.email} (role: ${role_admin.name})`);
 
   // ─── Donors ─────────────────────────────────────────────────────────────────
   const donorHash = await bcrypt.hash('demo123', BCRYPT_ROUNDS);
@@ -85,10 +173,15 @@ async function main() {
           },
         ],
       },
+      donorRoles: {
+        create: {
+          roleId: role_donor.id,
+        },
+      },
     },
     include: { engagement: true, payments: true },
   });
-  console.log(`  ✓ Donor: ${ahmed.email} (${ahmed.payments.length} payments)`);
+  console.log(`  ✓ Donor: ${ahmed.email} (${ahmed.payments.length} payments, role: ${role_donor.name})`);
 
   const fatima = await prisma.donor.create({
     data: {
@@ -122,12 +215,17 @@ async function main() {
     },
     include: { engagement: true, payments: true },
   });
-  console.log(`  ✓ Donor: ${fatima.email} (${fatima.payments.length} payments)`);
+  console.log(`  ✓ Donor: ${fatima.email} (${fatima.payments.length} payments, role: ${role_donor.name})`);
 
   const youssef = await prisma.donor.create({
     data: {
       name: 'Youssef Mansour',
       email: 'youssef@example.com',
+      phoneNumber: '+1-555-0123',
+      address: '123 Main Street',
+      city: 'Toronto',
+      country: 'Canada',
+      postalCode: 'M1A 1A1',
       passwordHash: donorHash,
       engagement: {
         create: {
@@ -146,10 +244,15 @@ async function main() {
           },
         ],
       },
+      donorRoles: {
+        create: {
+          roleId: role_donor.id,
+        },
+      },
     },
     include: { engagement: true, payments: true },
   });
-  console.log(`  ✓ Donor: ${youssef.email} (${youssef.payments.length} payment)`);
+  console.log(`  ✓ Donor: ${youssef.email} (${youssef.payments.length} payment, role: ${role_donor.name})`);
 
   // ─── Requests ───────────────────────────────────────────────────────────────
   const req1 = await prisma.request.create({

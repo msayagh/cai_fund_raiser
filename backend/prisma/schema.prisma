@@ -9,11 +9,22 @@ datasource db {
 }
 
 model Donor {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  isActive     Boolean  @default(true)
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  isActive      Boolean  @default(true)
+  
+  // New profile fields
+  phoneNumber   String?
+  address       String?
+  city          String?
+  country       String?
+  postalCode    String?
+  dateOfBirth   DateTime?
+  taxNumber     String?
+  companyName   String?
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -22,6 +33,7 @@ model Donor {
   requests      Request[]
   logs          ActivityLog[]
   refreshTokens RefreshToken[]
+  donorRoles    DonorRole[]
 }
 
 model Admin {
@@ -38,6 +50,7 @@ model Admin {
   paymentsRecorded Payment[]
   logs             ActivityLog[]
   refreshTokens    RefreshToken[]
+  adminRoles       AdminRole[]
 }
 
 model Engagement {
@@ -47,6 +60,8 @@ model Engagement {
   totalPledge Float
   startDate   DateTime
   endDate     DateTime?
+  // Pillar breakdown: JSON object with foundation, walls, arches, dome amounts
+  pillars     Json?     @default("{}")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -116,6 +131,73 @@ model OtpCode {
   @@index([email])
 }
 
+model Role {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  roleCapabilities RoleCapability[]
+  adminRoles       AdminRole[]
+  donorRoles       DonorRole[]
+
+  @@index([name])
+}
+
+model Capability {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  module      String   // e.g., "admin.donors", "admin.requests", "donor.profile"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roleCapabilities RoleCapability[]
+
+  @@index([module])
+}
+
+model RoleCapability {
+  id            String      @id @default(cuid())
+  roleId        String
+  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  capabilityId  String
+  capability    Capability  @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([roleId, capabilityId])
+  @@index([roleId])
+  @@index([capabilityId])
+}
+
+model AdminRole {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  grantedAt DateTime @default(now())
+
+  @@unique([adminId, roleId])
+  @@index([adminId])
+  @@index([roleId])
+}
+
+model DonorRole {
+  id        String   @id @default(cuid())
+  donorId   String
+  donor     Donor    @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  grantedAt DateTime @default(now())
+
+  @@unique([donorId, roleId])
+  @@index([donorId])
+  @@index([roleId])
+}
+
+
 model RefreshToken {
   id        String   @id @default(cuid())
   tokenHash String   @unique
@@ -126,4 +208,42 @@ model RefreshToken {
   admin     Admin?   @relation(fields: [adminId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model GlobalGoal {
+  id        String   @id @default(cuid())
+  amount    Float    @default(0)
+  raised    Float    @default(0)
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  goal        Float    @default(0)
+  raised      Float    @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String   @default("active") // active, completed, archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([status])
+}
+
+model Pillar {
+  id           String   @id @default(cuid())
+  name         String   @unique // foundation, walls, arches, dome
+  amount       Float    @default(0)
+  arabicName   String?
+  icon         String?
+  color        String?
+  lightColor   String?
+  updatedAt    DateTime @updatedAt
+  updatedBy    String?
+
+  @@index([name])
 }
