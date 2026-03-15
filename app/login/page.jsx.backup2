@@ -1,13 +1,9 @@
 'use client';
 
-// ─────────────────────────────────────────────
-// Login page — rewritten from scratch
-// Backup of previous version: page.jsx.backup2
-// ─────────────────────────────────────────────
-
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import '../page.scss';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import SitePreloader from '@/components/SitePreloader.jsx';
@@ -21,11 +17,7 @@ import { hasRefreshToken } from '@/lib/apiClient.js';
 import { getStoredSession } from '@/lib/session.js';
 import './page.scss';
 
-// ─────────────────────────────────────────────
-// English fallbacks — merged with t.auth at render time
-// ─────────────────────────────────────────────
 const DEFAULT_AUTH_TEXT = {
-    loginSeoDescription: 'Secure donor and admin login for the Centre Zad Al-Imane platform.',
     donorAccessTitle: 'Donor access',
     adminAccessTitle: 'Admin access',
     loginHeading: 'Sign in to your portal',
@@ -36,18 +28,23 @@ const DEFAULT_AUTH_TEXT = {
     adminTab: 'Admin',
     showcaseKicker: 'How it works',
     donorShowcaseTitle: 'A simple 3-step donor journey',
-    donorShowcaseCopy: 'Create your account with the same email used for your donations.',
-    donorStep1: 'Create your account and link it to your donations.',
-    donorStep2: 'Choose an engagement.',
-    donorStep3: 'Pay at your own pace and monitor your progress.',
+    adminShowcaseTitle: 'Administrative access in one place',
+    donorShowcaseCopy: 'Create your account and connect it to the same email used for your donations.',
+    adminShowcaseCopy: 'Open the admin portal to review accounts, requests, and donor activity from one secure workspace.',
+    donorStep1: 'Create your account and link it to your donations',
+    donorStep2: 'Choose an engagement that fits your capacity',
+    donorStep3: 'Pay at your own pace and monitor your progress',
+    adminStep1: 'Review donor accounts and recovery requests',
+    adminStep2: 'Track engagement, payments, and activity',
+    adminStep3: 'Keep the platform aligned from one dashboard',
     emailLabel: 'Email',
     passwordLabel: 'Password',
     rememberMe: 'Remember me',
     forgotPassword: 'Forgot password?',
     signInDonor: 'Sign in as donor',
     signInAdmin: 'Sign in as admin',
-    signingIn: 'Signing in\u2026',
-    createDonorAccount: 'Create a donor account',
+    signingIn: 'Signing in...',
+    createDonorAccount: 'Create donor account',
     alignedEmailHint: 'Use the same email address as your donations to keep your history aligned.',
     signedInAs: 'Signed in as',
     signOut: 'Sign out',
@@ -66,21 +63,19 @@ export default function LoginPage() {
     const hydratedRef = useRef(false);
     const { language, setLanguage, t, isMounted } = useTranslation();
     const { themeMode, setThemeMode, isMounted: themeMounted } = useThemeMode();
-    const theme = THEMES[themeMode] ?? THEMES.dark;
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
     const languageDropdownRef = useRef(null);
+    const theme = THEMES[themeMode] ?? THEMES.dark;
     const appReady = isMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
     const isRTL = language === 'ar' || language === 'ur';
-
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/login?lang=${language}`, siteUrl);
     const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
-
-    const auth = { ...DEFAULT_AUTH_TEXT, ...(t.auth ?? {}) };
     const pageTitle = `${t.loginTitle || 'Login'} | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const auth = { ...DEFAULT_AUTH_TEXT, ...(t.auth ?? {}) };
     const pageDescription = truncateText(
-        auth.loginSeoDescription || 'Secure donor and admin login for the Centre Zad Al-Imane platform.',
+        t.auth?.loginSeoDescription || t.loginDescription || 'Secure donor and admin login for the Centre Zad Al-Imane platform.'
     );
     const locale = t.locale ?? language;
     const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
@@ -93,52 +88,74 @@ export default function LoginPage() {
     const [status, setStatus] = useState({ loading: true, error: '', success: '', user: null, role: null });
     const [submitting, setSubmitting] = useState(false);
 
-    // ── Close language menu on outside click ──
     useEffect(() => {
-        if (!languageDropdownRef.current || !showLanguageMenu) return;
-        const close = (e) => {
-            if (!languageDropdownRef.current?.contains(e.target)) setShowLanguageMenu(false);
-        };
-        document.addEventListener('click', close);
-        return () => document.removeEventListener('click', close);
+        if (languageDropdownRef.current && showLanguageMenu) {
+            const closeMenu = (event) => {
+                if (!languageDropdownRef.current?.contains(event.target)) {
+                    setShowLanguageMenu(false);
+                }
+            };
+            document.addEventListener('click', closeMenu);
+            return () => document.removeEventListener('click', closeMenu);
+        }
     }, [showLanguageMenu]);
 
-    // ── Sync role from URL param ──
-    useEffect(() => { setActiveRole(initialRole); }, [initialRole]);
+    useEffect(() => {
+        setActiveRole(initialRole);
+    }, [initialRole]);
 
-    // ── SEO + remembered email ──
     useEffect(() => {
         if (!isMounted) return;
+
         setupSEOMetaTags({
-            language, isRTL, pageTitle, pageDescription, pageUrl,
-            socialImageUrl, logoAlt, locale, siteUrl, t,
-            pagePath: '/login', pageType: 'login',
+            language,
+            isRTL,
+            pageTitle,
+            pageDescription,
+            pageUrl,
+            socialImageUrl,
+            logoAlt,
+            locale,
+            siteUrl,
+            t,
+            pagePath: '/login',
+            pageType: 'login',
         });
-        const saved = localStorage.getItem('rememberedEmail');
-        if (saved) { setEmail(saved); setRememberMe(true); }
+
+        // Load remembered email
+        const savedEmail = localStorage.getItem('rememberedEmail');
+        if (savedEmail) {
+            setEmail(savedEmail);
+            setRememberMe(true);
+        }
     }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
-    // ── Session hydration ──
     useEffect(() => {
         if (hydratedRef.current) return;
         hydratedRef.current = true;
+
         let active = true;
 
-        async function hydrate() {
+        async function hydrateSession() {
             try {
                 const saved = getStoredSession();
-                if (!saved || !hasRefreshToken()) {
+                const canRestoreSession = Boolean(saved) && hasRefreshToken();
+
+                if (!canRestoreSession) {
                     clearTokens();
                     setStatus({ loading: false, error: '', success: '', user: null, role: null });
                     return;
                 }
+
                 const refreshed = await tryAutoLogin();
                 if (!active) return;
+
                 if (!refreshed) {
                     clearTokens();
                     setStatus({ loading: false, error: '', success: '', user: null, role: null });
                     return;
                 }
+
                 const parsed = getStoredSession();
                 setStatus({
                     loading: false,
@@ -156,30 +173,31 @@ export default function LoginPage() {
             }
         }
 
-        hydrate();
-        return () => { active = false; };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        hydrateSession();
 
-    // ── Redirect once session is confirmed ──
+        return () => {
+            active = false;
+        };
+    }, []);
+
     useEffect(() => {
         if (!status.user || status.loading) return;
         router.replace(status.role === 'admin' ? '/admin/dashboard' : '/donor/dashboard');
     }, [router, status.loading, status.role, status.user]);
 
-    // ─────────────────────────────────────────
-    // Preloader
-    // ─────────────────────────────────────────
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
-            <div className="login-page-wrapper" data-theme="dark" suppressHydrationWarning>
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading" />
+            <div
+                className="login-page-wrapper"
+                data-theme="dark"
+                suppressHydrationWarning
+                style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
+            >
+                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading site" />
             </div>
         );
     }
 
-    // ─────────────────────────────────────────
-    // Form handlers
-    // ─────────────────────────────────────────
     async function handleSubmit(event) {
         event.preventDefault();
         setSubmitting(true);
@@ -190,28 +208,39 @@ export default function LoginPage() {
                 ? await adminLogin(email.trim().toLowerCase(), password)
                 : await donorLogin(email.trim().toLowerCase(), password);
 
+            // Save email if "Remember me" is checked
             if (rememberMe) {
                 localStorage.setItem('rememberedEmail', email.trim().toLowerCase());
             } else {
                 localStorage.removeItem('rememberedEmail');
             }
 
+            const nextSession = { ...user, role: activeRole };
             setStatus({
                 loading: false,
                 error: '',
                 success: activeRole === 'admin' ? auth.adminLoginSuccess : auth.donorLoginSuccess,
-                user: { ...user, role: activeRole },
+                user: nextSession,
                 role: activeRole,
             });
             setPassword('');
-        } catch (err) {
-            const msg = err?.message || auth.unableToSignIn;
-            if (activeRole === 'donor' && msg.toLowerCase().includes('not found')) {
+        } catch (error) {
+            const errorMessage = error?.message || auth.unableToSignIn;
+
+            // If donor login fails with "not found" error, redirect to register page
+            if (activeRole === 'donor' && errorMessage.toLowerCase().includes('not found')) {
+                // Save email to sessionStorage temporarily for the register page to pick up
                 sessionStorage.setItem('registerEmail', email.trim().toLowerCase());
                 router.push('/register');
                 return;
             }
-            setStatus((prev) => ({ ...prev, loading: false, error: msg, success: '' }));
+
+            setStatus((prev) => ({
+                ...prev,
+                loading: false,
+                error: errorMessage,
+                success: '',
+            }));
         } finally {
             setSubmitting(false);
         }
@@ -222,30 +251,44 @@ export default function LoginPage() {
         setStatus({ loading: false, error: '', success: auth.signedOut, user: null, role: null });
     }
 
-    // ─────────────────────────────────────────
-    // Derived display values
-    // ─────────────────────────────────────────
-    const authTitle       = activeRole === 'admin' ? auth.adminAccessTitle  : auth.donorAccessTitle;
-    const authDescription = activeRole === 'admin' ? auth.adminLoginDescription : auth.donorLoginDescription;
-    const showcaseSteps   = [auth.donorStep1, auth.donorStep2, auth.donorStep3];
+    const authTitle = activeRole === 'admin' ? auth.adminAccessTitle : auth.donorAccessTitle;
+    const authDescription = activeRole === 'admin'
+        ? auth.adminLoginDescription
+        : auth.donorLoginDescription;
+    const showcaseTitle = auth.donorShowcaseTitle;
+    const showcaseCopy = auth.donorShowcaseCopy;
+    const showcaseSteps = [
+        auth.donorStep1,
+        auth.donorStep2,
+        auth.donorStep3,
+    ];
+    const showcaseChips = [
+        auth.donorStepChip1 || 'Account + Donations',
+        auth.donorStepChip2 || 'Choose Engagement',
+        auth.donorStepChip3 || 'Track Progress',
+    ];
 
-    // ─────────────────────────────────────────
-    // RENDER
-    // ─────────────────────────────────────────
     return (
         <div
             className="login-page-wrapper"
             data-theme={themeMode}
             dir={isRTL ? 'rtl' : 'ltr'}
             suppressHydrationWarning
+            style={{
+                '--bg-primary': theme['bg-primary'],
+                '--bg-page': theme['bg-page'],
+                '--text-primary': theme['text-primary'],
+                '--border': theme['border'],
+                '--bg-card': theme['bg-card'],
+                '--accent-gold': theme['accent-gold'],
+            }}
         >
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-                *, *::before, *::after { box-sizing: border-box; }
-                ::-webkit-scrollbar { width: 4px; }
-                ::-webkit-scrollbar-thumb { background: rgba(200,169,110,.22); border-radius: 4px; }
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
+                *{box-sizing:border-box;margin:0;padding:0}
+                ::-webkit-scrollbar{width:4px}
+                ::-webkit-scrollbar-thumb{background:${theme.scrollbarThumb};border-radius:4px}
             `}</style>
-
             <Header
                 language={language}
                 setLanguage={setLanguage}
@@ -260,90 +303,67 @@ export default function LoginPage() {
                 languageDropdownRef={languageDropdownRef}
                 isLoginPage={true}
             />
-
-            <main className="login-container">
+            <div className="login-container">
                 <div className="login-shell">
-
-                    {/* ─────────────────────────
-                        LEFT: 3-step showcase
-                    ───────────────────────── */}
-                    <section className="login-showcase" aria-label={auth.showcaseKicker}>
+                    <section className="login-showcase">
                         <div className="login-showcase-card">
-                            <p className="login-showcase-kicker">{auth.showcaseKicker}</p>
-                            <h1 className="login-showcase-title">{auth.donorShowcaseTitle}</h1>
-                            <p className="login-showcase-copy">{auth.donorShowcaseCopy}</p>
+                            <div className="login-showcase-kicker">{auth.showcaseKicker}</div>
+                            <h1 className="login-showcase-title">{showcaseTitle}</h1>
+                            <p className="login-showcase-copy">{showcaseCopy}</p>
 
-                            <div className="login-steps">
-                                {showcaseSteps.map((text, index) => (
-                                    <div key={index} className="login-step">
-                                        <div className="login-step-num" aria-hidden="true">{index + 1}</div>
-                                        <p className="login-step-text">{text}</p>
+                            <div className="login-step-flow" aria-label={auth.showcaseKicker}>
+                                {showcaseSteps.map((item, index) => (
+                                    <div key={item} className="login-step-flow-item">
+                                        <article className="login-step-card">
+                                            <div className={`login-step-image login-step-image--${index + 1}`} aria-hidden="true">
+                                                <div className="login-step-image-wash" />
+                                                <div className="login-step-image-number">{index + 1}</div>
+                                                <div className="login-step-image-icon">{index === 0 ? '👤' : index === 1 ? '🎯' : '📈'}</div>
+                                                <div className="login-step-image-chip">{showcaseChips[index]}</div>
+                                            </div>
+                                            <p className="login-step-text">{item}</p>
+                                        </article>
+                                        {index < showcaseSteps.length - 1 ? (
+                                            <div className="login-step-arrow" aria-hidden="true">→</div>
+                                        ) : null}
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </section>
 
-                    {/* ─────────────────────────
-                        RIGHT: Auth card
-                    ───────────────────────── */}
                     <div className="login-card login-card--wide">
-
                         <div className="login-content">
-                            <p className="login-eyebrow">{authTitle}</p>
-                            <h2 className="login-title">{auth.loginHeading}</h2>
+                            <div className="login-eyebrow">{authTitle}</div>
+                            <h1 className="login-title">{auth.loginHeading}</h1>
                             <p className="login-description">{authDescription}</p>
                         </div>
 
-                        {/* Role tabs */}
                         <div className="login-role-switcher" role="tablist" aria-label={auth.roleSwitcherLabel}>
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeRole === 'donor'}
-                                className={`login-role-button${activeRole === 'donor' ? ' active' : ''}`}
-                                onClick={() => setActiveRole('donor')}
-                            >
+                            <button type="button" className={`login-role-button ${activeRole === 'donor' ? 'active' : ''}`} onClick={() => setActiveRole('donor')}>
                                 {auth.donorTab}
                             </button>
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeRole === 'admin'}
-                                className={`login-role-button${activeRole === 'admin' ? ' active' : ''}`}
-                                onClick={() => setActiveRole('admin')}
-                            >
+                            <button type="button" className={`login-role-button ${activeRole === 'admin' ? 'active' : ''}`} onClick={() => setActiveRole('admin')}>
                                 {auth.adminTab}
                             </button>
                         </div>
 
-                        {/* Feedback banners */}
-                        {status.error
-                            ? <div className="login-alert login-alert--error" role="alert">{status.error}</div>
-                            : null}
-                        {status.success
-                            ? <div className="login-alert login-alert--success" role="status">{status.success}</div>
-                            : null}
+                        {status.error ? <div className="login-alert login-alert--error">{status.error}</div> : null}
+                        {status.success ? <div className="login-alert login-alert--success">{status.success}</div> : null}
 
-                        {/* Active session view */}
                         {status.user ? (
                             <div className="login-session-card">
-                                <div>
-                                    <p className="login-session-label">{auth.signedInAs}</p>
-                                    <p className="login-session-name">{status.user.name || status.user.email}</p>
-                                    <p className="login-session-meta">{status.user.email} &middot; {status.role}</p>
+                                <div className="login-session-copy">
+                                    <div className="login-session-label">{auth.signedInAs}</div>
+                                    <div className="login-session-name">{status.user.name || status.user.email}</div>
+                                    <div className="login-session-meta">{status.user.email} · {status.role}</div>
                                 </div>
-                                <button
-                                    type="button"
-                                    className="login-primary-button login-primary-button--secondary"
-                                    onClick={handleLogout}
-                                >
+                                <button type="button" className="login-primary-button login-primary-button--secondary" onClick={handleLogout}>
                                     {auth.signOut}
                                 </button>
                             </div>
                         ) : (
-                            /* Login form */
-                            <form className="login-form" onSubmit={handleSubmit} noValidate>
+                            <form className="login-form" onSubmit={handleSubmit}>
                                 <label className="login-label">
                                     <span>{auth.emailLabel}</span>
                                     <input
@@ -351,7 +371,7 @@ export default function LoginPage() {
                                         type="email"
                                         autoComplete="email"
                                         value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        onChange={(event) => setEmail(event.target.value)}
                                         required
                                     />
                                 </label>
@@ -363,7 +383,7 @@ export default function LoginPage() {
                                         type="password"
                                         autoComplete="current-password"
                                         value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
+                                        onChange={(event) => setPassword(event.target.value)}
                                         required
                                     />
                                 </label>
@@ -372,30 +392,20 @@ export default function LoginPage() {
                                     <label className="login-checkbox-label">
                                         <input
                                             type="checkbox"
-                                            className="login-checkbox"
                                             checked={rememberMe}
-                                            onChange={(e) => setRememberMe(e.target.checked)}
+                                            onChange={(event) => setRememberMe(event.target.checked)}
+                                            className="login-checkbox"
                                         />
                                         <span>{auth.rememberMe}</span>
                                     </label>
-                                    <Link
-                                        href={`/forgot-password?role=${activeRole}`}
-                                        className="login-inline-link"
-                                    >
+
+                                    <Link href={`/forgot-password?role=${activeRole}`} className="login-inline-link">
                                         {auth.forgotPassword}
                                     </Link>
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    className="login-primary-button"
-                                    disabled={submitting || status.loading}
-                                >
-                                    {submitting
-                                        ? auth.signingIn
-                                        : activeRole === 'admin'
-                                            ? auth.signInAdmin
-                                            : auth.signInDonor}
+                                <button type="submit" className="login-primary-button" disabled={submitting || status.loading}>
+                                    {submitting ? auth.signingIn : activeRole === 'admin' ? auth.signInAdmin : auth.signInDonor}
                                 </button>
 
                                 {activeRole === 'donor' && (
@@ -407,13 +417,11 @@ export default function LoginPage() {
                         )}
 
                         <div className="login-links login-links--footer">
-                            <p className="login-footer-note">{auth.alignedEmailHint}</p>
+                            <span className="login-footer-note">{auth.alignedEmailHint}</span>
                         </div>
                     </div>
-
                 </div>
-            </main>
-
+            </div>
             <Footer t={isMounted ? t : {}} />
         </div>
     );
