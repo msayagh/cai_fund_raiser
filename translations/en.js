@@ -111,6 +111,184 @@ const en = {
   accessibilityResetZoom: "Reset text size",
   accessibilityResetZoomShort: "100%",
   backToHome: "Back to Home",
+
+  // Admin Dashboard Translations
+  admin: {
+    dashboard: "Admin Dashboard",
+    overview: "Overview",
+    donors: "Donors",
+    requests: "Requests",
+    admins: "Admins",
+    logs: "Activity Logs",
+    settings: "Settings",
+    payment: "Payment",
+    accounts: "Accounts",
+    help: "Help",
+    globalGoal: "Global Goal",
+    campaigns: "Campaigns",
+
+    // Pillars
+    pillars: "Pillar Breakdown",
+    foundation: "Foundation",
+    walls: "Walls",
+    arches: "Arches",
+    dome: "Dome",
+
+    // Overview Stats
+    totalDonors: "Total Donors",
+    totalRaised: "Amount Raised",
+    activeEngagements: "Active Engagements",
+    pendingRequests: "Pending Requests",
+
+    // Global Goal
+    globalGoalTitle: "Set Global Goal",
+    globalGoalAmount: "Global Goal Amount",
+    goalProgress: "Goal Progress",
+    amountRaised: "Amount Raised",
+    remainingAmount: "Remaining",
+    goalPercentage: "Progress",
+
+    // Campaigns
+    campaignsList: "All Campaigns",
+    newCampaign: "Create Campaign",
+    campaignName: "Campaign Name",
+    campaignDescription: "Description",
+    campaignStartDate: "Start Date",
+    campaignEndDate: "End Date",
+    campaignGoal: "Campaign Goal",
+    campaignStatus: "Status",
+    active: "Active",
+    completed: "Completed",
+    archived: "Archived",
+
+    // Settings
+    generalSettings: "General Settings",
+    organizationName: "Organization Name",
+    organizationEmail: "Email",
+    organizationPhone: "Phone",
+    organizationAddress: "Address",
+    organizationWebsite: "Website",
+    defaultCurrency: "Default Currency",
+    defaultLanguage: "Default Language",
+    saveChanges: "Save Changes",
+
+    // Security
+    security: "Security",
+    twoFactorAuth: "Two-Factor Authentication",
+    twoFactorEmail: "Protect your account with SMS or authenticator app",
+    sessionTimeout: "Session Timeout",
+    autoLogout: "Auto-logout after inactivity",
+    loginActivity: "Login Activity",
+    activeSessions: "Active Sessions",
+    changePassword: "Change Password",
+    lastChangedPasswordDaysAgo: (days) => `Last changed ${days} days ago`,
+
+    // Email Notifications
+    emailNotifications: "Email Notifications",
+    newDonorRegistrations: "New donor registrations",
+    newPaymentsReceived: "New payments received",
+    pendingRequestsApproval: "Pending requests awaiting approval",
+    dailyActivityDigest: "Daily activity digest",
+    systemAlerts: "System alerts and warnings",
+
+    // Payment Methods
+    paymentMethods: "Payment Methods",
+    stripe: "Stripe",
+    bankTransfer: "Bank Transfer",
+    paypal: "PayPal",
+    applePay: "Apple Pay",
+    connected: "Connected",
+    notConnected: "Not connected",
+    configure: "Configure",
+    connect: "Connect",
+    disconnect: "Disconnect",
+
+    // Payment Analytics
+    paymentAnalytics: "Payment Analytics",
+    totalVolume: "Total Volume",
+    transactionCount: "Transactions",
+    avgTransaction: "Avg Transaction",
+    successRate: "Success Rate",
+    topPaymentMethods: "Top Payment Methods",
+
+    // Payment Settings
+    paymentSettings: "Payment Settings",
+    minimumDonation: "Minimum Donation Amount",
+    maximumDonation: "Maximum Donation Amount",
+    paymentConfirmationEmail: "Payment Confirmation Email",
+    sendToBothDonorAndAdmins: "Send to both donor and admins",
+    sendOnlyToDonor: "Send only to donor",
+    sendOnlyToAdmins: "Send only to admins",
+    doNotSend: "Do not send",
+    allowRecurringDonations: "Allow recurring donations",
+    requireDonorLogin: "Require donor login for donations",
+
+    // Account Management
+    yourAccount: "Your Account",
+    fullName: "Full Name",
+    emailAddress: "Email Address",
+    phoneNumber: "Phone Number",
+    role: "Role",
+    status: "Status",
+    updateProfile: "Update Profile",
+
+    // Permissions
+    permissionSettings: "Permission Settings",
+    donorManagement: "Donor Management",
+    viewDonorList: "View donor list",
+    createEditDonors: "Create/edit donors",
+    deleteDonors: "Delete donors",
+    viewDonorPayments: "View donor payments",
+    financialManagement: "Financial Management",
+    recordPayments: "Record payments",
+    viewPaymentReports: "View payment reports",
+    deletePayments: "Delete payments",
+    exportFinancialData: "Export financial data",
+    adminManagement: "Admin Management",
+    viewAdminList: "View admin list",
+    createEditAdmins: "Create/edit admins",
+    deleteAdmins: "Delete admins",
+    savePermissions: "Save Permissions",
+
+    // Sessions
+    sessions: "Active Sessions",
+    currentSession: "Current Session",
+    signOut: "Sign Out",
+    signOutAllOtherSessions: "Sign Out All Other Sessions",
+    deviceInfo: (device, os) => `${device} on ${os}`,
+    lastActive: "Last active",
+
+    // Help
+    faq: "Frequently Asked Questions",
+    gettingStartedGuide: "Getting Started Guide",
+    contactSupport: "Contact & Support",
+    emailSupport: "Email Support",
+    averageResponseTime: "Average response time",
+    liveChat: "Live Chat",
+    startChat: "Start Chat",
+    documentation: "Documentation",
+    readDocumentation: "Read Documentation",
+    reportIssue: "Report an Issue",
+    submitBugReport: "Submit Bug Report",
+
+    // System Info
+    systemInformation: "System Information",
+    applicationVersion: "Application Version",
+    lastUpdated: "Last Updated",
+    database: "Database",
+    apiStatus: "API Status",
+    uptime: "Uptime (30 days)",
+    totalDonationsAmount: "Total Donations",
+    overallSystemStatus: "Overall System Status",
+    allSystemsOnline: "All Systems Online",
+    connected: "Connected",
+    operational: "Operational",
+
+    // Payment Date
+    paymentDate: "Payment Date",
+    dateCannotBeFuture: "Payment date cannot be in the future",
+    selectDate: "Select date",
+  }
 };
 
 export default en;

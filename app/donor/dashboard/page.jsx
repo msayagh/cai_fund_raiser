@@ -14,6 +14,7 @@ import { createEngagement, getMe, getMyPayments, getMyRequests, updateEngagement
 import { createRequest } from '@/lib/requestsApi.js';
 import { clearTokens, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession, setStoredSession } from '@/lib/session.js';
+import { startTokenRefreshManager, stopTokenRefreshManager } from '@/lib/tokenRefreshManager.js';
 import OverviewTab from './OverviewTab.jsx';
 import PaymentsTab from './PaymentsTab.jsx';
 import ProfileTab from './ProfileTab.jsx';
@@ -50,10 +51,16 @@ export default function DonorDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTabState] = useState('overview');
+    const setActiveTab = (tab) => {
+        setActiveTabState(tab);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('donorDashboardTab', tab);
+        }
+    };
     const [profileForm, setProfileForm] = useState({ name: '', email: '' });
     const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    const [engagementForm, setEngagementForm] = useState({ totalPledge: '', endDate: '' });
+    const [engagementForm, setEngagementForm] = useState({ totalPledge: '', pillars: {}, endDate: '' });
     const [requestForm, setRequestForm] = useState({ type: 'other', message: '' });
     const appReady = translationMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
@@ -95,6 +102,7 @@ export default function DonorDashboardPage() {
                 if (active) {
                     setLoading(false);
                 }
+                stopTokenRefreshManager();
                 router.replace('/login');
                 return;
             }
@@ -104,12 +112,16 @@ export default function DonorDashboardPage() {
                 if (!refreshed) {
                     clearTokens();
                     clearStoredSession();
+                    stopTokenRefreshManager();
                     if (active) {
                         setError('Your session has expired. Please log in again.');
                     }
                     router.replace('/login');
                     return;
                 }
+
+                // ✓ Start periodic token refresh to keep session alive
+                startTokenRefreshManager();
 
                 const [me, myPayments, myRequests] = await Promise.all([
                     getMe(),
@@ -124,6 +136,7 @@ export default function DonorDashboardPage() {
                 setProfileForm({ name: me.name || '', email: me.email || '' });
                 setEngagementForm({
                     totalPledge: me.engagement?.totalPledge ? String(me.engagement.totalPledge) : '',
+                    pillars: me.engagement?.pillars || {},
                     endDate: me.engagement?.endDate ? String(me.engagement.endDate).slice(0, 10) : '',
                 });
                 setStoredSession({ ...session, ...me, role: 'donor' });
@@ -132,6 +145,7 @@ export default function DonorDashboardPage() {
                 if (!active) return;
                 clearTokens();
                 clearStoredSession();
+                stopTokenRefreshManager();
                 setError(err?.message || 'Unable to load donor dashboard.');
                 router.replace('/login');
                 return;
@@ -143,8 +157,19 @@ export default function DonorDashboardPage() {
         loadDashboard();
         return () => {
             active = false;
+            stopTokenRefreshManager();
         };
     }, [router]);
+
+    // Restore active tab from localStorage on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedTab = localStorage.getItem('donorDashboardTab');
+            if (savedTab && ['overview', 'payments', 'profile', 'requests'].includes(savedTab)) {
+                setActiveTabState(savedTab);
+            }
+        }
+    }, []);
 
     const paymentTotal = useMemo(
         () => payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
@@ -203,17 +228,29 @@ export default function DonorDashboardPage() {
         setError('');
         setSuccess('');
 
+        // Build request body - support both pillar-based and traditional totalPledge
         const body = {
-            totalPledge: Number(engagementForm.totalPledge),
             endDate: engagementForm.endDate ? new Date(engagementForm.endDate).toISOString() : null,
         };
+
+        // If pillars have amounts, send them instead of totalPledge
+        if (engagementForm.pillars && Object.values(engagementForm.pillars).some(v => v > 0)) {
+            body.pillars = engagementForm.pillars;
+        } else if (engagementForm.totalPledge) {
+            // Fallback to totalPledge if no pillars selected
+            body.totalPledge = Number(engagementForm.totalPledge);
+        } else {
+            setError('Please select pillar amounts or enter a pledge amount.');
+            return;
+        }
 
         try {
             const updated = profile?.engagement
                 ? await updateEngagement(body)
                 : await createEngagement({
-                    totalPledge: body.totalPledge,
-                    ...(body.endDate ? { endDate: body.endDate } : {}),
+                    ...body,
+                    // If creating new engagement with traditional pledge, add it
+                    ...(engagementForm.totalPledge && !engagementForm.pillars ? { totalPledge: Number(engagementForm.totalPledge) } : {}),
                 });
 
             setProfile((prev) => ({ ...prev, engagement: updated }));

@@ -179,20 +179,17 @@ const updatePillar = async (adminId, adminName, name, { amount }) => {
 
     pillar = await prisma.pillar.update({
         where: { name },
-        data: { amount, updatedBy: adminId === 'anonymous' ? null : adminId }
+        data: { amount, updatedBy: adminId }
     });
 
-    // Only log if admin is authenticated
-    if (adminId !== 'anonymous') {
-        await createLog({
-            actor: `Admin: ${adminName}`,
-            actorType: 'admin',
-            actorId: adminId,
-            action: 'pillar_updated',
-            details: `Pillar ${name} amount updated to $${amount}`,
-            adminId
-        });
-    }
+    await createLog({
+        actor: `Admin: ${adminName}`,
+        actorType: 'admin',
+        actorId: adminId,
+        action: 'pillar_updated',
+        details: `Pillar ${name} amount updated to $${amount}`,
+        adminId
+    });
 
     return pillar;
 };
@@ -205,28 +202,25 @@ const updateAllPillars = async (adminId, adminName, pillarsData) => {
         if (!pillar) {
             // Create if doesn't exist
             pillar = await prisma.pillar.create({
-                data: { name, amount, updatedBy: adminId === 'anonymous' ? null : adminId }
+                data: { name, amount, updatedBy: adminId }
             });
         } else {
             pillar = await prisma.pillar.update({
                 where: { name },
-                data: { amount, updatedBy: adminId === 'anonymous' ? null : adminId }
+                data: { amount, updatedBy: adminId }
             });
         }
         updated.push(pillar);
     }
 
-    // Only log if admin is authenticated
-    if (adminId !== 'anonymous') {
-        await createLog({
-            actor: `Admin: ${adminName}`,
-            actorType: 'admin',
-            actorId: adminId,
-            action: 'pillars_updated',
-            details: `All pillars updated`,
-            adminId
-        });
-    }
+    await createLog({
+        actor: `Admin: ${adminName}`,
+        actorType: 'admin',
+        actorId: adminId,
+        action: 'pillars_updated',
+        details: `All pillars updated`,
+        adminId
+    });
 
     return updated;
 };

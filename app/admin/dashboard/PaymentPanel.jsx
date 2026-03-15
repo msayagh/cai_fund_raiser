@@ -1,5 +1,23 @@
-export default function PaymentPanel({ donor, payments, onAddPayment, loading, inputStyle, cardStyle }) {
+import { downloadPaymentConfirmation } from '@/lib/adminApi.js';
+import { useState } from 'react';
+
+export default function PaymentPanel({ donor, payments, onAddPayment, loading, inputStyle, cardStyle, t }) {
+    const [paymentDateError, setPaymentDateError] = useState('');
+
     if (!donor) return null;
+
+    const handlePaymentDateChange = (e) => {
+        const selectedDate = new Date(e.target.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate > today) {
+            setPaymentDateError(t('admin.dateCannotBeFuture') || 'Payment date cannot be in the future');
+            e.target.value = '';
+        } else {
+            setPaymentDateError('');
+        }
+    };
 
     const pledge = Number(donor.engagement?.totalPledge || 0);
     const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -8,7 +26,6 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
 
     const handleDownloadConfirmation = async (payment) => {
         try {
-            const { downloadPaymentConfirmation } = await import('@/lib/adminApi.js');
             const blob = await downloadPaymentConfirmation(donor.id, payment.id);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -19,7 +36,8 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         } catch (err) {
-            console.error('Error downloading confirmation:', err);
+            const errorMsg = err?.message || 'Unknown error occurred while downloading payment confirmation';
+            alert(`Failed to download payment confirmation: ${errorMsg}`);
         }
     };
 
@@ -118,12 +136,21 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
                             <option value="check">Check</option>
                         </select>
                     </div>
-                    <input
-                        type="date"
-                        style={inputStyle}
-                        id="payment-date"
-                        required
-                    />
+                    <div>
+                        <input
+                            type="date"
+                            style={{ ...inputStyle, borderColor: paymentDateError ? '#ff6b6b' : 'var(--border)' }}
+                            id="payment-date"
+                            required
+                            onChange={handlePaymentDateChange}
+                            max={new Date().toISOString().split('T')[0]}
+                        />
+                        {paymentDateError && (
+                            <div style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>
+                                ⚠️ {paymentDateError}
+                            </div>
+                        )}
+                    </div>
                     <textarea
                         style={{ ...inputStyle, minHeight: 80 }}
                         placeholder="Payment note (optional)"

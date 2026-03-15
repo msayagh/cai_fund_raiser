@@ -1,3 +1,5 @@
+import PillarSelector from '../../../components/PillarSelector';
+
 export default function ProfileTab({ profileForm, setProfileForm, passwordForm, setPasswordForm, engagementForm, setEngagementForm, profile, sectionCardStyle, inputStyle, handleProfileUpdate, handlePasswordUpdate, handleEngagementUpdate }) {
     return (
         <>
@@ -50,21 +52,18 @@ export default function ProfileTab({ profileForm, setProfileForm, passwordForm, 
             </div>
 
             <div style={sectionCardStyle}>
-                <div className="dashboard-section-title">Engagement</div>
-                <form className="dashboard-form" onSubmit={handleEngagementUpdate}>
-                    <input
-                        style={inputStyle}
-                        type="number"
-                        min="1"
-                        value={engagementForm.totalPledge}
-                        onChange={(e) => setEngagementForm((prev) => ({ ...prev, totalPledge: e.target.value }))}
-                        placeholder="Pledge amount"
+                <form onSubmit={handleEngagementUpdate}>
+                    <PillarSelector
+                        pillars={engagementForm.pillars || {}}
+                        onPillarsChange={(pillars) => setEngagementForm((prev) => ({ ...prev, pillars }))}
+                        totalPledgeMode={false}
                     />
                     <input
                         style={inputStyle}
                         type="date"
                         value={engagementForm.endDate}
                         onChange={(e) => setEngagementForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                        placeholder="Commitment end date"
                     />
                     <button className="dashboard-button" type="submit">
                         {profile?.engagement ? 'Update engagement' : 'Create engagement'}

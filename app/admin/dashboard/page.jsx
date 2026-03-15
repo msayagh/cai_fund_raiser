@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import SitePreloader from '@/components/SitePreloader.jsx';
+import AdminSidebar from '@/components/AdminSidebar.jsx';
 import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES, MOBILE_BREAKPOINT } from '@/constants/config.js';
@@ -32,9 +33,13 @@ import {
 } from '@/lib/adminApi.js';
 import { clearTokens, logout, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession } from '@/lib/session.js';
+import { startTokenRefreshManager, stopTokenRefreshManager } from '@/lib/tokenRefreshManager.js';
 import { donorsToCSV, downloadCSV, parseCSV, validateDonors } from '@/lib/bulkDonorUtils.js';
 import AddDonorModal from './AddDonorModal.jsx';
 import PaymentPanel from './PaymentPanel.jsx';
+import GlobalGoalSection from './GlobalGoalSection.jsx';
+import CampaignsSection from './CampaignsSection.jsx';
+import PillarsOverview from './PillarsOverview.jsx';
 
 const cardStyle = {
     background: 'var(--bg-card)',
@@ -50,6 +55,13 @@ const inputStyle = {
     border: '1px solid var(--border)',
     background: 'rgba(255,255,255,0.03)',
     color: 'var(--text-primary)',
+};
+
+const getTranslation = (t, key, fallback) => {
+    if (typeof t === 'function') {
+        return t(key) || fallback;
+    }
+    return fallback;
 };
 
 export default function AdminDashboardPage() {
@@ -79,7 +91,13 @@ export default function AdminDashboardPage() {
     const [bulkUploadProgress, setBulkUploadProgress] = useState('');
     const [requests, setRequests] = useState([]);
     const [logs, setLogs] = useState([]);
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTabState] = useState('overview');
+    const setActiveTab = (tab) => {
+        setActiveTabState(tab);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminDashboardTab', tab);
+        }
+    };
     const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '' });
     const [resetPasswordByDonor, setResetPasswordByDonor] = useState({});
     const [requestDrafts, setRequestDrafts] = useState({});
@@ -95,6 +113,11 @@ export default function AdminDashboardPage() {
     const [recentLogsPage, setRecentLogsPage] = useState(1);
     const [logsPage, setLogsPage] = useState(1);
     const [message, setMessage] = useState('');
+
+    // New state for global goal, campaigns, and pillars
+    const [globalGoal, setGlobalGoal] = useState({ amount: 50000, raised: 0 });
+    const [campaigns, setCampaigns] = useState([]);
+    const [pillars, setPillars] = useState({ foundation: 0, walls: 0, arches: 0, dome: 0 });
     const appReady = translationMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
     const isRTL = ['ar', 'ur'].includes(language);
@@ -162,6 +185,7 @@ export default function AdminDashboardPage() {
                 if (active) {
                     setLoading(false);
                 }
+                stopTokenRefreshManager();
                 router.replace('/login');
                 return;
             }
@@ -171,12 +195,16 @@ export default function AdminDashboardPage() {
                 if (!refreshed) {
                     clearTokens();
                     clearStoredSession();
+                    stopTokenRefreshManager();
                     if (active) {
                         setError('Your session has expired. Please log in again.');
                     }
                     router.replace('/login');
                     return;
                 }
+
+                // ✓ Start periodic token refresh to keep session alive
+                startTokenRefreshManager();
 
                 await loadAllData();
                 if (!active) return;
@@ -185,6 +213,7 @@ export default function AdminDashboardPage() {
                 if (!active) return;
                 clearTokens();
                 clearStoredSession();
+                stopTokenRefreshManager();
                 setError(err?.message || 'Unable to load admin dashboard.');
                 router.replace('/login');
                 return;
@@ -196,8 +225,19 @@ export default function AdminDashboardPage() {
         loadDashboard();
         return () => {
             active = false;
+            stopTokenRefreshManager();
         };
     }, [router]);
+
+    // Restore active tab from localStorage on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedTab = localStorage.getItem('adminDashboardTab');
+            if (savedTab && ['overview', 'donors', 'requests', 'admins', 'logs', 'settings', 'payment', 'accounts', 'help'].includes(savedTab)) {
+                setActiveTabState(savedTab);
+            }
+        }
+    }, []);
 
     const filteredDonors = useMemo(() => {
         const query = donorFilter.query.trim().toLowerCase();
@@ -497,6 +537,7 @@ export default function AdminDashboardPage() {
     }
 
     async function handleLogout() {
+        stopTokenRefreshManager();
         await logout();
         router.replace('/login');
     }
@@ -721,7 +762,7 @@ export default function AdminDashboardPage() {
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@400;600&family=Amiri:wght@400;700&display=swap');
                 *{box-sizing:border-box}
                 .admin-shell{width:100%;max-width:var(--page-max-width);margin:0 auto;padding:24px 20px 64px;display:grid;gap:24px;position:relative}
-                .admin-layout{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
+                .admin-layout{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start}
                 .admin-tab-list{display:grid;gap:10px}
                 .admin-tab{padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-primary);cursor:pointer;text-align:left}
                 .admin-tab.active{background:var(--accent-gold);color:#111}
@@ -934,46 +975,59 @@ export default function AdminDashboardPage() {
                                         loading={selectedDonorSaving}
                                         inputStyle={inputStyle}
                                         cardStyle={cardStyle}
+                                        t={t}
                                     />
                                 </div>
                             </div>
                         </div>
                     ) : null}
                     <div className="admin-layout">
-                        <aside style={cardStyle}>
-                            <div style={{ fontFamily: "'Cinzel', serif", color: 'var(--accent-gold)', fontSize: 24, marginBottom: 18 }}>
-                                Admin Dashboard
-                            </div>
-                            <div className="admin-tab-list">
-                                {[
-                                    ['overview', 'Overview'],
-                                    ['donors', 'Donors'],
-                                    ['requests', 'Requests'],
-                                    ['admins', 'Admins'],
-                                    ['logs', 'Logs'],
-                                ].map(([key, label]) => (
-                                    <button key={key} type="button" className={`admin-tab ${activeTab === key ? 'active' : ''}`} onClick={() => setActiveTab(key)}>
-                                        {label}
-                                    </button>
-                                ))}
-                                <button type="button" className="admin-tab" onClick={handleLogout}>
-                                    Logout
-                                </button>
-                            </div>
-                        </aside>
+                        <AdminSidebar
+                            activeTab={activeTab}
+                            setActiveTab={setActiveTab}
+                            isRTL={isRTL}
+                            onLogout={handleLogout}
+                        />
 
                         <section style={{ display: 'grid', gap: 24 }}>
                             {activeTab === 'overview' ? (
                                 <>
                                     <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Campaign Snapshot</div>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>📊 {getTranslation(t, 'admin.dashboard', 'Dashboard')}</div>
                                         <div className="admin-grid">
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.totalDonors}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total raised</div><div style={{ fontSize: 30, fontWeight: 700 }}>${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Active engagements</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.activeEngagements}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Pending requests</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.pendingRequests}</div></div>
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>{getTranslation(t, 'admin.totalDonors', 'Total Donors')}</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.totalDonors}</div></div>
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>{getTranslation(t, 'admin.totalRaised', 'Total Raised')}</div><div style={{ fontSize: 30, fontWeight: 700 }}>${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>{getTranslation(t, 'admin.activeEngagements', 'Active Engagements')}</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.activeEngagements}</div></div>
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>{getTranslation(t, 'admin.pendingRequests', 'Pending Requests')}</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.pendingRequests}</div></div>
                                         </div>
                                     </div>
+
+                                    {/* Global Goal Section */}
+                                    <GlobalGoalSection
+                                        t={t}
+                                        cardStyle={cardStyle}
+                                        inputStyle={inputStyle}
+                                        goal={globalGoal}
+                                        onGoalUpdate={(newGoal) => {
+                                            setGlobalGoal(newGoal);
+                                            return Promise.resolve();
+                                        }}
+                                    />
+
+                                    {/* Pillars Overview */}
+                                    <PillarsOverview
+                                        t={t}
+                                        pillars={pillars}
+                                        totalRaised={stats.totalRaised}
+                                    />
+
+                                    {/* Campaigns Section */}
+                                    <CampaignsSection
+                                        t={t}
+                                        cardStyle={cardStyle}
+                                        inputStyle={inputStyle}
+                                        campaigns={campaigns}
+                                    />
                                     <div className="admin-two-col">
                                         <div style={cardStyle}>
                                             <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Pending Queue</div>
@@ -1494,6 +1548,587 @@ export default function AdminDashboardPage() {
                                             <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
                                             <span>Page {logsPage} of {logsTotalPages}</span>
                                             <button type="button" className="admin-button secondary" disabled={logsPage >= logsTotalPages} onClick={() => setLogsPage((page) => Math.min(logsTotalPages, page + 1))}>Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {activeTab === 'settings' ? (
+                                <div style={{ display: 'grid', gap: 24 }}>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>⚙️ {getTranslation(t, 'admin.generalSettings', 'General Settings')}</div>
+                                        <div className="admin-form">
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Organization Name</label>
+                                                <input style={inputStyle} type="text" defaultValue="Centre Zad Al-Imane" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Email</label>
+                                                <input style={inputStyle} type="email" defaultValue="admin@masjid.com" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Phone</label>
+                                                <input style={inputStyle} type="tel" defaultValue="+1 (555) 000-0000" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Address</label>
+                                                <textarea style={{ ...inputStyle, minHeight: 80 }} defaultValue="123 Mosque Street, City, Country 12345" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Website</label>
+                                                <input style={inputStyle} type="url" defaultValue="https://masjid.example.com" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Default Currency</label>
+                                                <select style={inputStyle}>
+                                                    <option>USD - US Dollar</option>
+                                                    <option>EUR - Euro</option>
+                                                    <option>GBP - British Pound</option>
+                                                    <option>CAD - Canadian Dollar</option>
+                                                    <option>AED - UAE Dirham</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Default Language</label>
+                                                <select style={inputStyle}>
+                                                    <option>English</option>
+                                                    <option>العربية - Arabic</option>
+                                                    <option>Français - French</option>
+                                                    <option>Español - Spanish</option>
+                                                </select>
+                                            </div>
+                                            <button type="button" className="admin-button">Save Changes</button>
+                                        </div>
+                                    </div>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>🔐 Security</div>
+                                        <div style={{ display: 'grid', gap: 16 }}>
+                                            <div className="admin-item" style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 700 }}>Two-Factor Authentication</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Protect your account with SMS or authenticator app</div>
+                                                </div>
+                                                <button type="button" className="admin-button secondary">Enable</button>
+                                            </div>
+                                            <div className="admin-item" style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 700 }}>Session Timeout</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Auto-logout after 30 minutes of inactivity</div>
+                                                </div>
+                                                <select style={{ ...inputStyle, width: 120 }}>
+                                                    <option>15 minutes</option>
+                                                    <option selected>30 minutes</option>
+                                                    <option>1 hour</option>
+                                                    <option>2 hours</option>
+                                                </select>
+                                            </div>
+                                            <div className="admin-item" style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 700 }}>Login Activity</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Last login: Today at 2:30 PM from Chrome on macOS</div>
+                                                </div>
+                                                <button type="button" className="admin-button secondary">View All</button>
+                                            </div>
+                                            <div className="admin-item" style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 700 }}>Active Sessions</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>3 active sessions across devices</div>
+                                                </div>
+                                                <button type="button" className="admin-button secondary">Manage</button>
+                                            </div>
+                                            <div className="admin-item" style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 700 }}>Change Password</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Last changed 90 days ago</div>
+                                                </div>
+                                                <button type="button" className="admin-button secondary">Update</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>📧 Email Notifications</div>
+                                        <div style={{ display: 'grid', gap: 12 }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                <span>New donor registrations</span>
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                <span>New payments received</span>
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                <span>Pending requests awaiting approval</span>
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                <input type="checkbox" style={{ width: 18, height: 18 }} />
+                                                <span>Daily activity digest</span>
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                <span>System alerts and warnings</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {activeTab === 'payment' ? (
+                                <div style={{ display: 'grid', gap: 24 }}>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>💳 Payment Methods</div>
+                                        <div style={{ display: 'grid', gap: 16 }}>
+                                            <div style={{ padding: 20, border: '1px solid var(--border)', borderRadius: 8, background: 'rgba(126, 184, 160, 0.05)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 16 }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, fontSize: 16 }}>Stripe</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Stripe Inc. • Connected 3 days ago</div>
+                                                        <div style={{ color: '#7EB8A0', fontSize: 14, marginTop: 8 }}>✓ Active and verified</div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 8 }}>
+                                                        <button type="button" className="admin-button secondary">Configure</button>
+                                                        <button type="button" className="admin-button secondary">Disconnect</button>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Account ID</div>
+                                                        <div style={{ fontWeight: 700, marginTop: 4 }}>acct_1234567890</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Commission Rate</div>
+                                                        <div style={{ fontWeight: 700, marginTop: 4 }}>2.9% + $0.30</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Volume (This Month)</div>
+                                                        <div style={{ fontWeight: 700, marginTop: 4 }}>$12,450</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 20, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 16 }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, fontSize: 16 }}>Bank Transfer</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Direct bank transfers • Configured</div>
+                                                        <div style={{ color: '#7EB8A0', fontSize: 14, marginTop: 8 }}>✓ Active</div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 8 }}>
+                                                        <button type="button" className="admin-button secondary">Configure</button>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Bank Account</div>
+                                                        <div style={{ fontWeight: 700, marginTop: 4 }}>****1234</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Fees</div>
+                                                        <div style={{ fontWeight: 700, marginTop: 4 }}>None</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Volume (This Month)</div>
+                                                        <div style={{ fontWeight: 700, marginTop: 4 }}>$8,230</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 20, border: '1px solid var(--border)', borderRadius: 8, opacity: 0.6 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, fontSize: 16 }}>PayPal</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>PayPal Inc. • Not connected</div>
+                                                    </div>
+                                                    <button type="button" className="admin-button">Connect PayPal</button>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 20, border: '1px solid var(--border)', borderRadius: 8, opacity: 0.6 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, fontSize: 16 }}>Apple Pay</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Apple Inc. • Not connected</div>
+                                                    </div>
+                                                    <button type="button" className="admin-button">Connect Apple Pay</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>📊 Payment Analytics</div>
+                                        <div className="admin-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+                                            <div style={{ padding: 16, background: 'rgba(126, 184, 160, 0.1)', borderRadius: 8 }}>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Total Volume</div>
+                                                <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>$45,230</div>
+                                                <div style={{ color: '#7EB8A0', fontSize: 12, marginTop: 4 }}>↑ +12% from last month</div>
+                                            </div>
+                                            <div style={{ padding: 16, background: 'rgba(126, 184, 160, 0.1)', borderRadius: 8 }}>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Transactions</div>
+                                                <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>234</div>
+                                                <div style={{ color: '#7EB8A0', fontSize: 12, marginTop: 4 }}>↑ +8 from yesterday</div>
+                                            </div>
+                                            <div style={{ padding: 16, background: 'rgba(126, 184, 160, 0.1)', borderRadius: 8 }}>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Avg Transaction</div>
+                                                <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>$193</div>
+                                                <div style={{ color: '#7EB8A0', fontSize: 12, marginTop: 4 }}>Stable from last month</div>
+                                            </div>
+                                            <div style={{ padding: 16, background: 'rgba(126, 184, 160, 0.1)', borderRadius: 8 }}>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Success Rate</div>
+                                                <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>99.2%</div>
+                                                <div style={{ color: '#7EB8A0', fontSize: 12, marginTop: 4 }}>↑ +0.5% from last month</div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                                            <div style={{ fontWeight: 700, marginBottom: 16 }}>Top Payment Methods (This Month)</div>
+                                            <div style={{ display: 'grid', gap: 12 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                    <span>Stripe Credit Card</span>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontWeight: 700 }}>$28,450</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>149 transactions</div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                    <span>Bank Transfer</span>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontWeight: 700 }}>$12,780</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>45 transactions</div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12 }}>
+                                                    <span>Stripe Other</span>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontWeight: 700 }}>$4,000</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>40 transactions</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>⚙️ Payment Settings</div>
+                                        <div className="admin-form">
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Minimum Donation Amount</label>
+                                                <input style={inputStyle} type="number" defaultValue="5" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Maximum Donation Amount</label>
+                                                <input style={inputStyle} type="number" defaultValue="99999" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Payment Confirmation Email</label>
+                                                <select style={inputStyle}>
+                                                    <option selected>Send to both donor and admins</option>
+                                                    <option>Send only to donor</option>
+                                                    <option>Send only to admins</option>
+                                                    <option>Do not send</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                    <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                    <span>Allow recurring donations</span>
+                                                </label>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                    <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                    <span>Require donor login for donations</span>
+                                                </label>
+                                            </div>
+                                            <button type="button" className="admin-button">Save Settings</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {activeTab === 'accounts' ? (
+                                <div style={{ display: 'grid', gap: 24 }}>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>👤 Your Account</div>
+                                        <div className="admin-form">
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Full Name</label>
+                                                <input style={inputStyle} type="text" defaultValue="Administrator" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Email Address</label>
+                                                <input style={inputStyle} type="email" defaultValue="admin@masjid.com" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Phone Number</label>
+                                                <input style={inputStyle} type="tel" defaultValue="+1 (555) 000-0000" />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Role</label>
+                                                <input style={{ ...inputStyle, background: 'rgba(255,255,255,0.02)', color: 'var(--text-muted)' }} type="text" defaultValue="Super Administrator" disabled />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Status</label>
+                                                <select style={inputStyle}>
+                                                    <option selected>Active</option>
+                                                    <option>Inactive</option>
+                                                    <option>Suspended</option>
+                                                </select>
+                                            </div>
+                                            <button type="button" className="admin-button">Update Profile</button>
+                                        </div>
+                                    </div>
+
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>🔐 Permission Settings</div>
+                                        <div style={{ display: 'grid', gap: 16 }}>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 12 }}>Donor Management</div>
+                                                <div style={{ display: 'grid', gap: 8, paddingLeft: 16 }}>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>View donor list</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>Create/edit donors</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>Delete donors</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>View donor payments</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 12 }}>Financial Management</div>
+                                                <div style={{ display: 'grid', gap: 8, paddingLeft: 16 }}>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>Record payments</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>View payment reports</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>Delete payments</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" style={{ width: 18, height: 18 }} />
+                                                        <span>Export financial data</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 12 }}>Admin Management</div>
+                                                <div style={{ display: 'grid', gap: 8, paddingLeft: 16 }}>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>View admin list</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>Create/edit admins</span>
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                                        <input type="checkbox" defaultChecked style={{ width: 18, height: 18 }} />
+                                                        <span>Delete admins</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" className="admin-button" style={{ marginTop: 20, width: '100%' }}>Save Permissions</button>
+                                    </div>
+
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>📋 Active Sessions</div>
+                                        <div style={{ display: 'grid', gap: 16 }}>
+                                            <div style={{ padding: 16, border: '2px solid var(--accent-gold)', borderRadius: 8, background: 'rgba(218, 198, 118, 0.05)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700 }}>Current Session</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Chrome on macOS</div>
+                                                    </div>
+                                                    <span style={{ color: '#7EB8A0', fontSize: 12, fontWeight: 700 }}>ACTIVE</span>
+                                                </div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                                                    <div>IP Address: 192.168.1.100</div>
+                                                    <div>Last active: Just now</div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700 }}>Safari on iPhone</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>iOS 17.3</div>
+                                                    </div>
+                                                    <button type="button" className="admin-button secondary">Sign Out</button>
+                                                </div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                                                    <div>IP Address: 203.0.113.45</div>
+                                                    <div>Last active: 2 hours ago</div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700 }}>Firefox on Windows</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Windows 11</div>
+                                                    </div>
+                                                    <button type="button" className="admin-button secondary">Sign Out</button>
+                                                </div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                                                    <div>IP Address: 198.51.100.42</div>
+                                                    <div>Last active: Yesterday at 3:30 PM</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" className="admin-button secondary" style={{ marginTop: 16, width: '100%' }}>Sign Out All Other Sessions</button>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {activeTab === 'help' ? (
+                                <div style={{ display: 'grid', gap: 24 }}>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>❓ Frequently Asked Questions</div>
+                                        <div style={{ display: 'grid', gap: 12 }}>
+                                            <details style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <summary style={{ cursor: 'pointer', fontWeight: 700, paddingBottom: 8 }}>How do I add a new donor?</summary>
+                                                <div style={{ color: 'var(--text-muted)', marginTop: 8, paddingLeft: 16 }}>
+                                                    Go to the Donors tab and click the "Add Donor" button. Fill in the required information including name, email, and phone number. You can optionally set their pledge amount and add notes. Once saved, they'll receive a welcome email with login credentials.
+                                                </div>
+                                            </details>
+
+                                            <details style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <summary style={{ cursor: 'pointer', fontWeight: 700, paddingBottom: 8 }}>How do I process a donation?</summary>
+                                                <div style={{ color: 'var(--text-muted)', marginTop: 8, paddingLeft: 16 }}>
+                                                    Select a donor from the Donors tab and click "View Details". In their profile, navigate to the Payment History section and click "Record Payment". Enter the donation amount, payment method, and payment date. You can also attach a receipt or confirmation document if available.
+                                                </div>
+                                            </details>
+
+                                            <details style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <summary style={{ cursor: 'pointer', fontWeight: 700, paddingBottom: 8 }}>How do I manage admin accounts?</summary>
+                                                <div style={{ color: 'var(--text-muted)', marginTop: 8, paddingLeft: 16 }}>
+                                                    Go to the Admins tab to create, edit, or remove administrator accounts. You can assign different permission levels to each admin, controlling what they can see and modify. Super Administrators have full access to all features and settings.
+                                                </div>
+                                            </details>
+
+                                            <details style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <summary style={{ cursor: 'pointer', fontWeight: 700, paddingBottom: 8 }}>How do I view activity logs?</summary>
+                                                <div style={{ color: 'var(--text-muted)', marginTop: 8, paddingLeft: 16 }}>
+                                                    Visit the Activity Logs tab to see all system activity including user logins, donor changes, payments, and admin actions. You can filter logs by action type, actor, date range, or specific donor to track specific changes.
+                                                </div>
+                                            </details>
+
+                                            <details style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <summary style={{ cursor: 'pointer', fontWeight: 700, paddingBottom: 8 }}>Can I export donor data?</summary>
+                                                <div style={{ color: 'var(--text-muted)', marginTop: 8, paddingLeft: 16 }}>
+                                                    Yes! In the Donors tab, you'll find an "Export" button that allows you to download all donor information as a CSV or Excel file. This includes contact details, payment history, and engagement records.
+                                                </div>
+                                            </details>
+
+                                            <details style={{ paddingBottom: 12 }}>
+                                                <summary style={{ cursor: 'pointer', fontWeight: 700, paddingBottom: 8 }}>What payment methods are supported?</summary>
+                                                <div style={{ color: 'var(--text-muted)', marginTop: 8, paddingLeft: 16 }}>
+                                                    We currently support Stripe (credit/debit cards), direct bank transfers, and can be extended to support PayPal, Apple Pay, and other payment gateways. You can enable or disable payment methods from the Payment settings.
+                                                </div>
+                                            </details>
+                                        </div>
+                                    </div>
+
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>📚 Getting Started Guide</div>
+                                        <div style={{ display: 'grid', gap: 16 }}>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>Step 1: Set Up Your Organization</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Go to Settings and configure your organization details, payment methods, and email notifications.</div>
+                                            </div>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>Step 2: Invite Your Team</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>In the Accounts tab, create admin accounts for your team members with appropriate permission levels.</div>
+                                            </div>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>Step 3: Import Donors</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Add your donors individually or bulk import using CSV. Set their pledge amounts and engagement preferences.</div>
+                                            </div>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>Step 4: Start Tracking Payments</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Record incoming donations and track them against donors' pledges. Generate reports to monitor progress.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>📞 Contact & Support</div>
+                                        <div style={{ display: 'grid', gap: 16 }}>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>📧 Email Support</div>
+                                                <div style={{ color: 'var(--accent-gold)', fontSize: 14 }}>support@masjid.com</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>Average response time: 24 hours</div>
+                                            </div>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>📱 Live Chat</div>
+                                                <div style={{ color: 'var(--accent-gold)', fontSize: 14 }}>Available Monday-Friday, 9 AM - 5 PM</div>
+                                                <button type="button" className="admin-button secondary" style={{ marginTop: 8, width: '100%' }}>Start Chat</button>
+                                            </div>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>📖 Documentation</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 8 }}>Comprehensive guides and tutorials for all features</div>
+                                                <button type="button" className="admin-button secondary" style={{ width: '100%' }}>Read Documentation →</button>
+                                            </div>
+                                            <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 8 }}>🐛 Report an Issue</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 8 }}>Found a bug? Let us know so we can fix it</div>
+                                                <button type="button" className="admin-button" style={{ width: '100%' }}>Submit Bug Report</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>ℹ️ System Information</div>
+                                        <div style={{ display: 'grid', gap: 12 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>Application Version</span>
+                                                <strong>1.0.0 (Build 2026.03.15)</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>Last Updated</span>
+                                                <strong>March 15, 2026</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>Database</span>
+                                                <strong>Connected ✓</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>API Status</span>
+                                                <strong style={{ color: '#7EB8A0' }}>Operational ✓</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>Uptime (30 days)</span>
+                                                <strong style={{ color: '#7EB8A0' }}>99.9%</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>Total Donors</span>
+                                                <strong>1,234</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>Total Donations</span>
+                                                <strong>$234,567.89</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>Overall System Status</span>
+                                                <strong style={{ color: '#7EB8A0' }}>All Systems Online ✓</strong>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
