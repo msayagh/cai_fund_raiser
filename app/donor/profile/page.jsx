@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getMe } from '@/lib/donorApi';
-import '@/app/styles/donor-dashboard.scss';
+// import '@/app/styles/donor-dashboard.scss';
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState(null);
