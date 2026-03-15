@@ -13,7 +13,7 @@ import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import { adminLogin, clearTokens, donorLogin, logout, tryAutoLogin } from '@/lib/auth.js';
-import { hasRefreshToken } from '@/lib/apiClient.js';
+import { apiFetch, hasRefreshToken } from '@/lib/apiClient.js';
 import { getStoredSession } from '@/lib/session.js';
 import './page.scss';
 
@@ -41,6 +41,7 @@ export default function LoginPage() {
     const [activeRole, setActiveRole] = useState('donor');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
     const [status, setStatus] = useState({ loading: true, error: '', success: '', user: null, role: null });
     const [submitting, setSubmitting] = useState(false);
 
@@ -73,6 +74,13 @@ export default function LoginPage() {
             pagePath: '/login',
             pageType: 'login',
         });
+
+        // Load remembered email
+        const savedEmail = localStorage.getItem('rememberedEmail');
+        if (savedEmail) {
+            setEmail(savedEmail);
+            setRememberMe(true);
+        }
     }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
     useEffect(() => {
@@ -151,6 +159,13 @@ export default function LoginPage() {
                 ? await adminLogin(email.trim().toLowerCase(), password)
                 : await donorLogin(email.trim().toLowerCase(), password);
 
+            // Save email if "Remember me" is checked
+            if (rememberMe) {
+                localStorage.setItem('rememberedEmail', email.trim().toLowerCase());
+            } else {
+                localStorage.removeItem('rememberedEmail');
+            }
+
             const nextSession = { ...user, role: activeRole };
             setStatus({
                 loading: false,
@@ -161,10 +176,20 @@ export default function LoginPage() {
             });
             setPassword('');
         } catch (error) {
+            const errorMessage = error?.message || 'Unable to sign in right now.';
+
+            // If donor login fails with "not found" error, redirect to register page
+            if (activeRole === 'donor' && errorMessage.toLowerCase().includes('not found')) {
+                // Save email to sessionStorage temporarily for the register page to pick up
+                sessionStorage.setItem('registerEmail', email.trim().toLowerCase());
+                router.push('/register');
+                return;
+            }
+
             setStatus((prev) => ({
                 ...prev,
                 loading: false,
-                error: error?.message || 'Unable to sign in right now.',
+                error: errorMessage,
                 success: '',
             }));
         } finally {
@@ -274,6 +299,16 @@ export default function LoginPage() {
                                 />
                             </label>
 
+                            <label className="login-checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(event) => setRememberMe(event.target.checked)}
+                                    className="login-checkbox"
+                                />
+                                <span>Remember me</span>
+                            </label>
+
                             <button type="submit" className="login-primary-button" disabled={submitting || status.loading}>
                                 {submitting ? 'Signing in...' : `Sign in as ${activeRole}`}
                             </button>
@@ -281,12 +316,15 @@ export default function LoginPage() {
                     )}
 
                     <div className="login-links">
-                        <Link href="/" className="login-back-button">
-                            {isMounted ? t.backToHome : 'Back to Home'}
-                        </Link>
-                        <Link href="/admin/setup" className="login-inline-link">
+                        {activeRole === 'donor' && (
+                            <Link href="/register" className="login-inline-link">
+                                Create donor account
+                            </Link>
+                        )}
+                        {/* Admin setup link hidden */}
+                        {/* <Link href="/admin/setup" className="login-inline-link">
                             Initial admin setup
-                        </Link>
+                        </Link> */}
                     </div>
                 </div>
             </div>

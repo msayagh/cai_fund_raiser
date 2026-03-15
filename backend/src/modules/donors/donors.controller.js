@@ -107,6 +107,13 @@ const adminAddPayment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const adminGetPayments = async (req, res, next) => {
+  try {
+    const data = await service.adminGetDonorPayments(req.params.id);
+    sendSuccess(res, data);
+  } catch (err) { next(err); }
+};
+
 const adminCreate = async (req, res, next) => {
   try {
     const data = await service.adminCreateDonor(req.admin.id, req.admin.name, req.body);
@@ -114,9 +121,55 @@ const adminCreate = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const adminDeactivate = async (req, res, next) => {
+  try {
+    const data = await service.adminUpdateDonor(req.admin.id, req.admin.name, req.params.id, { isActive: false });
+    sendSuccess(res, data, 'Donor deactivated');
+  } catch (err) { next(err); }
+};
+
+const adminReactivate = async (req, res, next) => {
+  try {
+    const data = await service.adminUpdateDonor(req.admin.id, req.admin.name, req.params.id, { isActive: true });
+    sendSuccess(res, data, 'Donor reactivated');
+  } catch (err) { next(err); }
+};
+
+const adminSetEngagement = async (req, res, next) => {
+  try {
+    const data = await service.adminSetEngagement(req.admin.id, req.admin.name, req.params.id, req.body);
+    sendSuccess(res, data, 'Engagement set', 201);
+  } catch (err) { next(err); }
+};
+
+const adminGetPaymentConfirmation = async (req, res, next) => {
+  try {
+    const stream = await service.generatePaymentConfirmation(req.params.id, req.params.paymentId, req.admin.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="payment-confirmation-${req.params.paymentId}.pdf"`);
+    stream.pipe(res);
+  } catch (err) { next(err); }
+};
+
+const uploadPaymentReceipt = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file provided' });
+    }
+    const data = await service.uploadPaymentReceipt(req.admin.id, req.admin.name, req.params.id, req.params.paymentId, req.file);
+    sendSuccess(res, data, 'Receipt uploaded', 200);
+  } catch (err) { next(err); }
+};
+
+const downloadPaymentConfirmation = async (req, res, next) => {
+  try {
+    await service.downloadPaymentConfirmation(req.params.id, req.params.paymentId, res);
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getMe, updateMe, updateMyPassword,
   getMyEngagement, createEngagement, updateEngagement,
   getMyPayments, getMyRequests,
-  list, getById, adminUpdate, adminDelete, adminUpdatePassword, adminAddPayment, adminCreate,
+  list, getById, adminUpdate, adminDelete, adminUpdatePassword, adminGetPayments, adminAddPayment, adminCreate, adminDeactivate, adminReactivate, adminSetEngagement, adminGetPaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
 };

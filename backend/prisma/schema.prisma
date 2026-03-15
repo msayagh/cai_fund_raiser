@@ -13,6 +13,7 @@ model Donor {
   name         String
   email        String   @unique
   passwordHash String
+  isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -58,6 +59,7 @@ model Payment {
   date              DateTime
   method            String
   note              String?
+  receiptPath       String?
   recordedByAdminId String?
   recordedByAdmin   Admin?   @relation(fields: [recordedByAdminId], references: [id])
   createdAt         DateTime @default(now())

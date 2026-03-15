@@ -10,9 +10,32 @@ import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES, MOBILE_BREAKPOINT } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
-import { approveRequest, createAdmin, declineRequest, getDonor, getLogs, getStats, holdRequest, listAdmins, listDonors, listRequests, resetDonorPassword, updateDonor } from '@/lib/adminApi.js';
+import {
+    approveRequest,
+    createAdmin,
+    createDonor,
+    deactivateDonor,
+    reactivateDonor,
+    declineRequest,
+    getDonor,
+    getDonorPayments,
+    getLogs,
+    getStats,
+    holdRequest,
+    listAdmins,
+    listDonors,
+    listRequests,
+    resetDonorPassword,
+    updateDonor,
+    addPayment,
+    bulkUploadDonors,
+    exportDonors,
+} from '@/lib/adminApi.js';
 import { clearTokens, logout, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession } from '@/lib/session.js';
+import { donorsToCSV, downloadCSV, parseCSV, validateDonors } from '@/lib/bulkDonorUtils.js';
+import AddDonorModal from './AddDonorModal.jsx';
+import PaymentPanel from './PaymentPanel.jsx';
 
 const cardStyle = {
     background: 'var(--bg-card)',
@@ -42,13 +65,19 @@ export default function AdminDashboardPage() {
     const [error, setError] = useState('');
     const [stats, setStats] = useState({ totalDonors: 0, totalRaised: 0, activeEngagements: 0, pendingRequests: 0 });
     const [donors, setDonors] = useState([]);
+    const [admins, setAdmins] = useState([]);
     const [selectedDonorId, setSelectedDonorId] = useState(null);
     const [selectedDonor, setSelectedDonor] = useState(null);
     const [selectedDonorForm, setSelectedDonorForm] = useState({ name: '', email: '' });
     const [selectedDonorLoading, setSelectedDonorLoading] = useState(false);
     const [selectedDonorSaving, setSelectedDonorSaving] = useState(false);
     const [isDonorModalOpen, setIsDonorModalOpen] = useState(false);
-    const [admins, setAdmins] = useState([]);
+    const [isAddDonorModalOpen, setIsAddDonorModalOpen] = useState(false);
+    const [addDonorForm, setAddDonorForm] = useState({ name: '', email: '', password: '' });
+    const [addDonorLoading, setAddDonorLoading] = useState(false);
+    const [donorPayments, setDonorPayments] = useState([]);
+    const [bulkUploadLoading, setBulkUploadLoading] = useState(false);
+    const [bulkUploadProgress, setBulkUploadProgress] = useState('');
     const [requests, setRequests] = useState([]);
     const [logs, setLogs] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
@@ -95,19 +124,31 @@ export default function AdminDashboardPage() {
     }, [translationMounted, language, isRTL, pageTitle, pageDescription, pageUrl, siteUrl, t]);
 
     async function loadAllData() {
-        const [statsData, donorsData, requestsData, adminsData, logsData] = await Promise.all([
-            getStats(),
-            listDonors({ limit: 100 }),
-            listRequests({ limit: 100 }),
-            listAdmins(),
-            getLogs({ limit: 200 }),
-        ]);
+        try {
+            const results = await Promise.allSettled([
+                getStats(),
+                listDonors({ limit: 100 }),
+                listRequests({ limit: 100 }),
+                listAdmins(),
+                getLogs({ limit: 200 }),
+            ]);
 
-        setStats(statsData);
-        setDonors(donorsData.items ?? []);
-        setRequests(requestsData.items ?? []);
-        setAdmins(adminsData ?? []);
-        setLogs(logsData.items ?? []);
+            const [statsResult, donorsResult, requestsResult, adminsResult, logsResult] = results;
+            
+            if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+            if (donorsResult.status === 'fulfilled') setDonors(donorsResult.value.items ?? []);
+            if (requestsResult.status === 'fulfilled') setRequests(requestsResult.value.items ?? []);
+            if (adminsResult.status === 'fulfilled') setAdmins(adminsResult.value ?? []);
+            if (logsResult.status === 'fulfilled') setLogs(logsResult.value.items ?? []);
+            
+            // If all failed, throw error; otherwise, silently continue with partial data
+            if (results.every(r => r.status === 'rejected')) {
+                throw new Error('Unable to load dashboard data.');
+            }
+        } catch (err) {
+            console.error('Error loading dashboard data:', err);
+            throw err;
+        }
     }
 
     useEffect(() => {
@@ -366,7 +407,12 @@ export default function AdminDashboardPage() {
                 password: newAdmin.password,
             });
             setNewAdmin({ name: '', email: '', password: '' });
-            await loadAllData();
+            
+            try {
+                await loadAllData();
+            } catch (err) {
+                console.error('Error reloading dashboard data:', err);
+            }
             setMessage('Admin created.');
         } catch (err) {
             setError(err?.message || 'Unable to create admin.');
@@ -384,7 +430,12 @@ export default function AdminDashboardPage() {
             } else {
                 await declineRequest(id);
             }
-            await loadAllData();
+            
+            try {
+                await loadAllData();
+            } catch (err) {
+                console.error('Error reloading dashboard data:', err);
+            }
             setMessage(status === 'on_hold' ? 'Request placed on hold.' : `Request ${status}.`);
         } catch (err) {
             setError(err?.message || 'Unable to update request.');
@@ -475,6 +526,208 @@ export default function AdminDashboardPage() {
         setIsDonorModalOpen(false);
     }
 
+    async function handleAddDonor() {
+        if (!addDonorForm.name.trim() || !addDonorForm.email.trim() || !addDonorForm.password.trim()) {
+            setError('All fields are required.');
+            return;
+        }
+
+        setAddDonorLoading(true);
+        setError('');
+        setMessage('');
+
+        try {
+            const newDonor = await createDonor({
+                name: addDonorForm.name.trim(),
+                email: addDonorForm.email.trim().toLowerCase(),
+                password: addDonorForm.password,
+                engagement: addDonorForm.pledge ? { totalPledge: Number(addDonorForm.pledge) } : undefined,
+            });
+
+            setDonors((prev) => [newDonor, ...prev]);
+            setAddDonorForm({ name: '', email: '', password: '' });
+            setIsAddDonorModalOpen(false);
+            setMessage(`Donor ${newDonor.name} added successfully.`);
+            
+            try {
+                await loadAllData();
+            } catch (err) {
+                console.error('Error reloading dashboard data:', err);
+            }
+        } catch (err) {
+            setError(err?.message || 'Unable to add donor.');
+        } finally {
+            setAddDonorLoading(false);
+        }
+    }
+
+    async function handleSelectDonorWithPayments(donorId) {
+        setSelectedDonorId(donorId);
+        setIsDonorModalOpen(true);
+        setSelectedDonorLoading(true);
+        setError('');
+        try {
+            const [donor, payments] = await Promise.all([
+                getDonor(donorId),
+                getDonorPayments(donorId),
+            ]);
+            setSelectedDonor(donor);
+            setDonorPayments(payments || []);
+            setSelectedDonorForm({
+                name: donor.name || '',
+                email: donor.email || '',
+            });
+        } catch (err) {
+            setSelectedDonor(null);
+            setDonorPayments([]);
+            setError(err?.message || 'Unable to load donor details.');
+        } finally {
+            setSelectedDonorLoading(false);
+        }
+    }
+
+    async function handleAddPayment(event) {
+        event.preventDefault();
+        if (!selectedDonorId) return;
+
+        const amountInput = document.getElementById('payment-amount');
+        const methodSelect = document.getElementById('payment-method');
+        const dateInput = document.getElementById('payment-date');
+        const noteInput = document.getElementById('payment-note');
+
+        if (!amountInput?.value || !methodSelect?.value || !dateInput?.value) {
+            setError('Amount, method, and date are required.');
+            return;
+        }
+
+        setSelectedDonorSaving(true);
+        setError('');
+        setMessage('');
+
+        try {
+            await addPayment(selectedDonorId, {
+                amount: Number(amountInput.value),
+                method: methodSelect.value,
+                date: dateInput.value,
+                note: noteInput?.value || '',
+            });
+
+            // Reload payments
+            const updated = await getDonorPayments(selectedDonorId);
+            setDonorPayments(updated || []);
+
+            // Reset form
+            amountInput.value = '';
+            methodSelect.value = '';
+            dateInput.value = '';
+            noteInput.value = '';
+
+            setMessage('Payment recorded successfully.');
+            
+            // Reload all data with error handling
+            try {
+                await loadAllData();
+            } catch (err) {
+                console.error('Error reloading dashboard data:', err);
+                // Don't throw - allow UI to remain responsive
+            }
+        } catch (err) {
+            setError(err?.message || 'Unable to record payment.');
+        } finally {
+            setSelectedDonorSaving(false);
+        }
+    }
+
+    async function handleDeactivateDonor(donorId) {
+        if (!confirm('Are you sure you want to deactivate this donor?')) return;
+
+        setError('');
+        setMessage('');
+
+        try {
+            await deactivateDonor(donorId);
+            setDonors((prev) =>
+                prev.map((d) => (d.id === donorId ? { ...d, isActive: false } : d))
+            );
+            setMessage('Donor deactivated.');
+        } catch (err) {
+            setError(err?.message || 'Unable to deactivate donor.');
+        }
+    }
+
+    async function handleReactivateDonor(donorId) {
+        if (!confirm('Are you sure you want to reactivate this donor?')) return;
+
+        setError('');
+        setMessage('');
+
+        try {
+            await reactivateDonor(donorId);
+            setDonors((prev) =>
+                prev.map((d) => (d.id === donorId ? { ...d, isActive: true } : d))
+            );
+            setMessage('Donor reactivated.');
+        } catch (err) {
+            setError(err?.message || 'Unable to reactivate donor.');
+        }
+    }
+
+    async function handleBulkUpload(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.csv')) {
+            setError('Please upload a CSV file.');
+            return;
+        }
+
+        setBulkUploadLoading(true);
+        setBulkUploadProgress('Reading file...');
+        setError('');
+        setMessage('');
+
+        try {
+            const text = await file.text();
+            setBulkUploadProgress('Parsing CSV...');
+            const parsedDonors = parseCSV(text);
+
+            setBulkUploadProgress('Validating...');
+            const validationErrors = validateDonors(parsedDonors);
+            if (validationErrors.length > 0) {
+                throw new Error(validationErrors.join('\n'));
+            }
+
+            setBulkUploadProgress(`Uploading ${parsedDonors.length} donors...`);
+            await bulkUploadDonors(file);
+
+            setBulkUploadProgress('');
+            setMessage(`Successfully uploaded ${parsedDonors.length} donors.`);
+            
+            try {
+                await loadAllData();
+            } catch (err) {
+                console.error('Error reloading dashboard data:', err);
+            }
+            event.target.value = '';
+        } catch (err) {
+            setError(err?.message || 'Unable to upload donors.');
+            setBulkUploadProgress('');
+        } finally {
+            setBulkUploadLoading(false);
+        }
+    }
+
+    async function handleBulkDownload() {
+        try {
+            setMessage('Exporting donors...');
+            const csv = donorsToCSV(filteredDonors);
+            downloadCSV(csv, `donors-export-${new Date().toISOString().slice(0, 10)}.csv`);
+            setMessage('Donors exported successfully.');
+        } catch (err) {
+            setError(err?.message || 'Unable to export donors.');
+        }
+    }
+
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div className="mosque-donation" data-theme="dark" style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
@@ -488,13 +741,13 @@ export default function AdminDashboardPage() {
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@400;600&family=Amiri:wght@400;700&display=swap');
                 *{box-sizing:border-box}
-                .admin-shell{width:100%;max-width:var(--page-max-width);margin:0 auto;padding:24px 20px 64px;display:grid;gap:24px}
+                .admin-shell{width:100%;max-width:var(--page-max-width);margin:0 auto;padding:24px 20px 64px;display:grid;gap:24px;position:relative}
                 .admin-layout{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
                 .admin-tab-list{display:grid;gap:10px}
                 .admin-tab{padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-primary);cursor:pointer;text-align:left}
                 .admin-tab.active{background:var(--accent-gold);color:#111}
                 .admin-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-                .admin-stat{padding:18px;border-radius:18px;border:1px solid var(--border);background:rgba(255,255,255,0.03)}
+                .admin-stat{padding:18px;border-radius:18px;border:1px solid var(--border);background:rgba(255,255,255,0.03);animation:pulse-skeleton 2s infinite}
                 .admin-list{display:grid;gap:14px}
                 .admin-item{padding:16px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,0.03)}
                 .admin-button{padding:10px 14px;border-radius:12px;border:none;background:var(--accent-gold);color:#111;font-weight:700;cursor:pointer}
@@ -529,6 +782,10 @@ export default function AdminDashboardPage() {
                 .admin-modal-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:18px}
                 .admin-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px}
                 .admin-pagination-buttons{display:flex;gap:10px;align-items:center}
+                .admin-loading-overlay{position:fixed;inset:0;background:rgba(3,6,16,0.5);backdrop-filter:blur(4px);display:grid;place-items:center;z-index:50}
+                .admin-spinner{width:48px;height:48px;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--accent-gold);border-radius:50%;animation:spin 1s linear infinite}
+                @keyframes spin{to{transform:rotate(360deg)}}
+                @keyframes pulse-skeleton{0%,100%{opacity:1}50%{opacity:0.6}}
                 @media (max-width:${MOBILE_BREAKPOINT}px){.admin-layout{grid-template-columns:1fr}.admin-grid{grid-template-columns:1fr 1fr}}
                 @media (max-width:900px){.admin-two-col{grid-template-columns:1fr}}
                 @media (max-width:720px){.admin-grid,.admin-donor-grid,.admin-donor-metrics,.admin-modal-grid{grid-template-columns:1fr}.admin-chart-row{grid-template-columns:1fr}}
@@ -547,606 +804,270 @@ export default function AdminDashboardPage() {
                 showHeaderCenter={false}
             />
             <main className="admin-shell">
-                {loading ? <div style={cardStyle}>Loading admin dashboard…</div> : null}
-                {!loading ? (
-                    <>
-                        {error ? <div className="admin-alert error">{error}</div> : null}
-                        {message ? <div className="admin-alert success">{message}</div> : null}
-                        {isDonorModalOpen ? (
-                            <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Donor details">
-                                <div className="admin-modal">
-                                    <div className="admin-modal-header">
-                                        <div>
-                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 22 }}>
-                                                {selectedDonor ? selectedDonor.name : 'Donor details'}
-                                            </div>
-                                            <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
-                                                Review donor activity and update their profile.
-                                            </div>
-                                        </div>
-                                        <button type="button" className="admin-button secondary" onClick={closeDonorModal}>
-                                            Close
-                                        </button>
-                                    </div>
-                                    <div className="admin-modal-grid">
-                                        <div className="admin-detail-card">
-                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18 }}>Details</div>
-                                            {selectedDonorLoading ? <div>Loading donor details...</div> : null}
-                                            {!selectedDonorLoading && !selectedDonor ? (
-                                                <div style={{ color: 'var(--text-muted)' }}>
-                                                    We could not load this donor yet. Try again from the donor card.
-                                                </div>
-                                            ) : null}
-                                            {!selectedDonorLoading && selectedDonor ? (
-                                                <div className="admin-detail-list">
-                                                    <div className="admin-detail-row">
-                                                        <span style={{ color: 'var(--text-muted)' }}>Email</span>
-                                                        <strong>{selectedDonor.email}</strong>
-                                                    </div>
-                                                    <div className="admin-detail-row">
-                                                        <span style={{ color: 'var(--text-muted)' }}>Pledged</span>
-                                                        <strong>${Number(selectedDonor.engagement?.totalPledge || 0).toLocaleString()}</strong>
-                                                    </div>
-                                                    <div className="admin-detail-row">
-                                                        <span style={{ color: 'var(--text-muted)' }}>Payments recorded</span>
-                                                        <strong>{selectedDonor.payments?.length ?? selectedDonor._count?.payments ?? 0}</strong>
-                                                    </div>
-                                                    <div className="admin-detail-row">
-                                                        <span style={{ color: 'var(--text-muted)' }}>Requests submitted</span>
-                                                        <strong>{selectedDonor.requests?.length ?? 0}</strong>
-                                                    </div>
-                                                    <div className="admin-detail-row">
-                                                        <span style={{ color: 'var(--text-muted)' }}>Latest payment</span>
-                                                        <strong>
-                                                            {selectedDonor.payments?.[0]
-                                                                ? `$${Number(selectedDonor.payments[0].amount || 0).toLocaleString()} on ${String(selectedDonor.payments[0].date).slice(0, 10)}`
-                                                                : 'No payments yet'}
-                                                        </strong>
-                                                    </div>
-                                                    <div className="admin-detail-row">
-                                                        <span style={{ color: 'var(--text-muted)' }}>Latest request</span>
-                                                        <strong style={{ textTransform: 'capitalize' }}>
-                                                            {selectedDonor.requests?.[0]?.type ? selectedDonor.requests[0].type.replace(/_/g, ' ') : 'No requests yet'}
-                                                        </strong>
-                                                    </div>
-                                                    <div className="admin-subsection">
-                                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16 }}>Recent payments</div>
-                                                        {selectedDonor.payments?.length ? (
-                                                            <div className="admin-mini-list">
-                                                                {selectedDonor.payments.slice(0, 5).map((payment) => (
-                                                                    <div key={payment.id} className="admin-mini-item">
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                                                                            <strong>${Number(payment.amount || 0).toLocaleString()}</strong>
-                                                                            <span style={{ color: 'var(--text-muted)' }}>{String(payment.date).slice(0, 10)}</span>
-                                                                        </div>
-                                                                        <div style={{ marginTop: 6, color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                                                                            {payment.method || 'other'}
-                                                                            {payment.recordedByAdmin?.name ? ` · recorded by ${payment.recordedByAdmin.name}` : ''}
-                                                                        </div>
-                                                                        {payment.note ? <div style={{ marginTop: 6 }}>{payment.note}</div> : null}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ color: 'var(--text-muted)' }}>No payments recorded yet.</div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                        <div className="admin-detail-card">
-                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18 }}>Edit donor</div>
-                                            <form className="admin-form" onSubmit={handleUpdateSelectedDonor}>
-                                                <input
-                                                    style={inputStyle}
-                                                    placeholder="Full name"
-                                                    value={selectedDonorForm.name}
-                                                    onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, name: e.target.value }))}
-                                                    disabled={!selectedDonor || selectedDonorSaving}
-                                                    required
-                                                />
-                                                <input
-                                                    style={inputStyle}
-                                                    type="email"
-                                                    placeholder="Email address"
-                                                    value={selectedDonorForm.email}
-                                                    onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, email: e.target.value }))}
-                                                    disabled={!selectedDonor || selectedDonorSaving}
-                                                    required
-                                                />
-                                                <button type="submit" className="admin-button" disabled={!selectedDonor || selectedDonorSaving}>
-                                                    {selectedDonorSaving ? 'Saving...' : 'Save donor changes'}
-                                                </button>
-                                            </form>
-                                            <div className="admin-subsection">
-                                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16 }}>Reset password</div>
-                                                <div className="admin-actions">
-                                                    <input
-                                                        style={inputStyle}
-                                                        type="password"
-                                                        placeholder="New password"
-                                                        value={resetPasswordByDonor[selectedDonorId] || ''}
-                                                        onChange={(e) => setResetPasswordByDonor((prev) => ({ ...prev, [selectedDonorId]: e.target.value }))}
-                                                        disabled={!selectedDonor}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        className="admin-button secondary"
-                                                        disabled={!selectedDonor}
-                                                        onClick={() => handleResetPassword(selectedDonorId)}
-                                                    >
-                                                        Reset donor password
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                                                The current backend supports editing donor name and email from admin tools.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                {loading ? (
+                    <div className="admin-loading-overlay">
+                        <div style={{ textAlign: 'center', display: 'grid', gap: 16, alignItems: 'center' }}>
+                            <div className="admin-spinner"></div>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18, color: 'var(--text-primary)' }}>
+                                Loading dashboard...
                             </div>
-                        ) : null}
-                        <div className="admin-layout">
-                            <aside style={cardStyle}>
-                                <div style={{ fontFamily: "'Cinzel', serif", color: 'var(--accent-gold)', fontSize: 24, marginBottom: 18 }}>
-                                    Admin Dashboard
-                                </div>
-                                <div className="admin-tab-list">
-                                    {[
-                                        ['overview', 'Overview'],
-                                        ['donors', 'Donors'],
-                                        ['requests', 'Requests'],
-                                        ['admins', 'Admins'],
-                                        ['logs', 'Logs'],
-                                    ].map(([key, label]) => (
-                                        <button key={key} type="button" className={`admin-tab ${activeTab === key ? 'active' : ''}`} onClick={() => setActiveTab(key)}>
-                                            {label}
-                                        </button>
-                                    ))}
-                                    <button type="button" className="admin-tab" onClick={handleLogout}>
-                                        Logout
+                        </div>
+                    </div>
+                ) : null}
+                <>
+                    {error ? <div className="admin-alert error">{error}</div> : null}
+                    {message ? <div className="admin-alert success">{message}</div> : null}
+                    {isDonorModalOpen ? (
+                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Donor details">
+                            <div className="admin-modal">
+                                <div className="admin-modal-header">
+                                    <div>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 22 }}>
+                                            {selectedDonor ? selectedDonor.name : 'Donor details'}
+                                        </div>
+                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
+                                            Review donor activity and update their profile.
+                                        </div>
+                                    </div>
+                                    <button type="button" className="admin-button secondary" onClick={closeDonorModal}>
+                                        Close
                                     </button>
                                 </div>
-                            </aside>
+                                <div className="admin-modal-grid">
+                                    <div className="admin-detail-card">
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18 }}>Details</div>
+                                        {selectedDonorLoading ? <div>Loading donor details...</div> : null}
+                                        {!selectedDonorLoading && !selectedDonor ? (
+                                            <div style={{ color: 'var(--text-muted)' }}>
+                                                We could not load this donor yet. Try again from the donor card.
+                                            </div>
+                                        ) : null}
+                                        {!selectedDonorLoading && selectedDonor ? (
+                                            <div className="admin-detail-list">
+                                                <div className="admin-detail-row">
+                                                    <span style={{ color: 'var(--text-muted)' }}>Email</span>
+                                                    <strong>{selectedDonor.email}</strong>
+                                                </div>
+                                                <div className="admin-detail-row">
+                                                    <span style={{ color: 'var(--text-muted)' }}>Pledged</span>
+                                                    <strong>${Number(selectedDonor.engagement?.totalPledge || 0).toLocaleString()}</strong>
+                                                </div>
+                                                <div className="admin-detail-row">
+                                                    <span style={{ color: 'var(--text-muted)' }}>Payments recorded</span>
+                                                    <strong>{selectedDonor.payments?.length ?? selectedDonor._count?.payments ?? 0}</strong>
+                                                </div>
+                                                <div className="admin-detail-row">
+                                                    <span style={{ color: 'var(--text-muted)' }}>Requests submitted</span>
+                                                    <strong>{selectedDonor.requests?.length ?? 0}</strong>
+                                                </div>
+                                                <div className="admin-detail-row">
+                                                    <span style={{ color: 'var(--text-muted)' }}>Latest payment</span>
+                                                    <strong>
+                                                        {selectedDonor.payments?.[0]
+                                                            ? `$${Number(selectedDonor.payments[0].amount || 0).toLocaleString()} on ${String(selectedDonor.payments[0].date).slice(0, 10)}`
+                                                            : 'No payments yet'}
+                                                    </strong>
+                                                </div>
+                                                <div className="admin-detail-row">
+                                                    <span style={{ color: 'var(--text-muted)' }}>Latest request</span>
+                                                    <strong style={{ textTransform: 'capitalize' }}>
+                                                        {selectedDonor.requests?.[0]?.type ? selectedDonor.requests[0].type.replace(/_/g, ' ') : 'No requests yet'}
+                                                    </strong>
+                                                </div>
+                                                <div className="admin-subsection">
+                                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16 }}>Recent payments</div>
+                                                    {selectedDonor.payments?.length ? (
+                                                        <div className="admin-mini-list">
+                                                            {selectedDonor.payments.slice(0, 5).map((payment) => (
+                                                                <div key={payment.id} className="admin-mini-item">
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                                                                        <strong>${Number(payment.amount || 0).toLocaleString()}</strong>
+                                                                        <span style={{ color: 'var(--text-muted)' }}>{String(payment.date).slice(0, 10)}</span>
+                                                                    </div>
+                                                                    <div style={{ marginTop: 6, color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                                                                        {payment.method || 'other'}
+                                                                        {payment.recordedByAdmin?.name ? ` · recorded by ${payment.recordedByAdmin.name}` : ''}
+                                                                    </div>
+                                                                    {payment.note ? <div style={{ marginTop: 6 }}>{payment.note}</div> : null}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ color: 'var(--text-muted)' }}>No payments recorded yet.</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                    <div className="admin-detail-card">
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18 }}>Edit donor</div>
+                                        <form className="admin-form" onSubmit={handleUpdateSelectedDonor}>
+                                            <input
+                                                style={inputStyle}
+                                                placeholder="Full name"
+                                                value={selectedDonorForm.name}
+                                                onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, name: e.target.value }))}
+                                                disabled={!selectedDonor || selectedDonorSaving}
+                                                required
+                                            />
+                                            <input
+                                                style={inputStyle}
+                                                type="email"
+                                                placeholder="Email address"
+                                                value={selectedDonorForm.email}
+                                                onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, email: e.target.value }))}
+                                                disabled={!selectedDonor || selectedDonorSaving}
+                                                required
+                                            />
+                                            <button type="submit" className="admin-button" disabled={!selectedDonor || selectedDonorSaving}>
+                                                {selectedDonorSaving ? 'Saving...' : 'Save donor changes'}
+                                            </button>
+                                        </form>
+                                        <div className="admin-subsection">
+                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16 }}>Reset password</div>
+                                            <div className="admin-actions">
+                                                <input
+                                                    style={inputStyle}
+                                                    type="password"
+                                                    placeholder="New password"
+                                                    value={resetPasswordByDonor[selectedDonorId] || ''}
+                                                    onChange={(e) => setResetPasswordByDonor((prev) => ({ ...prev, [selectedDonorId]: e.target.value }))}
+                                                    disabled={!selectedDonor}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="admin-button secondary"
+                                                    disabled={!selectedDonor}
+                                                    onClick={() => handleResetPassword(selectedDonorId)}
+                                                >
+                                                    Reset donor password
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+                                            The current backend supports editing donor name and email from admin tools.
+                                        </div>
+                                    </div>
+                                    <PaymentPanel
+                                        donor={selectedDonor}
+                                        payments={donorPayments}
+                                        onAddPayment={handleAddPayment}
+                                        loading={selectedDonorSaving}
+                                        inputStyle={inputStyle}
+                                        cardStyle={cardStyle}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+                    <div className="admin-layout">
+                        <aside style={cardStyle}>
+                            <div style={{ fontFamily: "'Cinzel', serif", color: 'var(--accent-gold)', fontSize: 24, marginBottom: 18 }}>
+                                Admin Dashboard
+                            </div>
+                            <div className="admin-tab-list">
+                                {[
+                                    ['overview', 'Overview'],
+                                    ['donors', 'Donors'],
+                                    ['requests', 'Requests'],
+                                    ['admins', 'Admins'],
+                                    ['logs', 'Logs'],
+                                ].map(([key, label]) => (
+                                    <button key={key} type="button" className={`admin-tab ${activeTab === key ? 'active' : ''}`} onClick={() => setActiveTab(key)}>
+                                        {label}
+                                    </button>
+                                ))}
+                                <button type="button" className="admin-tab" onClick={handleLogout}>
+                                    Logout
+                                </button>
+                            </div>
+                        </aside>
 
-                            <section style={{ display: 'grid', gap: 24 }}>
-                                {activeTab === 'overview' ? (
-                                    <>
-                                        <div style={cardStyle}>
-                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Campaign Snapshot</div>
-                                            <div className="admin-grid">
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.totalDonors}</div></div>
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total raised</div><div style={{ fontSize: 30, fontWeight: 700 }}>${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Active engagements</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.activeEngagements}</div></div>
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Pending requests</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.pendingRequests}</div></div>
-                                            </div>
+                        <section style={{ display: 'grid', gap: 24 }}>
+                            {activeTab === 'overview' ? (
+                                <>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Campaign Snapshot</div>
+                                        <div className="admin-grid">
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.totalDonors}</div></div>
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total raised</div><div style={{ fontSize: 30, fontWeight: 700 }}>${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Active engagements</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.activeEngagements}</div></div>
+                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Pending requests</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.pendingRequests}</div></div>
                                         </div>
-                                        <div className="admin-two-col">
-                                            <div style={cardStyle}>
+                                    </div>
+                                    <div className="admin-two-col">
+                                        <div style={cardStyle}>
                                             <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Pending Queue</div>
-                                                <div className="admin-actions" style={{ marginBottom: 16 }}>
-                                                    <input
-                                                        style={{ ...inputStyle, maxWidth: 220 }}
-                                                        placeholder="Search requests"
-                                                        value={requestFilter.query}
-                                                        onChange={(e) => setRequestFilter((prev) => ({ ...prev, query: e.target.value }))}
-                                                    />
-                                                    <select
-                                                        style={{ ...inputStyle, maxWidth: 180 }}
-                                                        value={requestFilter.type}
-                                                        onChange={(e) => setRequestFilter((prev) => ({ ...prev, type: e.target.value }))}
-                                                    >
-                                                        <option value="">All types</option>
-                                                        <option value="account_creation">account_creation</option>
-                                                        <option value="payment_upload">payment_upload</option>
-                                                        <option value="engagement_change">engagement_change</option>
-                                                        <option value="other">other</option>
-                                                    </select>
-                                                </div>
-                                                <div className="admin-list">
-                                                    {paginatedPendingRequests.map((request) => (
-                                                        <div key={request.id} className="admin-item">
-                                                            <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{request.type.replace(/_/g, ' ')}</div>
-                                                            <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{request.name} · {request.email}</div>
-                                                            <div style={{ color: 'var(--accent-gold)', marginTop: 6 }}>{request.status}</div>
-                                                        </div>
-                                                    ))}
-                                                    {paginatedPendingRequests.length === 0 ? <div className="admin-item">No pending requests.</div> : null}
-                                                </div>
-                                                <div className="admin-pagination">
-                                                    <div style={{ color: 'var(--text-muted)' }}>Showing up to 8 items per page</div>
-                                                    <div className="admin-pagination-buttons">
-                                                        <button type="button" className="admin-button secondary" disabled={pendingRequestsPage <= 1} onClick={() => setPendingRequestsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                        <span>Page {pendingRequestsPage} of {pendingRequestsTotalPages}</span>
-                                                        <button type="button" className="admin-button secondary" disabled={pendingRequestsPage >= pendingRequestsTotalPages} onClick={() => setPendingRequestsPage((page) => Math.min(pendingRequestsTotalPages, page + 1))}>Next</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div style={cardStyle}>
-                                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Top Donors</div>
-                                                <div className="admin-actions" style={{ marginBottom: 16 }}>
-                                                    <input
-                                                        style={{ ...inputStyle, maxWidth: 220 }}
-                                                        placeholder="Search donors"
-                                                        value={donorFilter.query}
-                                                        onChange={(e) => setDonorFilter({ query: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div className="admin-list">
-                                                    {paginatedTopDonors.map((donor) => (
-                                                        <div key={donor.id} className="admin-item">
-                                                            <div style={{ fontWeight: 700 }}>{donor.name}</div>
-                                                            <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{donor.email}</div>
-                                                            <div style={{ marginTop: 8 }}>${Number(donor.paidAmount || 0).toLocaleString()} paid</div>
-                                                        </div>
-                                                    ))}
-                                                    {paginatedTopDonors.length === 0 ? <div className="admin-item">No donors match the current filter.</div> : null}
-                                                </div>
-                                                <div className="admin-pagination">
-                                                    <div style={{ color: 'var(--text-muted)' }}>Showing up to 8 items per page</div>
-                                                    <div className="admin-pagination-buttons">
-                                                        <button type="button" className="admin-button secondary" disabled={topDonorsPage <= 1} onClick={() => setTopDonorsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                        <span>Page {topDonorsPage} of {topDonorsTotalPages}</span>
-                                                        <button type="button" className="admin-button secondary" disabled={topDonorsPage >= topDonorsTotalPages} onClick={() => setTopDonorsPage((page) => Math.min(topDonorsTotalPages, page + 1))}>Next</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style={cardStyle}>
-                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Recent activity</div>
                                             <div className="admin-actions" style={{ marginBottom: 16 }}>
                                                 <input
                                                     style={{ ...inputStyle, maxWidth: 220 }}
-                                                    placeholder="Search activity"
-                                                    value={logFilter.query}
-                                                    onChange={(e) => setLogFilter((prev) => ({ ...prev, query: e.target.value }))}
+                                                    placeholder="Search requests"
+                                                    value={requestFilter.query}
+                                                    onChange={(e) => setRequestFilter((prev) => ({ ...prev, query: e.target.value }))}
                                                 />
-                                                <input
-                                                    style={{ ...inputStyle, maxWidth: 220 }}
-                                                    placeholder="Filter by action"
-                                                    value={logFilter.action}
-                                                    onChange={(e) => setLogFilter((prev) => ({ ...prev, action: e.target.value }))}
-                                                />
-                                                <input
-                                                    style={{ ...inputStyle, maxWidth: 220 }}
-                                                    placeholder="Filter by actor"
-                                                    value={logFilter.actor}
-                                                    onChange={(e) => setLogFilter((prev) => ({ ...prev, actor: e.target.value }))}
-                                                />
+                                                <select
+                                                    style={{ ...inputStyle, maxWidth: 180 }}
+                                                    value={requestFilter.type}
+                                                    onChange={(e) => setRequestFilter((prev) => ({ ...prev, type: e.target.value }))}
+                                                >
+                                                    <option value="">All types</option>
+                                                    <option value="account_creation">account_creation</option>
+                                                    <option value="payment_upload">payment_upload</option>
+                                                    <option value="engagement_change">engagement_change</option>
+                                                    <option value="other">other</option>
+                                                </select>
                                             </div>
                                             <div className="admin-list">
-                                                {recentLogs.map((log) => (
-                                                    <div key={log.id} className="admin-item">
-                                                        <div style={{ fontWeight: 700 }}>{log.action}</div>
-                                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{log.details}</div>
-                                                        <div style={{ color: 'var(--accent-gold)', marginTop: 6 }}>{log.actor}</div>
+                                                {paginatedPendingRequests.map((request) => (
+                                                    <div key={request.id} className="admin-item">
+                                                        <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{request.type.replace(/_/g, ' ')}</div>
+                                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{request.name} · {request.email}</div>
+                                                        <div style={{ color: 'var(--accent-gold)', marginTop: 6 }}>{request.status}</div>
                                                     </div>
                                                 ))}
-                                                {recentLogs.length === 0 ? <div className="admin-item">No activity matches the current filters.</div> : null}
+                                                {paginatedPendingRequests.length === 0 ? <div className="admin-item">No pending requests.</div> : null}
                                             </div>
                                             <div className="admin-pagination">
                                                 <div style={{ color: 'var(--text-muted)' }}>Showing up to 8 items per page</div>
                                                 <div className="admin-pagination-buttons">
-                                                    <button type="button" className="admin-button secondary" disabled={recentLogsPage <= 1} onClick={() => setRecentLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                    <span>Page {recentLogsPage} of {recentLogsTotalPages}</span>
-                                                    <button type="button" className="admin-button secondary" disabled={recentLogsPage >= recentLogsTotalPages} onClick={() => setRecentLogsPage((page) => Math.min(recentLogsTotalPages, page + 1))}>Next</button>
+                                                    <button type="button" className="admin-button secondary" disabled={pendingRequestsPage <= 1} onClick={() => setPendingRequestsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                                    <span>Page {pendingRequestsPage} of {pendingRequestsTotalPages}</span>
+                                                    <button type="button" className="admin-button secondary" disabled={pendingRequestsPage >= pendingRequestsTotalPages} onClick={() => setPendingRequestsPage((page) => Math.min(pendingRequestsTotalPages, page + 1))}>Next</button>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </>
-                                ) : null}
-
-                                {activeTab === 'donors' ? (
-                                    <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Donors</div>
-                                        <div className="admin-actions" style={{ marginBottom: 16 }}>
-                                            <input
-                                                style={{ ...inputStyle, maxWidth: 260 }}
-                                                placeholder="Search donors"
-                                                value={donorFilter.query}
-                                                onChange={(e) => setDonorFilter({ query: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="admin-grid" style={{ marginBottom: 18 }}>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Visible donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{donorStats.total}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Avg pledge</div><div style={{ fontSize: 30, fontWeight: 700 }}>${donorStats.averagePledge.toLocaleString()}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Avg paid</div><div style={{ fontSize: 30, fontWeight: 700 }}>${donorStats.averagePaid.toLocaleString()}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Completion rate</div><div style={{ fontSize: 30, fontWeight: 700 }}>{donorStats.completionRate}%</div></div>
-                                        </div>
-                                        <div className="admin-two-col" style={{ marginBottom: 18 }}>
-                                            <div className="admin-chart-card">
-                                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18, marginBottom: 16 }}>Pledge Distribution</div>
-                                                <div className="admin-list">
-                                                    {donorPledgeBands.map((band) => {
-                                                        const pct = donorStats.total > 0 ? Math.round((band.count / donorStats.total) * 100) : 0;
-                                                        return (
-                                                            <div key={band.key} className="admin-chart-row">
-                                                                <span>{band.label}</span>
-                                                                <div className="admin-chart-track">
-                                                                    <div className="admin-chart-fill" style={{ width: `${pct}%` }}></div>
-                                                                </div>
-                                                                <strong>{band.count}</strong>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                            <div className="admin-chart-card">
-                                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18, marginBottom: 16 }}>Progress Snapshot</div>
-                                                <div className="admin-list">
-                                                    {donorProgressSegments.map((segment) => {
-                                                        const pct = donorStats.total > 0 ? Math.round((segment.count / donorStats.total) * 100) : 0;
-                                                        return (
-                                                            <div key={segment.key} className="admin-chart-row">
-                                                                <span>{segment.label}</span>
-                                                                <div className="admin-chart-track">
-                                                                    <div className="admin-chart-fill" style={{ width: `${pct}%`, background: segment.color }}></div>
-                                                                </div>
-                                                                <strong>{pct}%</strong>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="admin-donor-grid">
-                                            {paginatedDonors.map((donor) => {
-                                                const pledge = Number(donor.engagement?.totalPledge || 0);
-                                                const paid = Number(donor.paidAmount || 0);
-                                                const progress = pledge > 0 ? Math.min(100, Math.round((paid / pledge) * 100)) : 0;
-                                                return (
-                                                    <div key={donor.id} className="admin-donor-card">
-                                                        <div className="admin-donor-top">
-                                                            <div>
-                                                                <div style={{ fontWeight: 700, fontSize: 18 }}>{donor.name}</div>
-                                                                <div style={{ color: 'var(--text-muted)', marginTop: 4 }}>{donor.email}</div>
-                                                            </div>
-                                                            <span className="admin-chip">{donor._count?.payments ?? 0} payments</span>
-                                                        </div>
-
-                                                        <div className="admin-donor-metrics">
-                                                            <div className="admin-donor-metric">
-                                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Pledged</div>
-                                                                <div style={{ fontWeight: 700, marginTop: 6 }}>${pledge.toLocaleString()}</div>
-                                                            </div>
-                                                            <div className="admin-donor-metric">
-                                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Paid</div>
-                                                                <div style={{ fontWeight: 700, marginTop: 6 }}>${paid.toLocaleString()}</div>
-                                                            </div>
-                                                            <div className="admin-donor-metric">
-                                                                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Remaining</div>
-                                                                <div style={{ fontWeight: 700, marginTop: 6 }}>${Math.max(0, pledge - paid).toLocaleString()}</div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="admin-donor-progress">
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                                                                <span style={{ color: 'var(--text-muted)' }}>Funding progress</span>
-                                                                <strong>{progress}%</strong>
-                                                            </div>
-                                                            <div className="admin-chart-track">
-                                                                <div className="admin-chart-fill" style={{ width: `${progress}%` }}></div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="admin-actions">
-                                                            <button type="button" className="admin-button" onClick={() => handleSelectDonor(donor.id)}>
-                                                                View details
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {paginatedDonors.length === 0 ? <div className="admin-item">No donors match the current filter.</div> : null}
-                                        </div>
-                                        <div className="admin-pagination">
-                                            <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
-                                            <div className="admin-pagination-buttons">
-                                                <button type="button" className="admin-button secondary" disabled={donorsPage <= 1} onClick={() => setDonorsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                <span>Page {donorsPage} of {donorsTotalPages}</span>
-                                                <button type="button" className="admin-button secondary" disabled={donorsPage >= donorsTotalPages} onClick={() => setDonorsPage((page) => Math.min(donorsTotalPages, page + 1))}>Next</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {activeTab === 'requests' ? (
-                                    <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Requests</div>
-                                        <div className="admin-actions" style={{ marginBottom: 16 }}>
-                                            <input
-                                                style={{ ...inputStyle, maxWidth: 220 }}
-                                                placeholder="Search requests"
-                                                value={requestFilter.query}
-                                                onChange={(e) => setRequestFilter((prev) => ({ ...prev, query: e.target.value }))}
-                                            />
-                                            <select
-                                                style={{ ...inputStyle, maxWidth: 180 }}
-                                                value={requestFilter.status}
-                                                onChange={(e) => setRequestFilter((prev) => ({ ...prev, status: e.target.value }))}
-                                            >
-                                                <option value="">All statuses</option>
-                                                <option value="pending">pending</option>
-                                                <option value="on_hold">on_hold</option>
-                                                <option value="approved">approved</option>
-                                                <option value="declined">declined</option>
-                                            </select>
-                                            <select
-                                                style={{ ...inputStyle, maxWidth: 180 }}
-                                                value={requestFilter.type}
-                                                onChange={(e) => setRequestFilter((prev) => ({ ...prev, type: e.target.value }))}
-                                            >
-                                                <option value="">All types</option>
-                                                <option value="account_creation">account_creation</option>
-                                                <option value="payment_upload">payment_upload</option>
-                                                <option value="engagement_change">engagement_change</option>
-                                                <option value="other">other</option>
-                                            </select>
-                                        </div>
-                                        <div className="admin-list">
-                                            {paginatedRequests.map((request) => (
-                                                <div key={request.id} className="admin-item">
-                                                    <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{request.type.replace(/_/g, ' ')}</div>
-                                                    <div style={{ color: 'var(--accent-gold)', marginTop: 4 }}>{request.status}</div>
-                                                    <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>{request.message}</div>
-                                                    {['pending', 'on_hold'].includes(request.status) ? (
-                                                        <>
-                                                            {request.type === 'account_creation' ? (
-                                                                <div className="admin-actions" style={{ marginTop: 12 }}>
-                                                                    <input
-                                                                        style={{ ...inputStyle, maxWidth: 220 }}
-                                                                        type="password"
-                                                                        placeholder="Temp password"
-                                                                        value={getRequestDraft(request).password}
-                                                                        onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), password: e.target.value } }))}
-                                                                    />
-                                                                    <input
-                                                                        style={{ ...inputStyle, maxWidth: 180 }}
-                                                                        type="number"
-                                                                        placeholder="Pledge amount"
-                                                                        value={getRequestDraft(request).pledgeAmount}
-                                                                        onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), pledgeAmount: e.target.value } }))}
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        className="admin-button"
-                                                                        onClick={() => handleRequestAction(request.id, 'approved', {
-                                                                            password: getRequestDraft(request).password,
-                                                                            pledgeAmount: Number(getRequestDraft(request).pledgeAmount) || undefined,
-                                                                        })}
-                                                                    >
-                                                                        Approve account
-                                                                    </button>
-                                                                    {request.status === 'pending' ? (
-                                                                        <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'on_hold')}>
-                                                                            Put on hold
-                                                                        </button>
-                                                                    ) : null}
-                                                                </div>
-                                                            ) : null}
-                                                            {request.type === 'payment_upload' ? (
-                                                                <div className="admin-actions" style={{ marginTop: 12 }}>
-                                                                    <input
-                                                                        style={{ ...inputStyle, maxWidth: 160 }}
-                                                                        type="number"
-                                                                        placeholder="Amount"
-                                                                        value={getRequestDraft(request).amount}
-                                                                        onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), amount: e.target.value } }))}
-                                                                    />
-                                                                    <input
-                                                                        style={{ ...inputStyle, maxWidth: 180 }}
-                                                                        type="date"
-                                                                        value={getRequestDraft(request).date}
-                                                                        onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), date: e.target.value } }))}
-                                                                    />
-                                                                    <select
-                                                                        style={{ ...inputStyle, maxWidth: 160 }}
-                                                                        value={getRequestDraft(request).method}
-                                                                        onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), method: e.target.value } }))}
-                                                                    >
-                                                                        <option value="zeffy">zeffy</option>
-                                                                        <option value="cash">cash</option>
-                                                                        <option value="other">other</option>
-                                                                    </select>
-                                                                    <button
-                                                                        type="button"
-                                                                        className="admin-button"
-                                                                        onClick={() => handleRequestAction(request.id, 'approved', {
-                                                                            amount: Number(getRequestDraft(request).amount),
-                                                                            date: new Date(getRequestDraft(request).date).toISOString(),
-                                                                            method: getRequestDraft(request).method,
-                                                                        })}
-                                                                    >
-                                                                        Approve payment
-                                                                    </button>
-                                                                    {request.status === 'pending' ? (
-                                                                        <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'on_hold')}>
-                                                                            Put on hold
-                                                                        </button>
-                                                                    ) : null}
-                                                                </div>
-                                                            ) : null}
-                                                            {!['account_creation', 'payment_upload'].includes(request.type) ? (
-                                                                <div className="admin-actions" style={{ marginTop: 12 }}>
-                                                                    <button type="button" className="admin-button" onClick={() => handleRequestAction(request.id, 'approved')}>
-                                                                        Approve
-                                                                    </button>
-                                                                    {request.status === 'pending' ? (
-                                                                        <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'on_hold')}>
-                                                                            Put on hold
-                                                                        </button>
-                                                                    ) : null}
-                                                                </div>
-                                                            ) : null}
-                                                            <div className="admin-actions" style={{ marginTop: 12 }}>
-                                                                <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'declined')}>
-                                                                    Reject
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    ) : null}
-                                                </div>
-                                            ))}
-                                            {paginatedRequests.length === 0 ? <div className="admin-item">No requests match the current filters.</div> : null}
-                                        </div>
-                                        <div className="admin-pagination">
-                                            <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
-                                            <div className="admin-pagination-buttons">
-                                                <button type="button" className="admin-button secondary" disabled={requestsPage <= 1} onClick={() => setRequestsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                <span>Page {requestsPage} of {requestsTotalPages}</span>
-                                                <button type="button" className="admin-button secondary" disabled={requestsPage >= requestsTotalPages} onClick={() => setRequestsPage((page) => Math.min(requestsTotalPages, page + 1))}>Next</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {activeTab === 'admins' ? (
-                                    <>
-                                        <div style={cardStyle}>
-                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Create admin</div>
-                                            <form className="admin-form" onSubmit={handleCreateAdmin}>
-                                                <input style={inputStyle} placeholder="Full name" value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
-                                                <input style={inputStyle} type="email" placeholder="Email" value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
-                                                <input style={inputStyle} type="password" placeholder="Password" value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} />
-                                                <button type="submit" className="admin-button">Create admin</button>
-                                            </form>
                                         </div>
                                         <div style={cardStyle}>
-                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Admins</div>
+                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Top Donors</div>
                                             <div className="admin-actions" style={{ marginBottom: 16 }}>
                                                 <input
-                                                    style={{ ...inputStyle, maxWidth: 260 }}
-                                                    placeholder="Search admins"
-                                                    value={adminFilter.query}
-                                                    onChange={(e) => setAdminFilter({ query: e.target.value })}
+                                                    style={{ ...inputStyle, maxWidth: 220 }}
+                                                    placeholder="Search donors"
+                                                    value={donorFilter.query}
+                                                    onChange={(e) => setDonorFilter({ query: e.target.value })}
                                                 />
                                             </div>
                                             <div className="admin-list">
-                                                {paginatedAdmins.map((admin) => (
-                                                    <div key={admin.id} className="admin-item">
-                                                        <div style={{ fontWeight: 700 }}>{admin.name}</div>
-                                                        <div style={{ color: 'var(--text-muted)', marginTop: 4 }}>{admin.email}</div>
-                                                        {admin.addedBy?.name ? <div style={{ marginTop: 8 }}>Added by {admin.addedBy.name}</div> : null}
+                                                {paginatedTopDonors.map((donor) => (
+                                                    <div key={donor.id} className="admin-item">
+                                                        <div style={{ fontWeight: 700 }}>{donor.name}</div>
+                                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{donor.email}</div>
+                                                        <div style={{ marginTop: 8 }}>${Number(donor.paidAmount || 0).toLocaleString()} paid</div>
                                                     </div>
                                                 ))}
-                                                {paginatedAdmins.length === 0 ? <div className="admin-item">No admins match the current filter.</div> : null}
+                                                {paginatedTopDonors.length === 0 ? <div className="admin-item">No donors match the current filter.</div> : null}
                                             </div>
                                             <div className="admin-pagination">
-                                                <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
+                                                <div style={{ color: 'var(--text-muted)' }}>Showing up to 8 items per page</div>
                                                 <div className="admin-pagination-buttons">
-                                                    <button type="button" className="admin-button secondary" disabled={adminsPage <= 1} onClick={() => setAdminsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                    <span>Page {adminsPage} of {adminsTotalPages}</span>
-                                                    <button type="button" className="admin-button secondary" disabled={adminsPage >= adminsTotalPages} onClick={() => setAdminsPage((page) => Math.min(adminsTotalPages, page + 1))}>Next</button>
+                                                    <button type="button" className="admin-button secondary" disabled={topDonorsPage <= 1} onClick={() => setTopDonorsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                                    <span>Page {topDonorsPage} of {topDonorsTotalPages}</span>
+                                                    <button type="button" className="admin-button secondary" disabled={topDonorsPage >= topDonorsTotalPages} onClick={() => setTopDonorsPage((page) => Math.min(topDonorsTotalPages, page + 1))}>Next</button>
                                                 </div>
                                             </div>
                                         </div>
-                                    </>
-                                ) : null}
-
-                                {activeTab === 'logs' ? (
+                                    </div>
                                     <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Activity logs</div>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Recent activity</div>
                                         <div className="admin-actions" style={{ marginBottom: 16 }}>
                                             <input
                                                 style={{ ...inputStyle, maxWidth: 220 }}
@@ -1168,30 +1089,456 @@ export default function AdminDashboardPage() {
                                             />
                                         </div>
                                         <div className="admin-list">
-                                            {paginatedLogs.map((log) => (
+                                            {recentLogs.map((log) => (
                                                 <div key={log.id} className="admin-item">
                                                     <div style={{ fontWeight: 700 }}>{log.action}</div>
                                                     <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{log.details}</div>
                                                     <div style={{ color: 'var(--accent-gold)', marginTop: 6 }}>{log.actor}</div>
                                                 </div>
                                             ))}
-                                            {paginatedLogs.length === 0 ? <div className="admin-item">No logs match the current filters.</div> : null}
+                                            {recentLogs.length === 0 ? <div className="admin-item">No activity matches the current filters.</div> : null}
+                                        </div>
+                                        <div className="admin-pagination">
+                                            <div style={{ color: 'var(--text-muted)' }}>Showing up to 8 items per page</div>
+                                            <div className="admin-pagination-buttons">
+                                                <button type="button" className="admin-button secondary" disabled={recentLogsPage <= 1} onClick={() => setRecentLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                                <span>Page {recentLogsPage} of {recentLogsTotalPages}</span>
+                                                <button type="button" className="admin-button secondary" disabled={recentLogsPage >= recentLogsTotalPages} onClick={() => setRecentLogsPage((page) => Math.min(recentLogsTotalPages, page + 1))}>Next</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : null}
+
+                            {activeTab === 'donors' ? (
+                                <div style={cardStyle}>
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Donors</div>
+                                    <div className="admin-actions" style={{ marginBottom: 16, display: 'grid', gridTemplateColumns: '1fr auto auto auto auto auto', gap: 10, alignItems: 'center' }}>
+                                        <input
+                                            style={{ ...inputStyle, maxWidth: 'none' }}
+                                            placeholder="Search donors"
+                                            value={donorFilter.query}
+                                            onChange={(e) => setDonorFilter({ query: e.target.value })}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="admin-button"
+                                            onClick={() => setIsAddDonorModalOpen(true)}
+                                            style={{ whiteSpace: 'nowrap' }}
+                                        >
+                                            + Add Donor
+                                        </button>
+                                        <label style={{
+                                            padding: '10px 14px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: 'var(--accent-gold)',
+                                            color: '#111',
+                                            fontWeight: 700,
+                                            cursor: bulkUploadLoading ? 'not-allowed' : 'pointer',
+                                            opacity: bulkUploadLoading ? 0.6 : 1,
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            <input
+                                                type="file"
+                                                accept=".csv"
+                                                onChange={handleBulkUpload}
+                                                disabled={bulkUploadLoading}
+                                                style={{ display: 'none' }}
+                                            />
+                                            {bulkUploadLoading ? 'Uploading...' : 'Upload CSV'}
+                                        </label>
+                                        <button
+                                            type="button"
+                                            className="admin-button secondary"
+                                            onClick={handleBulkDownload}
+                                            style={{ whiteSpace: 'nowrap' }}
+                                        >
+                                            ↓ Export CSV
+                                        </button>
+                                    </div>
+                                    {bulkUploadProgress && (
+                                        <div style={{
+                                            padding: '12px',
+                                            borderRadius: '12px',
+                                            background: 'rgba(212, 169, 110, 0.1)',
+                                            border: '1px solid var(--accent-gold)',
+                                            marginBottom: 16,
+                                            color: 'var(--accent-gold)',
+                                        }}>
+                                            {bulkUploadProgress}
+                                        </div>
+                                    )}
+                                    <div className="admin-grid" style={{ marginBottom: 18 }}>
+                                        <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Visible donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{donorStats.total}</div></div>
+                                        <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Avg pledge</div><div style={{ fontSize: 30, fontWeight: 700 }}>${donorStats.averagePledge.toLocaleString()}</div></div>
+                                        <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Avg paid</div><div style={{ fontSize: 30, fontWeight: 700 }}>${donorStats.averagePaid.toLocaleString()}</div></div>
+                                        <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Completion rate</div><div style={{ fontSize: 30, fontWeight: 700 }}>{donorStats.completionRate}%</div></div>
+                                    </div>
+                                    <div className="admin-two-col" style={{ marginBottom: 18 }}>
+                                        <div className="admin-chart-card">
+                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18, marginBottom: 16 }}>Pledge Distribution</div>
+                                            <div className="admin-list">
+                                                {donorPledgeBands.map((band) => {
+                                                    const pct = donorStats.total > 0 ? Math.round((band.count / donorStats.total) * 100) : 0;
+                                                    return (
+                                                        <div key={band.key} className="admin-chart-row">
+                                                            <span>{band.label}</span>
+                                                            <div className="admin-chart-track">
+                                                                <div className="admin-chart-fill" style={{ width: `${pct}%` }}></div>
+                                                            </div>
+                                                            <strong>{band.count}</strong>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                        <div className="admin-chart-card">
+                                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18, marginBottom: 16 }}>Progress Snapshot</div>
+                                            <div className="admin-list">
+                                                {donorProgressSegments.map((segment) => {
+                                                    const pct = donorStats.total > 0 ? Math.round((segment.count / donorStats.total) * 100) : 0;
+                                                    return (
+                                                        <div key={segment.key} className="admin-chart-row">
+                                                            <span>{segment.label}</span>
+                                                            <div className="admin-chart-track">
+                                                                <div className="admin-chart-fill" style={{ width: `${pct}%`, background: segment.color }}></div>
+                                                            </div>
+                                                            <strong>{pct}%</strong>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="admin-donor-grid">
+                                        {paginatedDonors.map((donor) => {
+                                            const pledge = Number(donor.engagement?.totalPledge || 0);
+                                            const paid = Number(donor.paidAmount || 0);
+                                            const progress = pledge > 0 ? Math.min(100, Math.round((paid / pledge) * 100)) : 0;
+                                            return (
+                                                <div key={donor.id} className="admin-donor-card">
+                                                    <div className="admin-donor-top">
+                                                        <div>
+                                                            <div style={{ fontWeight: 700, fontSize: 18 }}>{donor.name}</div>
+                                                            <div style={{ color: 'var(--text-muted)', marginTop: 4 }}>{donor.email}</div>
+                                                        </div>
+                                                        <span className="admin-chip">{donor._count?.payments ?? 0} payments</span>
+                                                    </div>
+
+                                                    <div className="admin-donor-metrics">
+                                                        <div className="admin-donor-metric">
+                                                            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Pledged</div>
+                                                            <div style={{ fontWeight: 700, marginTop: 6 }}>${pledge.toLocaleString()}</div>
+                                                        </div>
+                                                        <div className="admin-donor-metric">
+                                                            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Paid</div>
+                                                            <div style={{ fontWeight: 700, marginTop: 6 }}>${paid.toLocaleString()}</div>
+                                                        </div>
+                                                        <div className="admin-donor-metric">
+                                                            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Remaining</div>
+                                                            <div style={{ fontWeight: 700, marginTop: 6 }}>${Math.max(0, pledge - paid).toLocaleString()}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="admin-donor-progress">
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                                                            <span style={{ color: 'var(--text-muted)' }}>Funding progress</span>
+                                                            <strong>{progress}%</strong>
+                                                        </div>
+                                                        <div className="admin-chart-track">
+                                                            <div className="admin-chart-fill" style={{ width: `${progress}%` }}></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="admin-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                                        <button type="button" className="admin-button" onClick={() => handleSelectDonorWithPayments(donor.id)}>
+                                                            View details
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="admin-button secondary"
+                                                            onClick={() => donor.isActive !== false ? handleDeactivateDonor(donor.id) : handleReactivateDonor(donor.id)}
+                                                            style={{
+                                                                color: donor.isActive !== false ? '#ffb4b4' : '#b5f0c4',
+                                                                borderColor: donor.isActive !== false ? 'rgba(224, 96, 96, 0.45)' : 'rgba(126, 184, 160, 0.45)',
+                                                            }}
+                                                        >
+                                                            {donor.isActive !== false ? 'Deactivate' : 'Reactivate'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {paginatedDonors.length === 0 ? <div className="admin-item">No donors match the current filter.</div> : null}
+                                    </div>
+                                    <div className="admin-pagination">
+                                        <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
+                                        <div className="admin-pagination-buttons">
+                                            <button type="button" className="admin-button secondary" disabled={donorsPage <= 1} onClick={() => setDonorsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                            <span>Page {donorsPage} of {donorsTotalPages}</span>
+                                            <button type="button" className="admin-button secondary" disabled={donorsPage >= donorsTotalPages} onClick={() => setDonorsPage((page) => Math.min(donorsTotalPages, page + 1))}>Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {activeTab === 'requests' ? (
+                                <div style={cardStyle}>
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Requests</div>
+                                    <div className="admin-actions" style={{ marginBottom: 16 }}>
+                                        <input
+                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            placeholder="Search requests"
+                                            value={requestFilter.query}
+                                            onChange={(e) => setRequestFilter((prev) => ({ ...prev, query: e.target.value }))}
+                                        />
+                                        <select
+                                            style={{ ...inputStyle, maxWidth: 180 }}
+                                            value={requestFilter.status}
+                                            onChange={(e) => setRequestFilter((prev) => ({ ...prev, status: e.target.value }))}
+                                        >
+                                            <option value="">All statuses</option>
+                                            <option value="pending">pending</option>
+                                            <option value="on_hold">on_hold</option>
+                                            <option value="approved">approved</option>
+                                            <option value="declined">declined</option>
+                                        </select>
+                                        <select
+                                            style={{ ...inputStyle, maxWidth: 180 }}
+                                            value={requestFilter.type}
+                                            onChange={(e) => setRequestFilter((prev) => ({ ...prev, type: e.target.value }))}
+                                        >
+                                            <option value="">All types</option>
+                                            <option value="account_creation">account_creation</option>
+                                            <option value="payment_upload">payment_upload</option>
+                                            <option value="engagement_change">engagement_change</option>
+                                            <option value="other">other</option>
+                                        </select>
+                                    </div>
+                                    <div className="admin-list">
+                                        {paginatedRequests.map((request) => (
+                                            <div key={request.id} className="admin-item">
+                                                <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{request.type.replace(/_/g, ' ')}</div>
+                                                <div style={{ color: 'var(--accent-gold)', marginTop: 4 }}>{request.status}</div>
+                                                <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>{request.message}</div>
+                                                {['pending', 'on_hold'].includes(request.status) ? (
+                                                    <>
+                                                        {request.type === 'account_creation' ? (
+                                                            <div className="admin-actions" style={{ marginTop: 12 }}>
+                                                                <input
+                                                                    style={{ ...inputStyle, maxWidth: 220 }}
+                                                                    type="password"
+                                                                    placeholder="Temp password"
+                                                                    value={getRequestDraft(request).password}
+                                                                    onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), password: e.target.value } }))}
+                                                                />
+                                                                <input
+                                                                    style={{ ...inputStyle, maxWidth: 180 }}
+                                                                    type="number"
+                                                                    placeholder="Pledge amount"
+                                                                    value={getRequestDraft(request).pledgeAmount}
+                                                                    onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), pledgeAmount: e.target.value } }))}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    className="admin-button"
+                                                                    onClick={() => handleRequestAction(request.id, 'approved', {
+                                                                        password: getRequestDraft(request).password,
+                                                                        pledgeAmount: Number(getRequestDraft(request).pledgeAmount) || undefined,
+                                                                    })}
+                                                                >
+                                                                    Approve account
+                                                                </button>
+                                                                {request.status === 'pending' ? (
+                                                                    <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'on_hold')}>
+                                                                        Put on hold
+                                                                    </button>
+                                                                ) : null}
+                                                            </div>
+                                                        ) : null}
+                                                        {request.type === 'payment_upload' ? (
+                                                            <div className="admin-actions" style={{ marginTop: 12 }}>
+                                                                <input
+                                                                    style={{ ...inputStyle, maxWidth: 160 }}
+                                                                    type="number"
+                                                                    placeholder="Amount"
+                                                                    value={getRequestDraft(request).amount}
+                                                                    onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), amount: e.target.value } }))}
+                                                                />
+                                                                <input
+                                                                    style={{ ...inputStyle, maxWidth: 180 }}
+                                                                    type="date"
+                                                                    value={getRequestDraft(request).date}
+                                                                    onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), date: e.target.value } }))}
+                                                                />
+                                                                <select
+                                                                    style={{ ...inputStyle, maxWidth: 160 }}
+                                                                    value={getRequestDraft(request).method}
+                                                                    onChange={(e) => setRequestDrafts((prev) => ({ ...prev, [request.id]: { ...getRequestDraft(request), method: e.target.value } }))}
+                                                                >
+                                                                    <option value="zeffy">zeffy</option>
+                                                                    <option value="cash">cash</option>
+                                                                    <option value="other">other</option>
+                                                                </select>
+                                                                <button
+                                                                    type="button"
+                                                                    className="admin-button"
+                                                                    onClick={() => handleRequestAction(request.id, 'approved', {
+                                                                        amount: Number(getRequestDraft(request).amount),
+                                                                        date: new Date(getRequestDraft(request).date).toISOString(),
+                                                                        method: getRequestDraft(request).method,
+                                                                    })}
+                                                                >
+                                                                    Approve payment
+                                                                </button>
+                                                                {request.status === 'pending' ? (
+                                                                    <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'on_hold')}>
+                                                                        Put on hold
+                                                                    </button>
+                                                                ) : null}
+                                                            </div>
+                                                        ) : null}
+                                                        {!['account_creation', 'payment_upload'].includes(request.type) ? (
+                                                            <div className="admin-actions" style={{ marginTop: 12 }}>
+                                                                <button type="button" className="admin-button" onClick={() => handleRequestAction(request.id, 'approved')}>
+                                                                    Approve
+                                                                </button>
+                                                                {request.status === 'pending' ? (
+                                                                    <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'on_hold')}>
+                                                                        Put on hold
+                                                                    </button>
+                                                                ) : null}
+                                                            </div>
+                                                        ) : null}
+                                                        <div className="admin-actions" style={{ marginTop: 12 }}>
+                                                            <button type="button" className="admin-button secondary" onClick={() => handleRequestAction(request.id, 'declined')}>
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : null}
+                                            </div>
+                                        ))}
+                                        {paginatedRequests.length === 0 ? <div className="admin-item">No requests match the current filters.</div> : null}
+                                    </div>
+                                    <div className="admin-pagination">
+                                        <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
+                                        <div className="admin-pagination-buttons">
+                                            <button type="button" className="admin-button secondary" disabled={requestsPage <= 1} onClick={() => setRequestsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                            <span>Page {requestsPage} of {requestsTotalPages}</span>
+                                            <button type="button" className="admin-button secondary" disabled={requestsPage >= requestsTotalPages} onClick={() => setRequestsPage((page) => Math.min(requestsTotalPages, page + 1))}>Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {activeTab === 'admins' ? (
+                                <>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Create admin</div>
+                                        <form className="admin-form" onSubmit={handleCreateAdmin}>
+                                            <input style={inputStyle} placeholder="Full name" value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
+                                            <input style={inputStyle} type="email" placeholder="Email" value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
+                                            <input style={inputStyle} type="password" placeholder="Password" value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} />
+                                            <button type="submit" className="admin-button">Create admin</button>
+                                        </form>
+                                    </div>
+                                    <div style={cardStyle}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Admins</div>
+                                        <div className="admin-actions" style={{ marginBottom: 16 }}>
+                                            <input
+                                                style={{ ...inputStyle, maxWidth: 260 }}
+                                                placeholder="Search admins"
+                                                value={adminFilter.query}
+                                                onChange={(e) => setAdminFilter({ query: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="admin-list">
+                                            {paginatedAdmins.map((admin) => (
+                                                <div key={admin.id} className="admin-item">
+                                                    <div style={{ fontWeight: 700 }}>{admin.name}</div>
+                                                    <div style={{ color: 'var(--text-muted)', marginTop: 4 }}>{admin.email}</div>
+                                                    {admin.addedBy?.name ? <div style={{ marginTop: 8 }}>Added by {admin.addedBy.name}</div> : null}
+                                                </div>
+                                            ))}
+                                            {paginatedAdmins.length === 0 ? <div className="admin-item">No admins match the current filter.</div> : null}
                                         </div>
                                         <div className="admin-pagination">
                                             <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
                                             <div className="admin-pagination-buttons">
-                                                <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                <span>Page {logsPage} of {logsTotalPages}</span>
-                                                <button type="button" className="admin-button secondary" disabled={logsPage >= logsTotalPages} onClick={() => setLogsPage((page) => Math.min(logsTotalPages, page + 1))}>Next</button>
+                                                <button type="button" className="admin-button secondary" disabled={adminsPage <= 1} onClick={() => setAdminsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                                <span>Page {adminsPage} of {adminsTotalPages}</span>
+                                                <button type="button" className="admin-button secondary" disabled={adminsPage >= adminsTotalPages} onClick={() => setAdminsPage((page) => Math.min(adminsTotalPages, page + 1))}>Next</button>
                                             </div>
                                         </div>
                                     </div>
-                                ) : null}
-                            </section>
-                        </div>
-                    </>
-                ) : null}
+                                </>
+                            ) : null}
+
+                            {activeTab === 'logs' ? (
+                                <div style={cardStyle}>
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Activity logs</div>
+                                    <div className="admin-actions" style={{ marginBottom: 16 }}>
+                                        <input
+                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            placeholder="Search activity"
+                                            value={logFilter.query}
+                                            onChange={(e) => setLogFilter((prev) => ({ ...prev, query: e.target.value }))}
+                                        />
+                                        <input
+                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            placeholder="Filter by action"
+                                            value={logFilter.action}
+                                            onChange={(e) => setLogFilter((prev) => ({ ...prev, action: e.target.value }))}
+                                        />
+                                        <input
+                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            placeholder="Filter by actor"
+                                            value={logFilter.actor}
+                                            onChange={(e) => setLogFilter((prev) => ({ ...prev, actor: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="admin-list">
+                                        {paginatedLogs.map((log) => (
+                                            <div key={log.id} className="admin-item">
+                                                <div style={{ fontWeight: 700 }}>{log.action}</div>
+                                                <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{log.details}</div>
+                                                <div style={{ color: 'var(--accent-gold)', marginTop: 6 }}>{log.actor}</div>
+                                            </div>
+                                        ))}
+                                        {paginatedLogs.length === 0 ? <div className="admin-item">No logs match the current filters.</div> : null}
+                                    </div>
+                                    <div className="admin-pagination">
+                                        <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
+                                        <div className="admin-pagination-buttons">
+                                            <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                            <span>Page {logsPage} of {logsTotalPages}</span>
+                                            <button type="button" className="admin-button secondary" disabled={logsPage >= logsTotalPages} onClick={() => setLogsPage((page) => Math.min(logsTotalPages, page + 1))}>Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+                        </section>
+                    </div>
+                </>
             </main>
+
+            <AddDonorModal
+                isOpen={isAddDonorModalOpen}
+                onClose={() => setIsAddDonorModalOpen(false)}
+                onSubmit={handleAddDonor}
+                formData={addDonorForm}
+                setFormData={setAddDonorForm}
+                loading={addDonorLoading}
+                inputStyle={inputStyle}
+                cardStyle={{
+                    ...cardStyle,
+                    position: 'relative',
+                    zIndex: 1000,
+                }}
+            />
+
             <Footer t={t} />
         </div>
     );

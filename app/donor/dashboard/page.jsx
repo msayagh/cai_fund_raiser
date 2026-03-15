@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
@@ -14,6 +14,11 @@ import { createEngagement, getMe, getMyPayments, getMyRequests, updateEngagement
 import { createRequest } from '@/lib/requestsApi.js';
 import { clearTokens, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession, setStoredSession } from '@/lib/session.js';
+import OverviewTab from './OverviewTab.jsx';
+import PaymentsTab from './PaymentsTab.jsx';
+import ProfileTab from './ProfileTab.jsx';
+import RequestsTab from './RequestsTab.jsx';
+import TabLoadingFallback from './TabLoadingFallback.jsx';
 
 const sectionCardStyle = {
     background: 'var(--bg-card)',
@@ -316,193 +321,55 @@ export default function DonorDashboardPage() {
                             </aside>
 
                             <section style={{ display: 'grid', gap: 24 }}>
-                                {activeTab === 'overview' ? (
-                                    <>
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Giving Summary</div>
-                                            <div className="dashboard-stat-grid">
-                                                <div className="dashboard-stat">
-                                                    <div style={{ color: 'var(--text-muted)' }}>Committed</div>
-                                                    <div style={{ fontSize: 28, fontWeight: 700 }}>${engagementTarget.toLocaleString()}</div>
-                                                </div>
-                                                <div className="dashboard-stat">
-                                                    <div style={{ color: 'var(--text-muted)' }}>Received</div>
-                                                    <div style={{ fontSize: 28, fontWeight: 700 }}>${paymentTotal.toLocaleString()}</div>
-                                                </div>
-                                                <div className="dashboard-stat">
-                                                    <div style={{ color: 'var(--text-muted)' }}>Progress</div>
-                                                    <div style={{ fontSize: 28, fontWeight: 700 }}>{progressPct}%</div>
-                                                </div>
-                                            </div>
-                                            <div style={{ marginTop: 18 }}>
-                                                <div className="dashboard-progress">
-                                                    <div className="dashboard-progress-bar" style={{ width: `${progressPct}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Engagement Details</div>
-                                            <div className="dashboard-stat-grid">
-                                                <div className="dashboard-stat">
-                                                    <div style={{ color: 'var(--text-muted)' }}>Remaining</div>
-                                                    <div style={{ fontSize: 28, fontWeight: 700 }}>${remainingAmount.toLocaleString()}</div>
-                                                </div>
-                                                <div className="dashboard-stat">
-                                                    <div style={{ color: 'var(--text-muted)' }}>End date</div>
-                                                    <div style={{ fontSize: 22, fontWeight: 700 }}>
-                                                        {profile?.engagement?.endDate ? new Date(profile.engagement.endDate).toLocaleDateString() : 'Open'}
-                                                    </div>
-                                                </div>
-                                                <div className="dashboard-stat">
-                                                    <div style={{ color: 'var(--text-muted)' }}>Requests filed</div>
-                                                    <div style={{ fontSize: 28, fontWeight: 700 }}>{requests.length}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Quick Actions</div>
-                                            <div className="dashboard-list">
-                                                <button type="button" className="dashboard-action" onClick={() => setActiveTab('payments')}>
-                                                    Review your payment history and current progress
-                                                </button>
-                                                <button type="button" className="dashboard-action" onClick={() => setActiveTab('profile')}>
-                                                    Update your profile, password, and pledge details
-                                                </button>
-                                                <button type="button" className="dashboard-action" onClick={() => setActiveTab('requests')}>
-                                                    Contact the admin team or submit a help request
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Recent Payments</div>
-                                            <div className="dashboard-list">
-                                                {latestPayments.map((payment) => (
-                                                    <div key={payment.id} className="dashboard-list-item">
-                                                        <div style={{ fontWeight: 700 }}>${Number(payment.amount || 0).toLocaleString()}</div>
-                                                        <div style={{ color: 'var(--text-muted)' }}>
-                                                            {new Date(payment.date).toLocaleDateString()} · {payment.method}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {payments.length === 0 ? <div className="dashboard-list-item">No payments recorded yet.</div> : null}
-                                            </div>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Recent Requests</div>
-                                            <div className="dashboard-list">
-                                                {latestRequests.map((request) => (
-                                                    <div key={request.id} className="dashboard-list-item">
-                                                        <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{request.type.replace(/_/g, ' ')}</div>
-                                                        <div style={{ color: 'var(--accent-gold)', marginTop: 4 }}>{request.status}</div>
-                                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{request.message}</div>
-                                                    </div>
-                                                ))}
-                                                {requests.length === 0 ? <div className="dashboard-list-item">No requests submitted yet.</div> : null}
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : null}
-
-                                {activeTab === 'payments' ? (
-                                    <>
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Payment History</div>
-                                            <div className="dashboard-list">
-                                                {payments.map((payment) => (
-                                                    <div key={payment.id} className="dashboard-list-item">
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                                                            <strong>${Number(payment.amount || 0).toLocaleString()}</strong>
-                                                            <span style={{ color: 'var(--accent-gold)' }}>{payment.method}</span>
-                                                        </div>
-                                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
-                                                            {new Date(payment.date).toLocaleDateString()}
-                                                        </div>
-                                                        {payment.note ? <div style={{ marginTop: 8 }}>{payment.note}</div> : null}
-                                                    </div>
-                                                ))}
-                                                {payments.length === 0 ? <div className="dashboard-list-item">No payments recorded yet.</div> : null}
-                                            </div>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Need to report an offline payment?</div>
-                                            <p style={{ color: 'var(--text-muted)', marginBottom: 14 }}>
-                                                If you donated by cash or bank transfer, send a request so the admin team can record it for you.
-                                            </p>
-                                            <button className="dashboard-button" type="button" onClick={() => setActiveTab('requests')}>
-                                                Open request form
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : null}
-
-                                {activeTab === 'profile' ? (
-                                    <>
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Profile</div>
-                                            <form className="dashboard-form" onSubmit={handleProfileUpdate}>
-                                                <input style={inputStyle} value={profileForm.name} onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Full name" />
-                                                <input style={inputStyle} type="email" value={profileForm.email} onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="Email" />
-                                                <button className="dashboard-button" type="submit">Save profile</button>
-                                            </form>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Password</div>
-                                            <form className="dashboard-form" onSubmit={handlePasswordUpdate}>
-                                                <input style={inputStyle} type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))} placeholder="Current password" />
-                                                <input style={inputStyle} type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))} placeholder="New password" />
-                                                <input style={inputStyle} type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))} placeholder="Confirm new password" />
-                                                <button className="dashboard-button" type="submit">Update password</button>
-                                            </form>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Engagement</div>
-                                            <form className="dashboard-form" onSubmit={handleEngagementUpdate}>
-                                                <input style={inputStyle} type="number" min="1" value={engagementForm.totalPledge} onChange={(e) => setEngagementForm((prev) => ({ ...prev, totalPledge: e.target.value }))} placeholder="Pledge amount" />
-                                                <input style={inputStyle} type="date" value={engagementForm.endDate} onChange={(e) => setEngagementForm((prev) => ({ ...prev, endDate: e.target.value }))} />
-                                                <button className="dashboard-button" type="submit">{profile?.engagement ? 'Update engagement' : 'Create engagement'}</button>
-                                            </form>
-                                        </div>
-                                    </>
-                                ) : null}
-
-                                {activeTab === 'requests' ? (
-                                    <>
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Need help?</div>
-                                            <form className="dashboard-form" onSubmit={handleRequestCreate}>
-                                                <select style={inputStyle} value={requestForm.type} onChange={(e) => setRequestForm((prev) => ({ ...prev, type: e.target.value }))}>
-                                                    <option value="other">General request</option>
-                                                    <option value="payment_upload">Payment upload</option>
-                                                    <option value="engagement_change">Engagement change</option>
-                                                    <option value="account_creation">Account help</option>
-                                                </select>
-                                                <textarea style={{ ...inputStyle, minHeight: 140 }} value={requestForm.message} onChange={(e) => setRequestForm((prev) => ({ ...prev, message: e.target.value }))} placeholder="Tell us how we can help." />
-                                                <button className="dashboard-button" type="submit">Submit request</button>
-                                            </form>
-                                        </div>
-
-                                        <div style={sectionCardStyle}>
-                                            <div className="dashboard-section-title">Your requests</div>
-                                            <div className="dashboard-list">
-                                                {requests.map((request) => (
-                                                    <div key={request.id} className="dashboard-list-item">
-                                                        <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{request.type.replace(/_/g, ' ')}</div>
-                                                        <div style={{ color: 'var(--accent-gold)', margin: '4px 0' }}>{request.status}</div>
-                                                        <div style={{ color: 'var(--text-muted)' }}>{request.message}</div>
-                                                    </div>
-                                                ))}
-                                                {requests.length === 0 ? <div className="dashboard-list-item">No requests submitted yet.</div> : null}
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : null}
+                                <Suspense fallback={<TabLoadingFallback sectionCardStyle={sectionCardStyle} />}>
+                                    {activeTab === 'overview' && (
+                                        <OverviewTab
+                                            profile={profile}
+                                            paymentTotal={paymentTotal}
+                                            engagementTarget={engagementTarget}
+                                            progressPct={progressPct}
+                                            remainingAmount={remainingAmount}
+                                            requests={requests}
+                                            latestPayments={latestPayments}
+                                            latestRequests={latestRequests}
+                                            sectionCardStyle={sectionCardStyle}
+                                            setActiveTab={setActiveTab}
+                                        />
+                                    )}
+                                    {activeTab === 'payments' && (
+                                        <PaymentsTab
+                                            payments={payments}
+                                            sectionCardStyle={sectionCardStyle}
+                                            setActiveTab={setActiveTab}
+                                        />
+                                    )}
+                                    {activeTab === 'profile' && (
+                                        <ProfileTab
+                                            profileForm={profileForm}
+                                            setProfileForm={setProfileForm}
+                                            passwordForm={passwordForm}
+                                            setPasswordForm={setPasswordForm}
+                                            engagementForm={engagementForm}
+                                            setEngagementForm={setEngagementForm}
+                                            profile={profile}
+                                            sectionCardStyle={sectionCardStyle}
+                                            inputStyle={inputStyle}
+                                            handleProfileUpdate={handleProfileUpdate}
+                                            handlePasswordUpdate={handlePasswordUpdate}
+                                            handleEngagementUpdate={handleEngagementUpdate}
+                                        />
+                                    )}
+                                    {activeTab === 'requests' && (
+                                        <RequestsTab
+                                            requestForm={requestForm}
+                                            setRequestForm={setRequestForm}
+                                            requests={requests}
+                                            sectionCardStyle={sectionCardStyle}
+                                            inputStyle={inputStyle}
+                                            handleRequestCreate={handleRequestCreate}
+                                        />
+                                    )}
+                                </Suspense>
                             </section>
                         </div>
                     </>

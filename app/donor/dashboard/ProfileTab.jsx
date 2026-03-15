@@ -1,0 +1,76 @@
+export default function ProfileTab({ profileForm, setProfileForm, passwordForm, setPasswordForm, engagementForm, setEngagementForm, profile, sectionCardStyle, inputStyle, handleProfileUpdate, handlePasswordUpdate, handleEngagementUpdate }) {
+    return (
+        <>
+            <div style={sectionCardStyle}>
+                <div className="dashboard-section-title">Profile</div>
+                <form className="dashboard-form" onSubmit={handleProfileUpdate}>
+                    <input
+                        style={inputStyle}
+                        value={profileForm.name}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+                        placeholder="Full name"
+                    />
+                    <input
+                        style={inputStyle}
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+                        placeholder="Email"
+                    />
+                    <button className="dashboard-button" type="submit">Save profile</button>
+                </form>
+            </div>
+
+            <div style={sectionCardStyle}>
+                <div className="dashboard-section-title">Password</div>
+                <form className="dashboard-form" onSubmit={handlePasswordUpdate}>
+                    <input
+                        style={inputStyle}
+                        type="password"
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                        placeholder="Current password"
+                    />
+                    <input
+                        style={inputStyle}
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                        placeholder="New password"
+                    />
+                    <input
+                        style={inputStyle}
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                        placeholder="Confirm new password"
+                    />
+                    <button className="dashboard-button" type="submit">Update password</button>
+                </form>
+            </div>
+
+            <div style={sectionCardStyle}>
+                <div className="dashboard-section-title">Engagement</div>
+                <form className="dashboard-form" onSubmit={handleEngagementUpdate}>
+                    <input
+                        style={inputStyle}
+                        type="number"
+                        min="1"
+                        value={engagementForm.totalPledge}
+                        onChange={(e) => setEngagementForm((prev) => ({ ...prev, totalPledge: e.target.value }))}
+                        placeholder="Pledge amount"
+                    />
+                    <input
+                        style={inputStyle}
+                        type="date"
+                        value={engagementForm.endDate}
+                        onChange={(e) => setEngagementForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    />
+                    <button className="dashboard-button" type="submit">
+                        {profile?.engagement ? 'Update engagement' : 'Create engagement'}
+                    </button>
+                </form>
+            </div>
+        </>
+    );
+}

@@ -33,8 +33,8 @@ const adminDonorPasswordSchema = z.object({
 
 const adminPaymentSchema = z.object({
   amount: z.number().positive(),
-  date: z.string().datetime({ offset: true }),
-  method: z.enum(['zeffy', 'cash', 'other']),
+  date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format'),
+  method: z.enum(['card', 'bank_transfer', 'cash', 'check']),
   note: z.string().max(500).optional(),
 });
 
@@ -50,14 +50,26 @@ const adminUpdateDonorSchema = z.object({
   email: z.string().email().optional(),
 }).refine((d) => d.name || d.email, { message: 'At least one field required' });
 
+const adminEngagementSchema = z.object({
+  totalPledge: z.number().positive('Pledge must be greater than 0'),
+  startDate: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
+});
+
 const adminDonorRouter = Router();
 
 adminDonorRouter.get('/', requireAdmin, ctrl.list);
 adminDonorRouter.post('/', requireAdmin, validate(adminCreateDonorSchema), ctrl.adminCreate);
 adminDonorRouter.get('/:id', requireAdmin, ctrl.getById);
+adminDonorRouter.get('/:id/payments', requireAdmin, ctrl.adminGetPayments);
+adminDonorRouter.get('/:id/payments/:paymentId/confirmation', requireAdmin, ctrl.adminGetPaymentConfirmation);
+adminDonorRouter.put('/:id/engagement', requireAdmin, validate(adminEngagementSchema), ctrl.adminSetEngagement);
+adminDonorRouter.put('/:id/deactivate', requireAdmin, ctrl.adminDeactivate);
+adminDonorRouter.put('/:id/reactivate', requireAdmin, ctrl.adminReactivate);
+adminDonorRouter.put('/:id/password', requireAdmin, validate(adminDonorPasswordSchema), ctrl.adminUpdatePassword);
 adminDonorRouter.put('/:id', requireAdmin, validate(adminUpdateDonorSchema), ctrl.adminUpdate);
 adminDonorRouter.delete('/:id', requireAdmin, ctrl.adminDelete);
-adminDonorRouter.put('/:id/password', requireAdmin, validate(adminDonorPasswordSchema), ctrl.adminUpdatePassword);
 adminDonorRouter.post('/:id/payments', requireAdmin, validate(adminPaymentSchema), ctrl.adminAddPayment);
+adminDonorRouter.post('/:id/payments/:paymentId/receipt', requireAdmin, ctrl.uploadPaymentReceipt);
 
 module.exports.adminDonorRouter = adminDonorRouter;
