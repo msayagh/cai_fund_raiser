@@ -8,6 +8,7 @@ const es = {
   goal: "meta",
   bricks: "ladrillos",
   scanToDonate: "Escanear para donar",
+  openDonationFormNewTab: "Abrir en una nueva pestaña",
   qrAlt: "Codigo QR de donacion",
   qrHelp: "Apunta tu camara para donar directamente",
   selectTier: "Selecciona una categoria",

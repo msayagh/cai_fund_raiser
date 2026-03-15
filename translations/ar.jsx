@@ -8,6 +8,7 @@ const ar = {
   goal: "الهدف",
   bricks: "طوبة",
   scanToDonate: "امسح للتبرع",
+  openDonationFormNewTab: "إفتح في صفحة جديدة",
   qrAlt: "رمز QR للتبرع",
   qrHelp: "وجّه كاميرا هاتفك للتبرع مباشرة",
   selectTier: "اختر الفئة",

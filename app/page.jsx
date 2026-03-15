@@ -219,10 +219,6 @@ export default function MosqueDonation() {
 
   function openDonationDialog() {
     setDonationIframeLoaded(false);
-    setDonationFeedback({
-      tone: 'info',
-      message: 'Opening the secure donation form...',
-    });
     setShowDonationDialog(true);
   }
 
@@ -500,12 +496,29 @@ export default function MosqueDonation() {
                   aria-label="Secure donation form"
                   onLoad={() => {
                     setDonationIframeLoaded(true);
-                    setDonationFeedback({
-                      tone: 'success',
-                      message: 'Secure donation form ready.',
-                    });
                   }}
                 />
+              </div>
+              <div className="donation-dialog-external-link-wrapper" style={{ textAlign: 'center', marginTop: '1rem' }}>
+                <a
+                  href="https://www.zeffy.com/en-CA/ticketing/travaux-damenagement-dans-le-nouveau-centre"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="donation-dialog-external-link-button"
+                  style={{
+                    display: 'inline-block',
+                    padding: '0.5em 1em',
+                    background: '#eee',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    color: '#333',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                  }}
+                  aria-label={t.openDonationFormNewTab || "Open donation form in new tab"}
+                >
+                  {(t.openDonationFormNewTab || "Open in new tab") + " ↗"}
+                </a>
               </div>
               {donationFeedback ? (
                 <div
