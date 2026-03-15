@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getMe, updateMe } from '@/lib/donorApi';
-import '@/app/styles/donor-dashboard.scss';
+// import '@/app/styles/donor-dashboard.scss';
 
 export default function EditProfilePage() {
     const router = useRouter();
