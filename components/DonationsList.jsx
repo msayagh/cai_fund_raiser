@@ -145,6 +145,7 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
         const tierLabel = tier ? tier.label : d.tier || "Unknown";
         const donated = d.totalDonated;
         const donatedLabel = dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`;
+        const quantity = d.ticketCount || 1;
 
         console.log(`[DonationsList] Donor ${idx}:`, { displayName, donated, amount, progressPct, tierName: d.tier, tier: tier?.key });
 
@@ -161,14 +162,14 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
             >
                 <div className="donation-item-top">
                     <div className="donation-item-progress-badge" aria-label={`${Math.round(progressPct)}% funded`}>
-                        {Math.round(progressPct)}%
+                        {Math.round(progressPct / quantity)}%
                     </div>
                 </div>
                 <div className="donation-item-copy" title={displayName}>
                     <div className="donation-item-name" dir="auto">{displayName}</div>
                 </div>
                 <div className="donation-item-tier">
-                    {tierLabel}
+                    {quantity > 1 ? `${tierLabel} x ${quantity}` : tierLabel}
                 </div>
                 <div className="donation-item-meta">
                     <div className="donation-item-amount">
