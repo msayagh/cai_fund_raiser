@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
     const [admins, setAdmins] = useState([]);
     const [selectedDonorId, setSelectedDonorId] = useState(null);
     const [selectedDonor, setSelectedDonor] = useState(null);
-    const [selectedDonorForm, setSelectedDonorForm] = useState({ name: '', email: '' });
+    const [selectedDonorForm, setSelectedDonorForm] = useState({ name: '', email: '', accountCreated: true });
     const [selectedDonorPassword, setSelectedDonorPassword] = useState('');
         const [selectedDonorPasswordConfirm, setSelectedDonorPasswordConfirm] = useState('');
         const [selectedDonorEngagementForm, setSelectedDonorEngagementForm] = useState({ totalPledge: '' });
@@ -108,7 +108,7 @@ export default function AdminDashboardPage() {
     const [logsPage, setLogsPage] = useState(1);
     const [message, setMessage] = useState('');
     const [isAddDonorModalOpen, setIsAddDonorModalOpen] = useState(false);
-    const [newDonorForm, setNewDonorForm] = useState({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '' });
+    const [newDonorForm, setNewDonorForm] = useState({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
     const [newDonorSaving, setNewDonorSaving] = useState(false);
     const [topDonorsPerPage, setTopDonorsPerPage] = useState(8);
     const [processingRequestId, setProcessingRequestId] = useState(null);
@@ -521,10 +521,12 @@ export default function AdminDashboardPage() {
             const updatePayload = {
                 name: selectedDonorForm.name.trim(),
                 email: selectedDonorForm.email.trim().toLowerCase(),
+                accountCreated: Boolean(selectedDonorForm.accountCreated),
             };
             const nextPassword = selectedDonorPassword.trim();
             const hasProfileChanges = Boolean(updatePayload.name) && Boolean(updatePayload.email);
             const hasPasswordChange = nextPassword.length > 0;
+            const isActivatingAccount = selectedDonor?.accountCreated === false && updatePayload.accountCreated === true;
 
             if (hasPasswordChange && nextPassword.length < 8) {
                 throw new Error('Password must be at least 8 characters.');
@@ -532,6 +534,9 @@ export default function AdminDashboardPage() {
                 if (hasPasswordChange && nextPassword !== selectedDonorPasswordConfirm.trim()) {
                     throw new Error('Passwords do not match.');
                 }
+            if (isActivatingAccount && !hasPasswordChange) {
+                throw new Error('Set a password when activating an account.');
+            }
 
             let updated = selectedDonor;
             if (hasProfileChanges) {
@@ -555,8 +560,8 @@ export default function AdminDashboardPage() {
                 setModalMessage('Donor password updated.');
                 setMessage('Donor password updated.');
             } else {
-                setModalMessage('Donor details updated.');
-                setMessage('Donor details updated.');
+                setModalMessage('Donor profile/account status updated.');
+                setMessage('Donor profile/account status updated.');
             }
         } catch (err) {
             setModalError(err?.message || 'Unable to update donor.');
@@ -603,6 +608,7 @@ export default function AdminDashboardPage() {
             setSelectedDonorForm({
                 name: donor.name || '',
                 email: donor.email || '',
+                accountCreated: donor.accountCreated !== false,
             });
             setSelectedDonorPassword('');
                 setSelectedDonorPasswordConfirm('');
@@ -767,7 +773,21 @@ export default function AdminDashboardPage() {
 
     async function handleAddNewDonor(event) {
         event.preventDefault();
-        if (newDonorForm.password !== newDonorForm.passwordConfirm) {
+        const creatingActiveAccount = Boolean(newDonorForm.accountCreated);
+
+        if (creatingActiveAccount && !newDonorForm.password.trim()) {
+            setError('Password is required for an active donor account.');
+            setModalError('Password is required for an active donor account.');
+            return;
+        }
+
+        if (creatingActiveAccount && newDonorForm.password.length < 8) {
+            setError('Password must be at least 8 characters.');
+            setModalError('Password must be at least 8 characters.');
+            return;
+        }
+
+        if (creatingActiveAccount && newDonorForm.password !== newDonorForm.passwordConfirm) {
             setError('Passwords do not match.');
             setModalError('Passwords do not match.');
             return;
@@ -783,13 +803,18 @@ export default function AdminDashboardPage() {
             await createDonor({
                 name: newDonorForm.name.trim(),
                 email: newDonorForm.email.trim().toLowerCase(),
-                password: newDonorForm.password,
+                accountCreated: creatingActiveAccount,
+                ...(creatingActiveAccount && { password: newDonorForm.password }),
                 ...(newDonorForm.pledgeAmount && { pledgeAmount: Number(newDonorForm.pledgeAmount) }),
             });
-            setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '' });
+            setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
             setIsAddDonorModalOpen(false);
             await loadAllData();
-            setMessage('✅ Donor account created. A welcome email has been sent.');
+            setMessage(
+                creatingActiveAccount
+                    ? '✅ Donor account created. A welcome email has been sent.'
+                    : '✅ Placeholder donor created. The donor can activate their account later.'
+            );
         } catch (err) {
             setModalError(err?.message || 'Unable to create donor.');
             setError(err?.message || 'Unable to create donor.');
@@ -953,7 +978,7 @@ export default function AdminDashboardPage() {
                                     <div>
                                         <div style={{ fontFamily: "'Cinzel', serif", fontSize: 22 }}>➕ Add New Donor</div>
                                         <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
-                                            A welcome email with account credentials will be sent automatically.
+                                            Choose whether to create an active donor account or a placeholder donor record.
                                         </div>
                                     </div>
                                     <button
@@ -961,7 +986,7 @@ export default function AdminDashboardPage() {
                                         className="admin-button secondary"
                                         onClick={() => {
                                             setIsAddDonorModalOpen(false);
-                                            setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '' });
+                                            setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
                                         }}
                                     >
                                         ✕ Close
@@ -995,14 +1020,25 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontSize: 14 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={Boolean(newDonorForm.accountCreated)}
+                                                onChange={(e) => setNewDonorForm((p) => ({ ...p, accountCreated: e.target.checked }))}
+                                                disabled={newDonorSaving}
+                                            />
+                                            Create active account (donor can log in immediately)
+                                        </label>
+                                    </div>
+                                    <div>
                                         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>🔒 Password * (min 8 characters)</label>
                                         <input
                                             style={inputStyle}
                                             type="password"
-                                            placeholder="Password"
+                                            placeholder={newDonorForm.accountCreated ? 'Password' : 'Not required for placeholder donor'}
                                             value={newDonorForm.password}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, password: e.target.value }))}
-                                            required
+                                            required={Boolean(newDonorForm.accountCreated)}
                                             disabled={newDonorSaving}
                                             minLength={8}
                                         />
@@ -1012,10 +1048,10 @@ export default function AdminDashboardPage() {
                                         <input
                                             style={inputStyle}
                                             type="password"
-                                            placeholder="Confirm password"
+                                            placeholder={newDonorForm.accountCreated ? 'Confirm password' : 'Not required for placeholder donor'}
                                             value={newDonorForm.passwordConfirm}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, passwordConfirm: e.target.value }))}
-                                            required
+                                            required={Boolean(newDonorForm.accountCreated)}
                                             disabled={newDonorSaving}
                                             minLength={8}
                                         />
@@ -1034,7 +1070,9 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <button type="submit" className="admin-button" disabled={newDonorSaving}>
-                                        {newDonorSaving ? 'Creating donor...' : '➕ Create Donor & Send Welcome Email'}
+                                        {newDonorSaving
+                                            ? 'Creating donor...'
+                                            : (newDonorForm.accountCreated ? '➕ Create Donor & Send Welcome Email' : '➕ Create Placeholder Donor')}
                                     </button>
                                 </form>
                             </div>
@@ -1089,6 +1127,20 @@ export default function AdminDashboardPage() {
                                                         disabled={selectedDonorSaving}
                                                         required
                                                     />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontSize: 14 }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={Boolean(selectedDonorForm.accountCreated)}
+                                                            onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, accountCreated: e.target.checked }))}
+                                                            disabled={selectedDonorSaving}
+                                                        />
+                                                        Active donor account (login enabled)
+                                                    </label>
+                                                    <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 12 }}>
+                                                        If enabling this for a placeholder donor, set a password below.
+                                                    </div>
                                                 </div>
                                                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
                                                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>🔒 Change Password (optional)</div>

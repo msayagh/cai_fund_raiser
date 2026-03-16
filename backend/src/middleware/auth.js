@@ -23,6 +23,7 @@ const requireDonor = async (req, res, next) => {
 
     const donor = await prisma.donor.findUnique({ where: { id: payload.sub } });
     if (!donor) throw new AppError('Donor not found', 401, 'UNAUTHORIZED');
+    if (!donor.accountCreated) throw new AppError('Donor not found', 401, 'UNAUTHORIZED');
 
     req.donor = donor;
     next();

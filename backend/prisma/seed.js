@@ -49,6 +49,7 @@ async function main() {
 
   // ─── Donors ─────────────────────────────────────────────────────────────────
   const donorHash = await bcrypt.hash('demo123', BCRYPT_ROUNDS);
+  const placeholderHash = await bcrypt.hash('placeholder-disabled-account', BCRYPT_ROUNDS);
 
   const ahmed = await prisma.donor.create({
     data: {
@@ -152,6 +153,35 @@ async function main() {
   });
   console.log(`  ✓ Donor: ${youssef.email} (${youssef.payments.length} payment)`);
 
+  const layla = await prisma.donor.create({
+    data: {
+      name: 'Layla Hassan',
+      email: 'layla@example.com',
+      passwordHash: placeholderHash,
+      accountCreated: false,
+      payments: {
+        create: [
+          {
+            amount: 300,
+            date: new Date('2024-09-13'),
+            method: 'cash',
+            note: 'Friday prayer collection',
+            recordedByAdminId: admin.id,
+          },
+          {
+            amount: 150,
+            date: new Date('2024-11-08'),
+            method: 'zeffy',
+            note: 'Online community campaign',
+            recordedByAdminId: admin.id,
+          },
+        ],
+      },
+    },
+    include: { payments: true },
+  });
+  console.log(`  ✓ Placeholder donor: ${layla.email} (${layla.payments.length} payments)`);
+
   // ─── Requests ───────────────────────────────────────────────────────────────
 
   const req2 = await prisma.request.create({
@@ -202,6 +232,15 @@ async function main() {
       action: 'donor_registered',
       details: `New donor registered: ${youssef.email}`,
       donorId: youssef.id,
+    },
+    {
+      actor: `Admin: ${admin.name}`,
+      actorType: 'admin',
+      actorId: admin.id,
+      action: 'admin_donor_placeholder_created',
+      details: `Admin created placeholder donor for ${layla.email}`,
+      donorId: layla.id,
+      adminId: admin.id,
     },
     {
       actor: `Admin: ${admin.name}`,

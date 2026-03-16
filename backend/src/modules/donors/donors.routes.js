@@ -51,14 +51,18 @@ const adminUpdatePaymentSchema = z.object({
 const adminCreateDonorSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
-  password: z.string().min(8),
+  accountCreated: z.boolean().optional(),
+  password: z.string().min(8).optional(),
   pledgeAmount: z.number().positive().optional(),
 });
 
 const adminUpdateDonorSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   email: z.string().email().optional(),
-}).refine((d) => d.name || d.email, { message: 'At least one field required' });
+  accountCreated: z.boolean().optional(),
+}).refine((d) => d.name !== undefined || d.email !== undefined || d.accountCreated !== undefined, {
+  message: 'At least one field required',
+});
 
 const adminEngagementSchema = z.object({
   totalPledge: z.number().positive('Pledge must be greater than 0'),

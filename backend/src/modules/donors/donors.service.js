@@ -11,6 +11,7 @@ const { calculateTotalFromPillars, validatePillars } = require('../../config/pil
 const BCRYPT_ROUNDS = 12;
 
 const stripPassword = ({ passwordHash, ...rest }) => rest;
+const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
 // ─── Self-service ─────────────────────────────────────────────────────────────
 
@@ -23,14 +24,16 @@ const getMe = async (donorId) => {
 };
 
 const updateMe = async (donorId, { name, email, phoneNumber, address, city, country, postalCode, dateOfBirth, taxNumber, companyName }) => {
+  const normalizedEmail = email !== undefined ? normalizeEmail(email) : undefined;
+
   if (email) {
-    const existing = await prisma.donor.findFirst({ where: { email, NOT: { id: donorId } } });
+    const existing = await prisma.donor.findFirst({ where: { email: normalizedEmail, NOT: { id: donorId } } });
     if (existing) throw new AppError('Email already in use', 409, 'EMAIL_TAKEN');
   }
 
   const updateData = {};
   if (name !== undefined) updateData.name = name;
-  if (email !== undefined) updateData.email = email;
+  if (email !== undefined) updateData.email = normalizedEmail;
   if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
   if (address !== undefined) updateData.address = address;
   if (city !== undefined) updateData.city = city;
@@ -254,18 +257,21 @@ const getDonorById = async (id) => {
   return rest;
 };
 
-const adminUpdateDonor = async (adminId, adminName, id, { name, email, isActive, phoneNumber, address, city, country, postalCode, dateOfBirth, taxNumber, companyName }) => {
+const adminUpdateDonor = async (adminId, adminName, id, { name, email, accountCreated, isActive, phoneNumber, address, city, country, postalCode, dateOfBirth, taxNumber, companyName }) => {
   const donor = await prisma.donor.findUnique({ where: { id } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
+  const normalizedEmail = email !== undefined ? normalizeEmail(email) : undefined;
+
   if (email && email !== donor.email) {
-    const conflict = await prisma.donor.findFirst({ where: { email, NOT: { id } } });
+    const conflict = await prisma.donor.findFirst({ where: { email: normalizedEmail, NOT: { id } } });
     if (conflict) throw new AppError('Email already in use', 409, 'EMAIL_TAKEN');
   }
 
   const updateData = {};
   if (name !== undefined) updateData.name = name;
-  if (email !== undefined) updateData.email = email;
+  if (email !== undefined) updateData.email = normalizedEmail;
+  if (accountCreated !== undefined) updateData.accountCreated = accountCreated;
   if (isActive !== undefined) updateData.isActive = isActive;
   if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
   if (address !== undefined) updateData.address = address;
@@ -534,17 +540,30 @@ const adminDeletePayment = async (adminId, adminName, donorId, paymentId) => {
   });
 };
 
-const adminCreateDonor = async (adminId, adminName, { name, email, password, pledgeAmount }) => {
-  const existing = await prisma.donor.findUnique({ where: { email } });
+const adminCreateDonor = async (adminId, adminName, { name, email, accountCreated, password, pledgeAmount }) => {
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (existing) throw new AppError('Email already in use', 409, 'EMAIL_TAKEN');
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const shouldCreateAccount = accountCreated !== undefined
+    ? accountCreated
+    : (typeof password === 'string' && password.length >= 8);
+
+  if (shouldCreateAccount && (!password || password.length < 8)) {
+    throw new AppError('Password is required when creating an active account', 400, 'PASSWORD_REQUIRED');
+  }
+
+  const passwordHash = await bcrypt.hash(
+    shouldCreateAccount ? password : `placeholder:${normalizedEmail}:${Date.now()}`,
+    BCRYPT_ROUNDS,
+  );
 
   const donor = await prisma.donor.create({
     data: {
       name,
-      email,
+      email: normalizedEmail,
       passwordHash,
+      accountCreated: shouldCreateAccount,
       ...(pledgeAmount && {
         engagement: {
           create: {
@@ -561,18 +580,21 @@ const adminCreateDonor = async (adminId, adminName, { name, email, password, ple
     actor: `Admin: ${adminName}`,
     actorType: 'admin',
     actorId: adminId,
-    action: 'admin_donor_created',
-    details: `Admin created donor account for ${email}`,
+    action: shouldCreateAccount ? 'admin_donor_created' : 'admin_donor_placeholder_created',
+    details: shouldCreateAccount
+      ? `Admin created donor account for ${normalizedEmail}`
+      : `Admin created placeholder donor for ${normalizedEmail}`,
     donorId: donor.id,
     adminId,
   });
 
-  // Send registration confirmation email
-  try {
-    await mailService.sendRegistrationConfirmation(donor.email, donor.name);
-  } catch (error) {
-    console.error('Failed to send registration confirmation email:', error);
-    // Don't throw error - donor was created successfully
+  if (shouldCreateAccount) {
+    try {
+      await mailService.sendRegistrationConfirmation(donor.email, donor.name);
+    } catch (error) {
+      console.error('Failed to send registration confirmation email:', error);
+      // Don't throw error - donor was created successfully
+    }
   }
 
   return stripPassword(donor);
