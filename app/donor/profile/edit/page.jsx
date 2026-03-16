@@ -121,12 +121,6 @@ export default function EditProfilePage() {
         transition: 'border-color 0.2s',
     };
 
-    const inputFocusStyle = {
-        ...inputStyle,
-        borderColor: '#8B4513',
-        outline: 'none',
-    };
-
     const labelStyle = {
         display: 'block',
         fontWeight: '600',

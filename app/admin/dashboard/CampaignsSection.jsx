@@ -22,19 +22,13 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
         status: 'active'
     });
     const [isSaving, setIsSaving] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [saveMessage, setSaveMessage] = useState('');
 
     // Load from API on mount (with localStorage fallback)
     useEffect(() => {
         const loadCampaigns = async () => {
             try {
-                setIsLoading(true);
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
                 const response = await settingsApi.listCampaigns();
-                clearTimeout(timeoutId);
 
                 if (response?.data && Array.isArray(response.data)) {
                     setCampaignsList(response.data);
@@ -53,8 +47,6 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
                 } catch (e) {
                     console.error('Error loading from localStorage:', e);
                 }
-            } finally {
-                setIsLoading(false);
             }
         };
 

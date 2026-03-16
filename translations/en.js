@@ -1,5 +1,3 @@
-import React from "react";
-
 const en = {
   locale: "en_CA",
   centerName: "Centre Zad Al-Imane",
@@ -76,11 +74,19 @@ const en = {
   collectedFundsLabel: "Collected funds",
   remainingGoalLabel: "Remaining goal",
   campaignOverview: "Campaign overview",
+  statisticsModalLabel: "Campaign statistics",
+  closeStatistics: "Close statistics",
+  statisticsGlobalGoal: "Global goal",
+  statisticsCurrentGoal: "Current goal",
+  averageSupport: "Avg. support",
+  currentTarget: "Current target",
+  tierBreakdown: "Tier breakdown",
+  campaignComparison: "Campaign comparison",
   reached: "reached",
   donorsList: "List of donors",
   prayerTimes: "Prayer Times",
   ramadanObjective: "Campaign Engagement",
-  engagement: "Campaign Received",
+  engagement: "Engagement Received",
   prepositionOf: "of",
   donationDialogTitle: "Support the masjid",
   hadithArabic:
@@ -377,7 +383,6 @@ const en = {
     totalDonationsAmount: "Total Donations",
     overallSystemStatus: "Overall System Status",
     allSystemsOnline: "All Systems Online",
-    connected: "Connected",
     operational: "Operational",
 
     // Payment Date

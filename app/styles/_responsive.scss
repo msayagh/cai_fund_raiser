@@ -30,6 +30,19 @@
         display: none;
     }
 
+    .login-button.header-mobile-login {
+        display: inline-flex;
+        max-width: min(180px, calc(100vw - 120px));
+    }
+
+    .header-mobile-login .login-button-text {
+        display: inline-block;
+        max-width: 110px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .header-menu {
         display: block;
     }

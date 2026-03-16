@@ -15,7 +15,6 @@ export function Header({
     tierEngagementPct = 0,
     tierEngagementTarget = 0,
     receivedAmount = 0,
-    receivedTarget = 0,
     showLanguageMenu,
     setShowLanguageMenu,
     languageDropdownRef,
@@ -199,6 +198,7 @@ export function Header({
                             >
                                 <span className="language-flag">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.flag ?? '🌐'}</span>
                                 <span className="language-dropdown-text">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.label ?? language.toUpperCase()}</span>
+                                <i className="fas fa-chevron-down" aria-hidden="true"></i>
                             </button>
                             {showLanguageMenu && (
                                 <div className="language-dropdown-menu" role="menu">
@@ -221,6 +221,18 @@ export function Header({
                             )}
                         </div>
                     </div>
+
+                    {session ? (
+                        <Link href={dashboardHref} className="login-button header-mobile-login" title={session.email}>
+                            <i className="fas fa-user-check" aria-hidden="true"></i>
+                            <span className="login-button-text">{session.name || session.email}</span>
+                        </Link>
+                    ) : (
+                        <Link href="/login" className="login-button header-mobile-login" title="Login">
+                            <i className="fas fa-user" aria-hidden="true"></i>
+                            <span className="login-button-text">{t.loginTitle}</span>
+                        </Link>
+                    )}
 
                     <div className="header-menu" ref={headerMenuRef}>
                         <button

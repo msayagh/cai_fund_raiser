@@ -108,7 +108,6 @@ export default function RegisterPage() {
             .replace(/\D/g, '')
             .slice(0, 6);
     };
-
     useEffect(() => {
         if (languageDropdownRef.current && showLanguageMenu) {
             const closeMenu = (event) => {
@@ -147,15 +146,15 @@ export default function RegisterPage() {
         setEmail(cachedEmail);
         window.sessionStorage.removeItem('registerEmail');
     }, []);
-
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div
                 className="login-page-wrapper"
                 data-theme="dark"
                 suppressHydrationWarning
+                style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
             >
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading site" />
             </div>
         );
     }
@@ -309,12 +308,20 @@ export default function RegisterPage() {
             data-theme={themeMode}
             dir={isRTL ? 'rtl' : 'ltr'}
             suppressHydrationWarning
+            style={{
+                '--bg-primary': theme['bg-primary'],
+                '--bg-page': theme['bg-page'],
+                '--text-primary': theme['text-primary'],
+                '--border': theme['border'],
+                '--bg-card': theme['bg-card'],
+                '--accent-gold': theme['accent-gold'],
+            }}
         >
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-                *, *::before, *::after { box-sizing: border-box; }
-                ::-webkit-scrollbar { width: 4px; }
-                ::-webkit-scrollbar-thumb { background: rgba(200,169,110,.22); border-radius: 4px; }
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
+                *{box-sizing:border-box;margin:0;padding:0}
+                ::-webkit-scrollbar{width:4px}
+                ::-webkit-scrollbar-thumb{background:${theme.scrollbarThumb};border-radius:4px}
             `}</style>
             <Header
                 language={language}

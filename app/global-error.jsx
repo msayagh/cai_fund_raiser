@@ -5,7 +5,7 @@ import { captureException } from '@/lib/monitoring.js';
 
 export default function GlobalError({ error, reset }) {
     useEffect(() => {
-        captureException(error, { source: 'app/global-error' });
+        captureException(error, { source: 'app/global-error', level: 'error', fatal: true });
     }, [error]);
 
     return (
