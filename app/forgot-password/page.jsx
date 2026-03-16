@@ -122,7 +122,6 @@ function ForgotPasswordPageContent() {
                 className="login-page-wrapper"
                 data-theme="dark"
                 suppressHydrationWarning
-                style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
             >
                 <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading site" />
             </div>

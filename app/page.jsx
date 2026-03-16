@@ -189,7 +189,6 @@ export default function MosqueDonation() {
         className="mosque-donation"
         data-theme="dark"
         suppressHydrationWarning
-        style={{ minHeight: '100vh', background: 'var(--bg-page)' }}
       >
         <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading campaign" />
       </div>
@@ -502,22 +501,12 @@ export default function MosqueDonation() {
                   }}
                 />
               </div>
-              <div className="donation-dialog-external-link-wrapper" style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <div className="donation-dialog-external-link-wrapper">
                 <a
                   href="https://www.zeffy.com/en-CA/ticketing/travaux-damenagement-dans-le-nouveau-centre"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="donation-dialog-external-link-button"
-                  style={{
-                    display: 'inline-block',
-                    padding: '0.5em 1em',
-                    background: '#eee',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    color: '#333',
-                    textDecoration: 'none',
-                    fontWeight: 500,
-                  }}
                   aria-label={t.openDonationFormNewTab || "Open donation form in new tab"}
                 >
                   {(t.openDonationFormNewTab || "Open in new tab") + " ↗"}

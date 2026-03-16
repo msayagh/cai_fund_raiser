@@ -1,7 +1,7 @@
 import { downloadPaymentConfirmation } from '@/lib/adminApi.js';
 import { useState } from 'react';
 
-export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePayment, onDeletePayment, loading, inputStyle, cardStyle, t }) {
+export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePayment, onDeletePayment, loading, t }) {
     const [paymentDateError, setPaymentDateError] = useState('');
     const [editingPaymentId, setEditingPaymentId] = useState(null);
     const [editForm, setEditForm] = useState({ amount: '', date: '', method: '', note: '' });
@@ -86,93 +86,51 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
     };
 
     return (
-        <div style={cardStyle}>
-            <div style={{
-                fontFamily: "'Cinzel', serif",
-                fontSize: 20,
-                marginBottom: 18,
-            }}>
+        <div className="admin-card">
+            <div className="admin-section-title">
                 Payment History
             </div>
 
-            {/* Summary Stats */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                gap: 12,
-                marginBottom: 20,
-            }}>
-                <div style={{
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid var(--border)',
-                }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Pledged</div>
-                    <div style={{ fontWeight: 700, marginTop: 4 }}>${pledge.toLocaleString()}</div>
+            <div className="admin-grid admin-grid--4cols mb-lg">
+                <div className="admin-surface">
+                    <div className="admin-muted admin-muted--sm">Pledged</div>
+                    <div className="admin-value-md">${pledge.toLocaleString()}</div>
                 </div>
-                <div style={{
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid var(--border)',
-                }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Paid</div>
-                    <div style={{ fontWeight: 700, marginTop: 4 }}>${totalPaid.toLocaleString()}</div>
+                <div className="admin-surface">
+                    <div className="admin-muted admin-muted--sm">Paid</div>
+                    <div className="admin-value-md">${totalPaid.toLocaleString()}</div>
                 </div>
-                <div style={{
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid var(--border)',
-                }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Remaining</div>
-                    <div style={{ fontWeight: 700, marginTop: 4 }}>${remaining.toLocaleString()}</div>
+                <div className="admin-surface">
+                    <div className="admin-muted admin-muted--sm">Remaining</div>
+                    <div className="admin-value-md">${remaining.toLocaleString()}</div>
                 </div>
-                <div style={{
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid var(--border)',
-                }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Status</div>
-                    <div style={{
-                        fontWeight: 700,
-                        marginTop: 4,
-                        color: status === 'Completed' ? '#7EB8A0' : status === 'In Progress' ? '#D4A96E' : '#7c8499',
-                    }}>
+                <div className="admin-surface">
+                    <div className="admin-muted admin-muted--sm">Status</div>
+                    <div
+                        className="admin-value-md"
+                        style={{ color: status === 'Completed' ? '#7EB8A0' : status === 'In Progress' ? '#D4A96E' : '#7c8499' }}
+                    >
                         {status}
                     </div>
                 </div>
             </div>
 
-            {/* Add Payment Form */}
-            <div style={{
-                padding: '14px',
-                borderRadius: '12px',
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid var(--border)',
-                marginBottom: 20,
-            }}>
-                <div style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: 14,
-                    marginBottom: 12,
-                }}>
+            <div className="admin-surface mb-lg">
+                <div className="admin-section-title admin-section-title--sm">
                     Record Payment
                 </div>
-                <form onSubmit={onAddPayment} style={{ display: 'grid', gap: 12 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <form onSubmit={onAddPayment} className="admin-stack">
+                    <div className="admin-grid admin-grid--2cols">
                         <input
                             type="number"
                             min="0"
                             step="0.01"
-                            style={inputStyle}
+                            className="admin-input"
                             placeholder="Amount"
                             required
                             id="payment-amount"
                         />
-                        <select style={inputStyle} id="payment-method" required>
+                        <select className="admin-input" id="payment-method" required>
                             <option value="">— Select method —</option>
                             <option value="cash">💵 Cash</option>
                             <option value="card">💳 Card</option>
@@ -182,40 +140,30 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                     <div>
                         <input
                             type="date"
-                            style={{ ...inputStyle, borderColor: paymentDateError ? '#ff6b6b' : 'var(--border)' }}
+                            className="admin-input"
+                            style={{ borderColor: paymentDateError ? '#ff6b6b' : undefined }}
                             id="payment-date"
                             required
                             onChange={handlePaymentDateChange}
                             max={new Date().toISOString().split('T')[0]}
                         />
                         {paymentDateError && (
-                            <div style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>
+                            <div className="admin-field-help" style={{ color: '#ff6b6b' }}>
                                 {paymentDateError}
                             </div>
                         )}
                     </div>
                     <textarea
-                        style={{ ...inputStyle, minHeight: 80 }}
+                        className="admin-input admin-input--textarea-lg"
                         placeholder="Payment note (optional)"
                         id="payment-note"
                     />
-                    <div style={{ display: 'grid', gap: 12 }}>
-                        <label style={{
-                            padding: '10px 14px',
-                            borderRadius: '12px',
-                            border: '1px dashed var(--border)',
-                            background: 'rgba(255,255,255,0.02)',
-                            color: 'var(--text-primary)',
-                            fontWeight: 600,
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            opacity: loading ? 0.6 : 1,
-                            textAlign: 'center',
-                            fontSize: 14,
-                        }}>
+                    <div className="admin-stack">
+                        <label className={`admin-upload-label${loading ? ' is-disabled' : ''}`}>
                             <input
                                 type="file"
                                 accept="image/*,.pdf"
-                                style={{ display: 'none' }}
+                                className="admin-hidden-file"
                                 id="payment-receipt"
                             />
                             Attach Receipt (optional)
@@ -223,16 +171,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                         <button
                             type="submit"
                             disabled={loading}
-                            style={{
-                                padding: '10px 14px',
-                                borderRadius: '12px',
-                                border: 'none',
-                                background: 'var(--accent-gold)',
-                                color: '#111',
-                                fontWeight: 700,
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                opacity: loading ? 0.6 : 1,
-                            }}
+                            className="admin-button"
                         >
                             {loading ? 'Recording...' : 'Record Payment'}
                         </button>
@@ -240,64 +179,43 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                 </form>
             </div>
 
-            {/* Payment List */}
             <div>
-                <div style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: 14,
-                    marginBottom: 12,
-                }}>
+                <div className="admin-section-title admin-section-title--sm">
                     Payment Records ({payments.length})
                 </div>
-                <div style={{ display: 'grid', gap: 10 }}>
+                <div className="admin-stack">
                     {payments.length === 0 ? (
-                        <div style={{
-                            padding: '12px',
-                            borderRadius: '12px',
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--text-muted)',
-                            textAlign: 'center',
-                        }}>
+                        <div className="admin-surface admin-text-center admin-muted">
                             No payments recorded yet
                         </div>
                     ) : (
                         payments.map((payment) => (
                             <div
                                 key={payment.id}
-                                style={{
-                                    padding: '12px',
-                                    borderRadius: '12px',
-                                    background: 'rgba(255,255,255,0.02)',
-                                    border: '1px solid var(--border)',
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr auto',
-                                    gap: 12,
-                                    alignItems: 'center',
-                                }}
+                                className="admin-surface"
                             >
                                 {editingPaymentId === payment.id ? (
-                                    <div style={{ display: 'grid', gap: 10, gridColumn: '1 / -1' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                                    <div className="admin-stack" style={{ gridColumn: '1 / -1' }}>
+                                        <div className="admin-grid admin-grid--3cols">
                                             <input
                                                 type="number"
                                                 min="0"
                                                 step="0.01"
-                                                style={inputStyle}
+                                                className="admin-input"
                                                 value={editForm.amount}
                                                 onChange={(e) => setEditForm((prev) => ({ ...prev, amount: e.target.value }))}
                                                 disabled={loading}
                                             />
                                             <input
                                                 type="date"
-                                                style={inputStyle}
+                                                className="admin-input"
                                                 value={editForm.date}
                                                 onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))}
                                                 max={new Date().toISOString().split('T')[0]}
                                                 disabled={loading}
                                             />
                                             <select
-                                                style={inputStyle}
+                                                className="admin-input"
                                                 value={editForm.method}
                                                 onChange={(e) => setEditForm((prev) => ({ ...prev, method: e.target.value }))}
                                                 disabled={loading}
@@ -309,12 +227,12 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                             </select>
                                         </div>
                                         <textarea
-                                            style={{ ...inputStyle, minHeight: 70 }}
+                                            className="admin-input admin-input--textarea-md"
                                             value={editForm.note}
                                             onChange={(e) => setEditForm((prev) => ({ ...prev, note: e.target.value }))}
                                             disabled={loading}
                                         />
-                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                        <div className="admin-actions">
                                             <button type="button" className="admin-button" disabled={loading} onClick={() => saveEdit(payment.id)}>
                                                 ✅ Save
                                             </button>
@@ -326,16 +244,12 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                 ) : (
                                     <>
                                         <div>
-                                            <div style={{ fontWeight: 700 }}>${Number(payment.amount || 0).toLocaleString()}</div>
-                                            <div style={{
-                                                fontSize: 12,
-                                                color: 'var(--text-muted)',
-                                                marginTop: 4,
-                                            }}>
+                                            <div className="admin-item-title">${Number(payment.amount || 0).toLocaleString()}</div>
+                                            <div className="admin-muted admin-muted--sm mt-sm">
                                                 {new Date(payment.date).toLocaleDateString()} · {payment.method} {payment.note && `· ${payment.note}`}
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                        <div className="admin-actions">
                                             <button
                                                 type="button"
                                                 onClick={() => handleDownloadConfirmation(payment)}

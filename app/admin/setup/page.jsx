@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { bootstrapAdmin, getAdminSetupStatus } from '@/lib/auth.js';
+import './page.scss';
 
 export default function AdminSetupPage() {
     const router = useRouter();
@@ -83,36 +84,36 @@ export default function AdminSetupPage() {
     }
 
     return (
-        <main style={{ minHeight: '100vh', background: '#090c18', color: '#f0e8d8' }}>
-            <div style={{ width: '100%', maxWidth: 'var(--page-max-width)', margin: '0 auto', minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px' }}>
-                <section style={{ width: '100%', maxWidth: '540px', background: '#131628', border: '1px solid #2e3250', borderRadius: '24px', padding: '32px' }}>
-                <div style={{ fontFamily: "'Cinzel', serif", color: '#D4A96E', fontSize: '28px', marginBottom: '12px' }}>Admin Setup</div>
-                <p style={{ color: '#c0c0d8', lineHeight: 1.6, marginBottom: '24px' }}>
+        <main className="admin-setup-page">
+            <div className="admin-setup-shell">
+                <section className="admin-setup-card">
+                <div className="admin-setup-title">Admin Setup</div>
+                <p className="admin-setup-description">
                     Bootstrap the first administrator from the backend API when no admin account exists yet.
                 </p>
 
-                {status.loading ? <p>Checking backend status...</p> : null}
-                {status.error ? <div style={{ color: '#ffb4b4', marginBottom: '16px' }}>{status.error}</div> : null}
-                {submitError ? <div style={{ color: '#ffb4b4', marginBottom: '16px' }}>{submitError}</div> : null}
-                {submitSuccess ? <div style={{ color: '#a6f0c1', marginBottom: '16px' }}>{submitSuccess}</div> : null}
+                {status.loading ? <p className="admin-setup-status">Checking backend status...</p> : null}
+                {status.error ? <div className="admin-setup-alert admin-setup-alert--error">{status.error}</div> : null}
+                {submitError ? <div className="admin-setup-alert admin-setup-alert--error">{submitError}</div> : null}
+                {submitSuccess ? <div className="admin-setup-alert admin-setup-alert--success">{submitSuccess}</div> : null}
 
                 {!status.loading && !status.error && status.adminExists ? (
-                    <div style={{ marginBottom: '20px', color: '#c0c0d8' }}>
-                        Admin setup is closed. Existing admin accounts: <strong style={{ color: '#D4A96E' }}>{status.adminCount}</strong>
+                    <div className="admin-setup-status">
+                        Admin setup is closed. Existing admin accounts: <strong className="admin-setup-emphasis">{status.adminCount}</strong>
                     </div>
                 ) : null}
 
                 {!status.loading && !status.error && !status.adminExists ? (
-                    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '14px' }}>
+                    <form onSubmit={handleSubmit} className="admin-setup-form">
                         <input
-                            style={inputStyle}
+                            className="admin-setup-input"
                             placeholder="Full name"
                             value={form.name}
                             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                             required
                         />
                         <input
-                            style={inputStyle}
+                            className="admin-setup-input"
                             type="email"
                             placeholder="Email"
                             value={form.email}
@@ -120,7 +121,7 @@ export default function AdminSetupPage() {
                             required
                         />
                         <input
-                            style={inputStyle}
+                            className="admin-setup-input"
                             type="password"
                             placeholder="Password"
                             value={form.password}
@@ -128,7 +129,7 @@ export default function AdminSetupPage() {
                             required
                         />
                         <input
-                            style={inputStyle}
+                            className="admin-setup-input"
                             type="password"
                             placeholder="Confirm password"
                             value={form.confirmPassword}
@@ -138,35 +139,18 @@ export default function AdminSetupPage() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            style={{
-                                background: submitting ? '#2e3250' : '#D4A96E',
-                                color: submitting ? '#a8acc6' : '#000',
-                                border: 'none',
-                                borderRadius: '12px',
-                                padding: '12px 16px',
-                                fontWeight: 700,
-                                cursor: submitting ? 'not-allowed' : 'pointer',
-                            }}
+                            className={`admin-setup-button${submitting ? ' is-submitting' : ''}`}
                         >
                             {submitting ? 'Creating...' : 'Create initial admin'}
                         </button>
                     </form>
                 ) : null}
 
-                <div style={{ marginTop: '20px' }}>
-                    <Link href="/login" style={{ color: '#D4A96E' }}>Back to login</Link>
+                <div className="admin-setup-footer">
+                    <Link href="/login" className="admin-setup-link">Back to login</Link>
                 </div>
                 </section>
             </div>
         </main>
     );
 }
-
-const inputStyle = {
-    width: '100%',
-    padding: '12px 14px',
-    borderRadius: '12px',
-    border: '1px solid #2e3250',
-    background: '#0e1020',
-    color: '#f0e8d8',
-};

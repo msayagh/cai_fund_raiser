@@ -101,134 +101,89 @@ export default function EditProfilePage() {
         );
     }
 
-    const sectionCardStyle = {
-        backgroundColor: '#fff',
-        borderRadius: '8px',
-        padding: '24px',
-        marginBottom: '24px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-    };
-
-    const inputStyle = {
-        width: '100%',
-        padding: '12px',
-        marginBottom: '16px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        fontSize: '14px',
-        fontFamily: 'inherit',
-        boxSizing: 'border-box',
-        transition: 'border-color 0.2s',
-    };
-
-    const labelStyle = {
-        display: 'block',
-        fontWeight: '600',
-        marginBottom: '8px',
-        color: '#333',
-        fontSize: '14px',
-    };
-
-    const gridLayoutStyle = {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '16px',
-    };
-
     return (
         <div className="donor-dashboard-container">
             <div className="donor-dashboard-content">
-                {/* Header */}
-                <div style={{ marginBottom: '32px' }}>
-                    <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>Edit Profile</h1>
-                    <p style={{ color: '#666', marginTop: '8px' }}>Update your profile information below</p>
+                <div className="dashboard-page-header">
+                    <h1 className="dashboard-page-title">Edit Profile</h1>
+                    <p className="dashboard-page-subtitle">Update your profile information below</p>
                 </div>
 
-                {/* Error Message */}
                 {error && (
-                    <div style={{
-                        backgroundColor: '#ffebee',
-                        color: '#c62828',
-                        padding: '16px',
-                        borderRadius: '4px',
-                        marginBottom: '24px',
-                        borderLeft: '4px solid #c62828',
-                    }}>
+                    <div className="dashboard-alert dashboard-alert--error">
                         {error}
                     </div>
                 )}
 
-                {/* Success Message */}
                 {success && (
-                    <div style={{
-                        backgroundColor: '#e8f5e9',
-                        color: '#2e7d32',
-                        padding: '16px',
-                        borderRadius: '4px',
-                        marginBottom: '24px',
-                        borderLeft: '4px solid #2e7d32',
-                    }}>
+                    <div className="dashboard-alert dashboard-alert--success">
                         Profile updated successfully! Redirecting...
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    {/* Basic Information */}
-                    <div style={sectionCardStyle}>
+                    <div className="dashboard-card">
                         <div className="dashboard-section-title">Basic Information</div>
 
-                        <label style={labelStyle}>Full Name *</label>
-                        <input
-                            style={inputStyle}
-                            type="text"
-                            name="name"
-                            value={form.name}
-                            onChange={handleChange}
-                            placeholder="Enter your full name"
-                            required
-                        />
+                        <div className="dashboard-field">
+                            <label className="dashboard-label">Full Name *</label>
+                            <input
+                                className="dashboard-input"
+                                type="text"
+                                name="name"
+                                value={form.name}
+                                onChange={handleChange}
+                                placeholder="Enter your full name"
+                                required
+                            />
+                        </div>
 
-                        <label style={labelStyle}>Email *</label>
-                        <input
-                            style={inputStyle}
-                            type="email"
-                            name="email"
-                            value={form.email}
-                            onChange={handleChange}
-                            placeholder="Enter your email"
-                            required
-                        />
+                        <div className="dashboard-field">
+                            <label className="dashboard-label">Email *</label>
+                            <input
+                                className="dashboard-input"
+                                type="email"
+                                name="email"
+                                value={form.email}
+                                onChange={handleChange}
+                                placeholder="Enter your email"
+                                required
+                            />
+                        </div>
                     </div>
 
-                    {/* Contact Information */}
-                    <div style={sectionCardStyle}>
+                    <div className="dashboard-card">
                         <div className="dashboard-section-title">Contact Information</div>
 
-                        <label style={labelStyle}>Phone Number</label>
-                        <input
-                            style={inputStyle}
-                            type="tel"
-                            name="phoneNumber"
-                            value={form.phoneNumber}
-                            onChange={handleChange}
-                            placeholder="+1-555-0123 (optional)"
-                        />
+                        <div className="dashboard-field">
+                            <label className="dashboard-label">Phone Number</label>
+                            <input
+                                className="dashboard-input"
+                                type="tel"
+                                name="phoneNumber"
+                                value={form.phoneNumber}
+                                onChange={handleChange}
+                                placeholder="+1-555-0123 (optional)"
+                            />
+                        </div>
 
-                        <label style={labelStyle}>Address</label>
-                        <input
-                            style={inputStyle}
-                            type="text"
-                            name="address"
-                            value={form.address}
-                            onChange={handleChange}
-                            placeholder="Street address (optional)"
-                        />
+                        <div className="dashboard-field">
+                            <label className="dashboard-label">Address</label>
+                            <input
+                                className="dashboard-input"
+                                type="text"
+                                name="address"
+                                value={form.address}
+                                onChange={handleChange}
+                                placeholder="Street address (optional)"
+                            />
+                        </div>
 
-                        <div style={gridLayoutStyle}>
-                            <div>
-                                <label style={labelStyle}>City</label>
+                        <div className="dashboard-form-grid dashboard-form-grid--two">
+                            <div className="dashboard-field">
+                                <label className="dashboard-label">City</label>
                                 <input
-                                    style={inputStyle}
+                                    className="dashboard-input"
                                     type="text"
                                     name="city"
                                     value={form.city}
@@ -237,10 +192,10 @@ export default function EditProfilePage() {
                                 />
                             </div>
 
-                            <div>
-                                <label style={labelStyle}>Country</label>
+                            <div className="dashboard-field">
+                                <label className="dashboard-label">Country</label>
                                 <input
-                                    style={inputStyle}
+                                    className="dashboard-input"
                                     type="text"
                                     name="country"
                                     value={form.country}
@@ -249,10 +204,10 @@ export default function EditProfilePage() {
                                 />
                             </div>
 
-                            <div style={{ gridColumn: 'span 2' }}>
-                                <label style={labelStyle}>Postal Code</label>
+                            <div className="dashboard-field dashboard-field--span-2">
+                                <label className="dashboard-label">Postal Code</label>
                                 <input
-                                    style={inputStyle}
+                                    className="dashboard-input"
                                     type="text"
                                     name="postalCode"
                                     value={form.postalCode}
@@ -263,49 +218,49 @@ export default function EditProfilePage() {
                         </div>
                     </div>
 
-                    {/* Additional Information */}
-                    <div style={sectionCardStyle}>
+                    <div className="dashboard-card">
                         <div className="dashboard-section-title">Additional Information</div>
 
-                        <label style={labelStyle}>Date of Birth</label>
-                        <input
-                            style={inputStyle}
-                            type="date"
-                            name="dateOfBirth"
-                            value={form.dateOfBirth}
-                            onChange={handleChange}
-                        />
+                        <div className="dashboard-field">
+                            <label className="dashboard-label">Date of Birth</label>
+                            <input
+                                className="dashboard-input dashboard-input--date"
+                                type="date"
+                                name="dateOfBirth"
+                                value={form.dateOfBirth}
+                                onChange={handleChange}
+                            />
+                        </div>
 
-                        <label style={labelStyle}>Tax Number</label>
-                        <input
-                            style={inputStyle}
-                            type="text"
-                            name="taxNumber"
-                            value={form.taxNumber}
-                            onChange={handleChange}
-                            placeholder="Tax ID or SSN (optional)"
-                        />
+                        <div className="dashboard-field">
+                            <label className="dashboard-label">Tax Number</label>
+                            <input
+                                className="dashboard-input"
+                                type="text"
+                                name="taxNumber"
+                                value={form.taxNumber}
+                                onChange={handleChange}
+                                placeholder="Tax ID or SSN (optional)"
+                            />
+                        </div>
 
-                        <label style={labelStyle}>Company Name</label>
-                        <input
-                            style={inputStyle}
-                            type="text"
-                            name="companyName"
-                            value={form.companyName}
-                            onChange={handleChange}
-                            placeholder="Company name (optional)"
-                        />
+                        <div className="dashboard-field">
+                            <label className="dashboard-label">Company Name</label>
+                            <input
+                                className="dashboard-input"
+                                type="text"
+                                name="companyName"
+                                value={form.companyName}
+                                onChange={handleChange}
+                                placeholder="Company name (optional)"
+                            />
+                        </div>
                     </div>
 
-                    {/* Form Actions */}
-                    <div style={sectionCardStyle}>
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                            <Link href="/donor/profile">
-                                <button
-                                    type="button"
-                                    className="dashboard-button"
-                                    style={{ backgroundColor: '#f5f5f5', color: '#666' }}
-                                >
+                    <div className="dashboard-card">
+                        <div className="dashboard-actions">
+                            <Link href="/donor/profile" className="dashboard-button-link">
+                                <button type="button" className="dashboard-button dashboard-button--secondary">
                                     Cancel
                                 </button>
                             </Link>
@@ -320,15 +275,7 @@ export default function EditProfilePage() {
                     </div>
                 </form>
 
-                {/* Notice */}
-                <div style={{
-                    backgroundColor: '#f5f5f5',
-                    padding: '16px',
-                    borderRadius: '4px',
-                    marginTop: '24px',
-                    color: '#666',
-                    fontSize: '13px',
-                }}>
+                <div className="dashboard-note">
                     <strong>Note:</strong> Fields marked with * are required. Other fields are optional and can be left blank.
                 </div>
             </div>
