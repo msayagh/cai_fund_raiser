@@ -1,5 +1,6 @@
 'use client';
 
+import './admin.scss';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header.jsx';
@@ -8,7 +9,7 @@ import SitePreloader from '@/components/SitePreloader.jsx';
 import AdminSidebar from '@/components/AdminSidebar.jsx';
 import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
-import { THEMES, MOBILE_BREAKPOINT } from '@/constants/config.js';
+import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import {
@@ -36,22 +37,6 @@ import { clearTokens, logout, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession } from '@/lib/session.js';
 import { startTokenRefreshManager, stopTokenRefreshManager } from '@/lib/tokenRefreshManager.js';
 import PaymentPanel from './PaymentPanel.jsx';
-
-const cardStyle = {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border)',
-    borderRadius: '24px',
-    padding: '24px',
-};
-
-const inputStyle = {
-    width: '100%',
-    padding: '12px 14px',
-    borderRadius: '12px',
-    border: '1px solid var(--border)',
-    background: 'rgba(255,255,255,0.03)',
-    color: 'var(--text-primary)',
-};
 
 export default function AdminDashboardPage() {
     const router = useRouter();
@@ -273,6 +258,7 @@ export default function AdminDashboardPage() {
             return actionMatch && actorMatch && queryMatch;
         });
     }, [logFilter.action, logFilter.actor, logFilter.query, logs]);
+    const currentAdminAccount = getStoredSession();
     const logsTotalPages = Math.max(1, Math.ceil(filteredLogs.length / 12));
     const paginatedLogs = useMemo(() => {
         const start = (logsPage - 1) * 12;
@@ -881,7 +867,7 @@ export default function AdminDashboardPage() {
 
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
-            <div className="mosque-donation" data-theme="dark" style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
+            <div className="mosque-donation admin-preloader-shell" data-theme="dark">
                 <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading admin dashboard" />
             </div>
         );
@@ -889,88 +875,6 @@ export default function AdminDashboardPage() {
 
     return (
         <div dir={isRTL ? 'rtl' : 'ltr'} className="mosque-donation" data-theme={themeMode} suppressHydrationWarning>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@400;600&family=Amiri:wght@400;700&display=swap');
-                *{box-sizing:border-box}
-                .admin-shell{width:100%;max-width:var(--page-max-width);margin:0 auto;padding:24px 20px 64px;display:grid;gap:24px;position:relative}
-                .admin-layout{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start}
-                .admin-tab-list{display:grid;gap:10px}
-                .admin-tab{padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-primary);cursor:pointer;text-align:left}
-                .admin-tab.active{background:var(--accent-gold);color:#111}
-                .admin-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-                .admin-stat{padding:18px;border-radius:18px;border:1px solid var(--border);background:rgba(255,255,255,0.03);animation:pulse-skeleton 2s infinite}
-                .admin-list{display:grid;gap:14px}
-                .admin-item{padding:16px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,0.03)}
-                .admin-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,0.02)}
-                .admin-table{width:100%;border-collapse:collapse;min-width:920px}
-                .admin-table th,.admin-table td{padding:12px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);vertical-align:middle}
-                .admin-table th{font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-muted);font-weight:600;background:rgba(255,255,255,0.03)}
-                .admin-table tr:last-child td{border-bottom:none}
-                .admin-table-cell-muted{color:var(--text-muted)}
-                .admin-table-progress{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;min-width:180px}
-                .admin-table-actions{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap}
-                .admin-button{padding:10px 14px;border-radius:12px;border:none;background:var(--accent-gold);color:#111;font-weight:700;cursor:pointer}
-                .admin-button.secondary{background:rgba(255,255,255,0.06);color:var(--text-primary);border:1px solid var(--border)}
-                .admin-button.danger{background:rgba(180,52,52,0.15);color:#e46767;border:1px solid rgba(228,103,103,0.45)}
-                .admin-button.danger:hover{background:rgba(180,52,52,0.26)}
-                .admin-search-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
-                .admin-per-page{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px}
-                .admin-actions{display:flex;gap:10px;flex-wrap:wrap}
-                .admin-form{display:grid;gap:14px}
-                .admin-alert{padding:14px 16px;border-radius:14px}
-                .admin-alert.error{background:rgba(180,52,52,0.12);border:1px solid rgba(220,90,90,0.3);color:#ffb4b4}
-                .admin-alert.success{background:rgba(80,155,100,0.12);border:1px solid rgba(120,185,150,0.3);color:#a8edbe}
-                .admin-two-col{display:grid;grid-template-columns:1.2fr .8fr;gap:24px}
-                .admin-donor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-                .admin-chart-card{padding:18px;border-radius:18px;border:1px solid var(--border);background:rgba(255,255,255,0.03)}
-                .admin-chart-row{display:grid;grid-template-columns:120px 1fr 48px;gap:12px;align-items:center}
-                .admin-chart-track{height:12px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden}
-                .admin-chart-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent-gold),#e6c86e)}
-                .admin-donor-card{padding:18px;border-radius:20px;border:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));display:grid;gap:14px}
-                .admin-donor-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-                .admin-chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--border);font-size:12px;color:var(--text-muted);background:rgba(255,255,255,0.03)}
-                .admin-chip.status-pending{background:rgba(232,164,74,0.1);border-color:rgba(232,164,74,0.3);color:#e8a44a}
-                .admin-chip.status-on_hold{background:rgba(120,120,220,0.15);border-color:rgba(120,120,220,0.4);color:#a0a0ff}
-                .admin-chip.status-approved{background:rgba(92,200,160,0.13);border-color:rgba(92,200,160,0.32);color:#5cc8a0}
-                .admin-chip.status-declined{background:rgba(228,103,103,0.13);border-color:rgba(228,103,103,0.32);color:#e46767}
-                .admin-donor-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-                .admin-donor-metric{padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)}
-                .admin-donor-progress{display:grid;gap:8px}
-                .admin-detail-card{padding:18px;border-radius:20px;border:1px solid var(--border);background:rgba(255,255,255,0.03);display:grid;gap:16px}
-                .admin-detail-list{display:grid;gap:12px}
-                .admin-detail-row{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06)}
-                .admin-detail-row:last-child{border-bottom:none;padding-bottom:0}
-                .admin-subsection{display:grid;gap:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08)}
-                .admin-mini-list{display:grid;gap:10px}
-                .admin-mini-item{padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02)}
-                .admin-modal-backdrop{position:fixed;inset:0;background:rgba(3,6,16,0.78);backdrop-filter:blur(8px);display:grid;place-items:center;padding:24px;z-index:60}
-                .admin-modal{width:min(960px,100%);max-height:min(90vh,920px);overflow:auto;border-radius:24px;border:1px solid var(--border);background:linear-gradient(180deg,#14192e,#0b1020);box-shadow:0 24px 90px rgba(0,0,0,0.45);padding:24px;display:grid;gap:18px}
-                .admin-modal-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
-                .admin-modal-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:18px}
-                [data-theme="light"] .admin-modal-backdrop{background:rgba(0,0,0,0.42)}
-                [data-theme="light"] .admin-modal{background:linear-gradient(155deg,#ffffff 0%,#faf8f4 52%,#f4f0e6 100%);border-color:rgba(154,123,79,0.28);box-shadow:0 28px 64px rgba(0,0,0,0.14),0 0 0 1px rgba(0,0,0,0.03)}
-                [data-theme="light"] .admin-modal-header{border-bottom:1px solid #e5e2dc;padding-bottom:14px}
-                [data-theme="light"] .admin-modal .admin-button.secondary{background:rgba(0,0,0,0.04);border-color:#e5e2dc;color:#5a5040}
-                [data-theme="light"] .admin-modal .admin-button.secondary:hover{background:rgba(0,0,0,0.07);border-color:rgba(154,123,79,0.4);color:#1a1208}
-                [data-theme="light"] .admin-modal .admin-button.danger{background:rgba(180,50,50,0.07);border-color:rgba(180,50,50,0.28);color:#9a2d2d}
-                [data-theme="light"] .admin-modal .admin-button.danger:hover{background:rgba(180,50,50,0.12);border-color:rgba(180,50,50,0.4);color:#7f1f1f}
-                [data-theme="light"] .admin-modal input,[data-theme="light"] .admin-modal textarea,[data-theme="light"] .admin-modal select{background:#f9f7f3;color:#1a1208;border-color:#e5e2dc}
-                [data-theme="light"] .admin-modal input:focus,[data-theme="light"] .admin-modal textarea:focus,[data-theme="light"] .admin-modal select:focus{outline:none;border-color:rgba(154,123,79,0.55);box-shadow:0 0 0 3px rgba(154,123,79,0.1)}
-                [data-theme="light"] .admin-alert.error{background:rgba(160,40,40,0.06);border-color:rgba(180,60,60,0.22);color:#8b2020}
-                [data-theme="light"] .admin-alert.success{background:rgba(50,110,70,0.06);border-color:rgba(80,150,100,0.22);color:#235234}
-                [data-theme="light"] .admin-chip.status-pending{background:rgba(154,123,79,0.09);border-color:rgba(154,123,79,0.28);color:#9a7b4f}
-                [data-theme="light"] .admin-chip.status-approved{background:rgba(50,110,70,0.08);border-color:rgba(80,150,100,0.24);color:#235234}
-                [data-theme="light"] .admin-chip.status-declined{background:rgba(160,40,40,0.08);border-color:rgba(180,60,60,0.22);color:#8b2020}
-                .admin-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px}
-                .admin-pagination-buttons{display:flex;gap:10px;align-items:center}
-                .admin-loading-overlay{position:fixed;inset:0;background:rgba(3,6,16,0.5);backdrop-filter:blur(4px);display:grid;place-items:center;z-index:50;pointer-events:none}
-                .admin-spinner{width:48px;height:48px;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--accent-gold);border-radius:50%;animation:spin 1s linear infinite}
-                @keyframes spin{to{transform:rotate(360deg)}}
-                @keyframes pulse-skeleton{0%,100%{opacity:1}50%{opacity:0.6}}
-                @media (max-width:${MOBILE_BREAKPOINT}px){.admin-layout{grid-template-columns:1fr}.admin-grid{grid-template-columns:1fr 1fr}}
-                @media (max-width:900px){.admin-two-col{grid-template-columns:1fr}}
-                @media (max-width:720px){.admin-grid,.admin-donor-grid,.admin-donor-metrics,.admin-modal-grid{grid-template-columns:1fr}.admin-chart-row{grid-template-columns:1fr}}
-            `}</style>
             <Header
                 language={language}
                 setLanguage={setLanguage}
@@ -987,9 +891,9 @@ export default function AdminDashboardPage() {
             <main className="admin-shell">
                 {loading ? (
                     <div className="admin-loading-overlay">
-                        <div style={{ textAlign: 'center', display: 'grid', gap: 16, alignItems: 'center' }}>
+                        <div className="admin-loading-content">
                             <div className="admin-spinner"></div>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18, color: 'var(--text-primary)' }}>
+                            <div className="admin-loading-title">
                                 Loading dashboard...
                             </div>
                         </div>
@@ -1000,11 +904,11 @@ export default function AdminDashboardPage() {
                     {message ? <div className="admin-alert success">{message}</div> : null}
                     {isAddDonorModalOpen ? (
                         <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Add new donor">
-                            <div className="admin-modal" style={{ maxWidth: 520 }}>
+                            <div className="admin-modal admin-modal--sm">
                                 <div className="admin-modal-header">
                                     <div>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 22 }}>➕ Add New Donor</div>
-                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
+                                        <div className="admin-section-title admin-section-title--lg">➕ Add New Donor</div>
+                                        <div className="admin-muted">
                                             Choose whether to create an active donor account or a placeholder donor record.
                                         </div>
                                     </div>
@@ -1023,9 +927,9 @@ export default function AdminDashboardPage() {
                                 {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 <form className="admin-form" onSubmit={handleAddNewDonor}>
                                     <div>
-                                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>👤 Full Name *</label>
+                                        <label className="admin-label">👤 Full Name *</label>
                                         <input
-                                            style={inputStyle}
+                                            className="admin-input"
                                             placeholder="Full name"
                                             value={newDonorForm.name}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, name: e.target.value }))}
@@ -1035,9 +939,9 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>📧 Email Address *</label>
+                                        <label className="admin-label">📧 Email Address *</label>
                                         <input
-                                            style={inputStyle}
+                                            className="admin-input"
                                             type="email"
                                             placeholder="donor@example.com"
                                             value={newDonorForm.email}
@@ -1047,7 +951,7 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontSize: 14 }}>
+                                        <label className="admin-inline admin-inline--wrap">
                                             <input
                                                 type="checkbox"
                                                 checked={Boolean(newDonorForm.accountCreated)}
@@ -1058,9 +962,9 @@ export default function AdminDashboardPage() {
                                         </label>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>🔒 Password * (min 8 characters)</label>
+                                        <label className="admin-label">🔒 Password * (min 8 characters)</label>
                                         <input
-                                            style={inputStyle}
+                                            className="admin-input"
                                             type="password"
                                             placeholder={newDonorForm.accountCreated ? 'Password' : 'Not required for placeholder donor'}
                                             value={newDonorForm.password}
@@ -1071,9 +975,9 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>🔒 Confirm Password *</label>
+                                        <label className="admin-label">🔒 Confirm Password *</label>
                                         <input
-                                            style={inputStyle}
+                                            className="admin-input"
                                             type="password"
                                             placeholder={newDonorForm.accountCreated ? 'Confirm password' : 'Not required for placeholder donor'}
                                             value={newDonorForm.passwordConfirm}
@@ -1084,9 +988,9 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>🤝 Pledge Amount (optional)</label>
+                                        <label className="admin-label">🤝 Pledge Amount (optional)</label>
                                         <input
-                                            style={inputStyle}
+                                            className="admin-input"
                                             type="number"
                                             min="1"
                                             step="0.01"
@@ -1107,13 +1011,13 @@ export default function AdminDashboardPage() {
                     ) : null}
                     {isProfileModalOpen ? (
                         <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Edit donor profile">
-                            <div className="admin-modal" style={{ maxWidth: 580 }}>
+                            <div className="admin-modal admin-modal--profile">
                                 <div className="admin-modal-header">
                                     <div>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 22 }}>
+                                        <div className="admin-section-title admin-section-title--lg">
                                             ✏️ {selectedDonor ? selectedDonor.name : 'Edit profile'}
                                         </div>
-                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
+                                        <div className="admin-muted">
                                             Update donor profile, engagement and password.
                                         </div>
                                     </div>
@@ -1126,16 +1030,16 @@ export default function AdminDashboardPage() {
                                 <div>
                                     {selectedDonorLoading ? <div>Loading donor details...</div> : null}
                                     {!selectedDonorLoading && !selectedDonor ? (
-                                        <div style={{ color: 'var(--text-muted)' }}>We could not load this donor. Please try again.</div>
+                                        <div className="admin-muted">We could not load this donor. Please try again.</div>
                                     ) : null}
                                     {!selectedDonorLoading && selectedDonor ? (
-                                        <div style={{ display: 'grid', gap: 20 }}>
+                                        <div className="admin-stack admin-stack--lg">
                                             <form className="admin-form" onSubmit={handleUpdateSelectedDonor}>
-                                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, color: 'var(--text-muted)', marginBottom: 4 }}>👤 Profile</div>
+                                                <div className="admin-section-title admin-section-title--sm">👤 Profile</div>
                                                 <div>
-                                                    <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>Full Name</label>
+                                                    <label className="admin-label">Full Name</label>
                                                     <input
-                                                        style={inputStyle}
+                                                        className="admin-input"
                                                         placeholder="Full name"
                                                         value={selectedDonorForm.name}
                                                         onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, name: e.target.value }))}
@@ -1144,9 +1048,9 @@ export default function AdminDashboardPage() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>📧 Email</label>
+                                                    <label className="admin-label">📧 Email</label>
                                                     <input
-                                                        style={inputStyle}
+                                                        className="admin-input"
                                                         type="email"
                                                         placeholder="Email address"
                                                         value={selectedDonorForm.email}
@@ -1156,7 +1060,7 @@ export default function AdminDashboardPage() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontSize: 14 }}>
+                                                    <label className="admin-inline admin-inline--wrap">
                                                         <input
                                                             type="checkbox"
                                                             checked={Boolean(selectedDonorForm.accountCreated)}
@@ -1165,15 +1069,15 @@ export default function AdminDashboardPage() {
                                                         />
                                                         Active donor account (login enabled)
                                                     </label>
-                                                    <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 12 }}>
+                                                    <div className="admin-field-help">
                                                         If enabling this for a placeholder donor, set a password below.
                                                     </div>
                                                 </div>
-                                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
-                                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>🔒 Change Password (optional)</div>
-                                                    <div style={{ display: 'grid', gap: 10 }}>
+                                                <div className="admin-divider-top">
+                                                    <div className="admin-section-title admin-section-title--sm">🔒 Change Password (optional)</div>
+                                                    <div className="admin-stack">
                                                         <input
-                                                            style={inputStyle}
+                                                            className="admin-input"
                                                             type="password"
                                                             placeholder="New password (min 8 chars)"
                                                             value={selectedDonorPassword}
@@ -1182,7 +1086,7 @@ export default function AdminDashboardPage() {
                                                             minLength={8}
                                                         />
                                                         <input
-                                                            style={inputStyle}
+                                                            className="admin-input"
                                                             type="password"
                                                             placeholder="Confirm new password"
                                                             value={selectedDonorPasswordConfirm}
@@ -1195,15 +1099,15 @@ export default function AdminDashboardPage() {
                                                     {selectedDonorSaving ? 'Saving...' : '✅ Save Profile Changes'}
                                                 </button>
                                             </form>
-                                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
-                                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>🤝 Engagement (Pledge Amount)</div>
-                                                <div style={{ display: 'grid', gap: 10 }}>
+                                            <div className="admin-divider-top">
+                                                <div className="admin-section-title admin-section-title--sm">🤝 Engagement (Pledge Amount)</div>
+                                                <div className="admin-stack">
                                                     <div>
-                                                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>
+                                                        <label className="admin-label">
                                                             Current pledge: ${Number(selectedDonor.engagement?.totalPledge || 0).toLocaleString()}
                                                         </label>
                                                         <input
-                                                            style={inputStyle}
+                                                            className="admin-input"
                                                             type="number"
                                                             min="1"
                                                             step="0.01"
@@ -1231,13 +1135,13 @@ export default function AdminDashboardPage() {
                     ) : null}
                     {isPaymentsModalOpen ? (
                         <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Payment history">
-                            <div className="admin-modal" style={{ maxWidth: 980 }}>
+                            <div className="admin-modal admin-modal--lg">
                                 <div className="admin-modal-header">
                                     <div>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 22 }}>
+                                        <div className="admin-section-title admin-section-title--lg">
                                             {selectedDonor ? `${selectedDonor.name} payment history` : 'Payment history'}
                                         </div>
-                                        <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
+                                        <div className="admin-muted mt-sm">
                                             Add, edit, and remove donor payments.
                                         </div>
                                     </div>
@@ -1249,7 +1153,7 @@ export default function AdminDashboardPage() {
                                 {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 {selectedDonorLoading ? <div>Loading donor payments...</div> : null}
                                 {!selectedDonorLoading && !selectedDonor ? (
-                                    <div style={{ color: 'var(--text-muted)' }}>
+                                    <div className="admin-muted">
                                         We could not load this donor yet. Please try again.
                                     </div>
                                 ) : null}
@@ -1261,8 +1165,6 @@ export default function AdminDashboardPage() {
                                         onUpdatePayment={handleUpdatePayment}
                                         onDeletePayment={handleDeletePayment}
                                         loading={selectedDonorSaving}
-                                        inputStyle={inputStyle}
-                                        cardStyle={{ ...cardStyle, padding: 0, border: 'none', background: 'transparent' }}
                                         t={t}
                                     />
                                 ) : null}
@@ -1271,13 +1173,13 @@ export default function AdminDashboardPage() {
                     ) : null}
                     {requestDecisionModal.open ? (
                         <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Review request">
-                            <div className="admin-modal" style={{ maxWidth: 560 }}>
+                            <div className="admin-modal admin-modal--md">
                                 <div className="admin-modal-header">
                                     <div>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20 }}>
+                                        <div className="admin-section-title">
                                             👁️ Review Request
                                         </div>
-                                        <div style={{ color: 'var(--text-muted)', marginTop: 6, textTransform: 'capitalize' }}>
+                                        <div className="admin-muted mt-sm admin-text-capitalize">
                                             {requestDecisionModal.request?.type?.replace(/_/g, ' ') || ''}
                                         </div>
                                     </div>
@@ -1287,42 +1189,42 @@ export default function AdminDashboardPage() {
                                 </div>
                                 {modalError ? <div className="admin-alert error">{modalError}</div> : null}
                                 {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
-                                <div style={{ color: 'var(--text-muted)' }}>
+                                <div className="admin-muted">
                                     {requestDecisionModal.request?.name
-                                        ? <div><strong style={{ color: 'var(--text-primary)' }}>{requestDecisionModal.request.name}</strong> &middot; {requestDecisionModal.request.email}</div>
+                                        ? <div><strong>{requestDecisionModal.request.name}</strong> &middot; {requestDecisionModal.request.email}</div>
                                         : <div>{requestDecisionModal.request?.email}</div>
                                     }
                                 </div>
-                                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                                    Status: <span style={{ textTransform: 'capitalize' }}>{requestDecisionModal.request?.status?.replace(/_/g, ' ')}</span>
+                                <div className="admin-muted admin-muted--md">
+                                    Status: <span className="admin-text-capitalize">{requestDecisionModal.request?.status?.replace(/_/g, ' ')}</span>
                                 </div>
                                 {requestDecisionModal.request?.message ? (
-                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', whiteSpace: 'pre-line' }}>
+                                    <div className="admin-surface admin-surface--message">
                                         {requestDecisionModal.request.message}
                                     </div>
                                 ) : null}
 
                                 {/* Type-specific info panels */}
                                 {requestDecisionModal.request?.type === 'payment_upload' && (
-                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(232,164,74,0.08)', border: '1px solid rgba(232,164,74,0.3)' }}>
-                                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>💵 Payment that will be recorded on approval:</div>
+                                    <div className="admin-surface admin-surface--warn">
+                                        <div className="admin-field-help admin-field-help--spaced admin-field-help--strong">💵 Payment that will be recorded on approval:</div>
                                         <div>
                                             <strong>Amount:</strong>{' '}
                                             {parsePaymentAmount(requestDecisionModal.request?.message)
                                                 ? `$${parsePaymentAmount(requestDecisionModal.request?.message).toLocaleString()}`
-                                                : <span style={{ color: '#ffb4b4' }}>⚠️ Could not parse — please check the message</span>}
+                                                : <span className="admin-error-text">⚠️ Could not parse — please check the message</span>}
                                         </div>
                                         <div><strong>Method:</strong> Cash</div>
                                         <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
                                     </div>
                                 )}
                                 {requestDecisionModal.request?.type === 'account_creation' && (
-                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(80,155,100,0.1)', border: '1px solid rgba(120,185,150,0.3)', fontSize: 13 }}>
+                                    <div className="admin-surface admin-surface--success admin-muted admin-muted--md">
                                         <strong>👤 Approval will:</strong> create a donor account, generate a temporary password, and email it to the donor with instructions to change it on first login.
                                     </div>
                                 )}
                                 {requestDecisionModal.request?.type === 'engagement_change' && (
-                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(120,120,220,0.08)', border: '1px solid rgba(120,120,220,0.3)', fontSize: 13 }}>
+                                    <div className="admin-surface admin-surface--info admin-muted admin-muted--md">
                                         <strong>🔔 This is a notification of an engagement/pledge change.</strong> Clicking "Received" logs the acknowledgement. Update the pledge amount from the donor's profile if needed.
                                     </div>
                                 )}
@@ -1374,7 +1276,7 @@ export default function AdminDashboardPage() {
                                                 </button>
                                             ) : null}
                                             {!canApprove && !canHold && !canDecline ? (
-                                                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                                                <div className="admin-muted admin-muted--md">
                                                     This request has no further available actions.
                                                 </div>
                                             ) : null}
@@ -1392,21 +1294,21 @@ export default function AdminDashboardPage() {
                             onLogout={handleLogout}
                         />
 
-                        <section style={{ display: 'grid', gap: 24 }}>
+                        <section className="admin-page-section">
                             {activeTab === 'overview' ? (
                                 <>
-                                    <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>📊 Overview</div>
-                                        <div className="admin-grid">
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total Donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.totalDonors}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Total Raised</div><div style={{ fontSize: 30, fontWeight: 700 }}>${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Active Engagements</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.activeEngagements}</div></div>
-                                            <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Pending Requests</div><div style={{ fontSize: 30, fontWeight: 700 }}>{stats.pendingRequests}</div></div>
+                                    <div className="admin-card">
+                                        <div className="admin-section-title">📊 Overview</div>
+                                        <div className="admin-grid admin-grid--4cols">
+                                            <div className="admin-stat"><div className="admin-muted">Total Donors</div><div className="admin-value-lg">{stats.totalDonors}</div></div>
+                                            <div className="admin-stat"><div className="admin-muted">Total Raised</div><div className="admin-value-lg">${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
+                                            <div className="admin-stat"><div className="admin-muted">Active Engagements</div><div className="admin-value-lg">{stats.activeEngagements}</div></div>
+                                            <div className="admin-stat"><div className="admin-muted">Pending Requests</div><div className="admin-value-lg">{stats.pendingRequests}</div></div>
                                         </div>
                                     </div>
 
-                                    <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>👥 Donors Progress</div>
+                                    <div className="admin-card">
+                                        <div className="admin-section-title">👥 Donors Progress</div>
                                         <div className="admin-search-row">
                                             <button
                                                 type="button"
@@ -1416,19 +1318,19 @@ export default function AdminDashboardPage() {
                                                 ➕ Add New Donor
                                             </button>
                                             <input
-                                                style={{ ...inputStyle, maxWidth: 280 }}
+                                                className="admin-input admin-input--max-280"
                                                 placeholder="🔎 Search by name"
                                                 value={donorFilter.nameQuery}
                                                 onChange={(e) => setDonorFilter((prev) => ({ ...prev, nameQuery: e.target.value }))}
                                             />
                                             <input
-                                                style={{ ...inputStyle, maxWidth: 280 }}
+                                                className="admin-input admin-input--max-280"
                                                 placeholder="📧 Search by email"
                                                 value={donorFilter.emailQuery}
                                                 onChange={(e) => setDonorFilter((prev) => ({ ...prev, emailQuery: e.target.value }))}
                                             />
                                             <input
-                                                style={{ ...inputStyle, maxWidth: 220 }}
+                                                className="admin-input admin-input--max-220"
                                                 placeholder="🤝 Search by pledge"
                                                 value={donorFilter.engagementQuery}
                                                 onChange={(e) => setDonorFilter((prev) => ({ ...prev, engagementQuery: e.target.value }))}
@@ -1454,7 +1356,7 @@ export default function AdminDashboardPage() {
                                                         const progress = pledge > 0 ? Math.min(100, Math.round((paid / pledge) * 100)) : 0;
                                                         return (
                                                             <tr key={donor.id}>
-                                                                <td style={{ fontWeight: 700 }}>👤 {donor.name || 'Unknown donor'}</td>
+                                                                <td className="admin-item-title">👤 {donor.name || 'Unknown donor'}</td>
                                                                 <td className="admin-table-cell-muted">📧 {donor.email || '-'}</td>
                                                                 <td>${pledge.toLocaleString()}</td>
                                                                 <td>${paid.toLocaleString()}</td>
@@ -1505,7 +1407,7 @@ export default function AdminDashboardPage() {
                                             <div className="admin-per-page">
                                                 <span>Rows per page:</span>
                                                 <select
-                                                    style={{ ...inputStyle, width: 90, padding: '8px 10px' }}
+                                                    className="admin-input admin-input--width-90"
                                                     value={topDonorsPerPage}
                                                     onChange={(e) => setTopDonorsPerPage(Number(e.target.value))}
                                                 >
@@ -1526,35 +1428,35 @@ export default function AdminDashboardPage() {
                             ) : null}
 
                             {activeTab === 'requests' ? (
-                                <div style={cardStyle}>
-                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>📨 Requests</div>
-                                    <div className="admin-grid" style={{ marginBottom: 16 }}>
+                                <div className="admin-card">
+                                    <div className="admin-section-title">📨 Requests</div>
+                                    <div className="admin-grid admin-grid--4cols mb-md">
                                         <div className="admin-stat">
-                                            <div style={{ color: 'var(--text-muted)' }}>Open Requests</div>
-                                            <div style={{ fontSize: 30, fontWeight: 700 }}>{requestStats.open}</div>
+                                            <div className="admin-muted">Open Requests</div>
+                                            <div className="admin-value-lg">{requestStats.open}</div>
                                         </div>
                                         <div className="admin-stat">
-                                            <div style={{ color: 'var(--text-muted)' }}>Payment Requests</div>
-                                            <div style={{ fontSize: 30, fontWeight: 700 }}>{requestStats.paymentRequests}</div>
+                                            <div className="admin-muted">Payment Requests</div>
+                                            <div className="admin-value-lg">{requestStats.paymentRequests}</div>
                                         </div>
                                         <div className="admin-stat">
-                                            <div style={{ color: 'var(--text-muted)' }}>Account Requests</div>
-                                            <div style={{ fontSize: 30, fontWeight: 700 }}>{requestStats.accountRequests}</div>
+                                            <div className="admin-muted">Account Requests</div>
+                                            <div className="admin-value-lg">{requestStats.accountRequests}</div>
                                         </div>
                                         <div className="admin-stat">
-                                            <div style={{ color: 'var(--text-muted)' }}>Reviewed</div>
-                                            <div style={{ fontSize: 30, fontWeight: 700 }}>{requestStats.reviewed}</div>
+                                            <div className="admin-muted">Reviewed</div>
+                                            <div className="admin-value-lg">{requestStats.reviewed}</div>
                                         </div>
                                     </div>
                                     <div className="admin-search-row">
                                         <input
-                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            className="admin-input admin-input--max-220"
                                             placeholder="🔎 Search requests"
                                             value={requestFilter.query}
                                             onChange={(e) => setRequestFilter((prev) => ({ ...prev, query: e.target.value }))}
                                         />
                                         <select
-                                            style={{ ...inputStyle, maxWidth: 180 }}
+                                            className="admin-input admin-input--max-180"
                                             value={requestFilter.status}
                                             onChange={(e) => setRequestFilter((prev) => ({ ...prev, status: e.target.value }))}
                                         >
@@ -1565,7 +1467,7 @@ export default function AdminDashboardPage() {
                                             <option value="declined">declined</option>
                                         </select>
                                         <select
-                                            style={{ ...inputStyle, maxWidth: 180 }}
+                                            className="admin-input admin-input--max-180"
                                             value={requestFilter.type}
                                             onChange={(e) => setRequestFilter((prev) => ({ ...prev, type: e.target.value }))}
                                         >
@@ -1596,8 +1498,8 @@ export default function AdminDashboardPage() {
                                                     return (
                                                         <tr key={request.id}>
                                                             <td>
-                                                                <div style={{ fontWeight: 700 }}>👤 {request.name || 'Unknown'}</div>
-                                                                <div className="admin-table-cell-muted" style={{ marginTop: 4 }}>📧 {request.email}</div>
+                                                                <div className="admin-item-title">👤 {request.name || 'Unknown'}</div>
+                                                                <div className="admin-table-cell-muted mt-sm">📧 {request.email}</div>
                                                             </td>
                                                             <td style={{ textTransform: 'capitalize' }}>{(request.type || '').replace(/_/g, ' ')}</td>
                                                             <td>
@@ -1668,7 +1570,7 @@ export default function AdminDashboardPage() {
                                         </table>
                                     </div>
                                     <div className="admin-pagination">
-                                        <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
+                                        <div className="admin-muted">Showing 12 items per page</div>
                                         <div className="admin-pagination-buttons">
                                             <button type="button" className="admin-button secondary" disabled={requestsPage <= 1} onClick={() => setRequestsPage((page) => Math.max(1, page - 1))}>Previous</button>
                                             <span>Page {requestsPage} of {requestsTotalPages}</span>
@@ -1679,16 +1581,16 @@ export default function AdminDashboardPage() {
                             ) : null}
 
                             {activeTab === 'imports' ? (
-                                <div style={cardStyle}>
-                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>📥 Import Existing Donations (CSV)</div>
-                                    <div style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+                                <div className="admin-card">
+                                    <div className="admin-section-title">📥 Import Existing Donations (CSV)</div>
+                                    <div className="admin-muted mb-md">
                                         Required columns: <strong>email</strong>, <strong>amount</strong>, <strong>method</strong>.
                                         Optional columns: <strong>name</strong>, <strong>date</strong>, <strong>note</strong>, <strong>engagement</strong>.
                                         Method values must be: <strong>cash</strong>, <strong>card</strong>, or <strong>zeffy</strong>.
                                     </div>
                                     <form className="admin-form" onSubmit={handleImportCsv}>
                                         <input
-                                            style={inputStyle}
+                                            className="admin-input"
                                             type="file"
                                             accept=".csv,text/csv"
                                             onChange={(e) => {
@@ -1703,8 +1605,8 @@ export default function AdminDashboardPage() {
                                     </form>
 
                                     {csvImportLoading && csvUploadProgress !== null ? (
-                                        <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 13 }}>
+                                        <div className="admin-stack mt-md">
+                                            <div className="admin-inline admin-inline--between admin-muted admin-muted--md">
                                                 <span>{csvUploadProgress < 100 ? 'Uploading CSV…' : 'Upload complete, processing rows…'}</span>
                                                 <span>{csvUploadProgress}%</span>
                                             </div>
@@ -1715,17 +1617,17 @@ export default function AdminDashboardPage() {
                                     ) : null}
 
                                     {csvImportSummary ? (
-                                        <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
-                                            <div className="admin-grid">
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Rows</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.totalRows}</div></div>
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Imported Payments</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.importedPayments}</div></div>
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Created Donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.createdDonors}</div></div>
-                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Failed Rows</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.failedRows}</div></div>
+                                        <div className="admin-stack mt-lg">
+                                            <div className="admin-grid admin-grid--4cols">
+                                                <div className="admin-stat"><div className="admin-muted">Rows</div><div className="admin-value-lg">{csvImportSummary.totalRows}</div></div>
+                                                <div className="admin-stat"><div className="admin-muted">Imported Payments</div><div className="admin-value-lg">{csvImportSummary.importedPayments}</div></div>
+                                                <div className="admin-stat"><div className="admin-muted">Created Donors</div><div className="admin-value-lg">{csvImportSummary.createdDonors}</div></div>
+                                                <div className="admin-stat"><div className="admin-muted">Failed Rows</div><div className="admin-value-lg">{csvImportSummary.failedRows}</div></div>
                                             </div>
 
                                             {Array.isArray(csvImportSummary.errors) && csvImportSummary.errors.length > 0 ? (
                                                 <div className="admin-table-wrap">
-                                                    <table className="admin-table" style={{ minWidth: 0 }}>
+                                                    <table className="admin-table admin-table--compact">
                                                         <thead>
                                                             <tr>
                                                                 <th>Row</th>
@@ -1752,20 +1654,20 @@ export default function AdminDashboardPage() {
 
                             {activeTab === 'admins' ? (
                                 <>
-                                    <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Create admin</div>
+                                    <div className="admin-card">
+                                        <div className="admin-section-title">Create admin</div>
                                         <form className="admin-form" onSubmit={handleCreateAdmin}>
-                                            <input style={inputStyle} placeholder="Full name" value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
-                                            <input style={inputStyle} type="email" placeholder="Email" value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
-                                            <input style={inputStyle} type="password" placeholder="Password" value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} />
+                                            <input className="admin-input" placeholder="Full name" value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
+                                            <input className="admin-input" type="email" placeholder="Email" value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
+                                            <input className="admin-input" type="password" placeholder="Password" value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} />
                                             <button type="submit" className="admin-button">Create admin</button>
                                         </form>
                                     </div>
-                                    <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Admins</div>
-                                        <div className="admin-actions" style={{ marginBottom: 16 }}>
+                                    <div className="admin-card">
+                                        <div className="admin-section-title">Admins</div>
+                                        <div className="admin-actions mb-md">
                                             <input
-                                                style={{ ...inputStyle, maxWidth: 260 }}
+                                                className="admin-input admin-input--max-260"
                                                 placeholder="Search admins"
                                                 value={adminFilter.query}
                                                 onChange={(e) => setAdminFilter({ query: e.target.value })}
@@ -1774,15 +1676,15 @@ export default function AdminDashboardPage() {
                                         <div className="admin-list">
                                             {paginatedAdmins.map((admin) => (
                                                 <div key={admin.id} className="admin-item">
-                                                    <div style={{ fontWeight: 700 }}>{admin.name}</div>
-                                                    <div style={{ color: 'var(--text-muted)', marginTop: 4 }}>{admin.email}</div>
-                                                    {admin.addedBy?.name ? <div style={{ marginTop: 8 }}>Added by {admin.addedBy.name}</div> : null}
+                                                    <div className="admin-item-title">{admin.name}</div>
+                                                    <div className="admin-muted mt-sm">{admin.email}</div>
+                                                    {admin.addedBy?.name ? <div className="mt-sm">Added by {admin.addedBy.name}</div> : null}
                                                 </div>
                                             ))}
                                             {paginatedAdmins.length === 0 ? <div className="admin-item">No admins match the current filter.</div> : null}
                                         </div>
                                         <div className="admin-pagination">
-                                            <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
+                                            <div className="admin-muted">Showing 12 items per page</div>
                                             <div className="admin-pagination-buttons">
                                                 <button type="button" className="admin-button secondary" disabled={adminsPage <= 1} onClick={() => setAdminsPage((page) => Math.max(1, page - 1))}>Previous</button>
                                                 <span>Page {adminsPage} of {adminsTotalPages}</span>
@@ -1794,43 +1696,43 @@ export default function AdminDashboardPage() {
                             ) : null}
 
                             {activeTab === 'logs' ? (
-                                <div style={cardStyle}>
-                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Activity logs</div>
-                                    <div className="admin-actions" style={{ marginBottom: 16 }}>
+                                <div className="admin-card">
+                                    <div className="admin-section-title">Activity logs</div>
+                                    <div className="admin-actions mb-md">
                                         <input
-                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            className="admin-input admin-input--max-220"
                                             placeholder="Search activity"
                                             value={logFilter.query}
                                             onChange={(e) => setLogFilter((prev) => ({ ...prev, query: e.target.value }))}
                                         />
                                         <input
-                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            className="admin-input admin-input--max-220"
                                             placeholder="Filter by action"
                                             value={logFilter.action}
                                             onChange={(e) => setLogFilter((prev) => ({ ...prev, action: e.target.value }))}
                                         />
                                         <input
-                                            style={{ ...inputStyle, maxWidth: 220 }}
+                                            className="admin-input admin-input--max-220"
                                             placeholder="Filter by actor"
                                             value={logFilter.actor}
                                             onChange={(e) => setLogFilter((prev) => ({ ...prev, actor: e.target.value }))}
                                         />
                                     </div>
-                                    <div className="admin-list">
-                                        {paginatedLogs.map((log) => (
-                                            <div key={log.id} className="admin-item">
-                                                <div style={{ fontWeight: 700 }}>{log.action}</div>
-                                                <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{log.details}</div>
-                                                <div style={{ color: 'var(--accent-gold)', marginTop: 6 }}>{log.actor}</div>
-                                            </div>
-                                        ))}
-                                        {paginatedLogs.length === 0 ? <div className="admin-item">No logs match the current filters.</div> : null}
-                                    </div>
-                                    <div className="admin-pagination">
-                                        <div style={{ color: 'var(--text-muted)' }}>Showing 12 items per page</div>
-                                        <div className="admin-pagination-buttons">
-                                            <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                            <span>Page {logsPage} of {logsTotalPages}</span>
+                                        <div className="admin-list">
+                                            {paginatedLogs.map((log) => (
+                                                <div key={log.id} className="admin-item">
+                                                    <div className="admin-item-title">{log.action}</div>
+                                                    <div className="admin-muted mt-sm">{log.details}</div>
+                                                    <div className="admin-accent mt-sm">{log.actor}</div>
+                                                </div>
+                                            ))}
+                                            {paginatedLogs.length === 0 ? <div className="admin-item">No logs match the current filters.</div> : null}
+                                        </div>
+                                        <div className="admin-pagination">
+                                            <div className="admin-muted">Showing 12 items per page</div>
+                                            <div className="admin-pagination-buttons">
+                                                <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
+                                                <span>Page {logsPage} of {logsTotalPages}</span>
                                             <button type="button" className="admin-button secondary" disabled={logsPage >= logsTotalPages} onClick={() => setLogsPage((page) => Math.min(logsTotalPages, page + 1))}>Next</button>
                                         </div>
                                     </div>
@@ -1838,33 +1740,40 @@ export default function AdminDashboardPage() {
                             ) : null}
 
                             {activeTab === 'accounts' ? (
-                                <div style={{ display: 'grid', gap: 24 }}>
-                                    <div style={cardStyle}>
-                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 24 }}>👤 Your Account</div>
+                                <div className="admin-stack admin-stack--xl">
+                                    <div className="admin-card">
+                                        <div className="admin-section-title">👤 Your Account</div>
                                         <div className="admin-form">
                                             <div>
-                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Full Name</label>
-                                                <input style={inputStyle} type="text" defaultValue="Administrator" />
+                                                <label className="admin-label">Full Name</label>
+                                                <input className="admin-input" type="text" defaultValue={currentAdminAccount?.name || ''} />
                                             </div>
                                             <div>
-                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Email Address</label>
-                                                <input style={inputStyle} type="email" defaultValue="admin@masjid.com" />
+                                                <label className="admin-label">Email Address</label>
+                                                <input className="admin-input" type="email" defaultValue={currentAdminAccount?.email || ''} />
                                             </div>
                                             <div>
-                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Phone Number</label>
-                                                <input style={inputStyle} type="tel" defaultValue="+1 (555) 000-0000" />
+                                                <label className="admin-label">Phone Number</label>
+                                                <input className="admin-input" type="tel" defaultValue={currentAdminAccount?.phoneNumber || ''} />
                                             </div>
                                             <div>
-                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Role</label>
-                                                <input style={{ ...inputStyle, background: 'rgba(255,255,255,0.02)', color: 'var(--text-muted)' }} type="text" defaultValue="Super Administrator" disabled />
+                                                <label className="admin-label">Role</label>
+                                                <input className="admin-input admin-input--disabled" type="text" defaultValue={currentAdminAccount?.role || 'admin'} disabled />
                                             </div>
                                             <div>
-                                                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>Status</label>
-                                                <select style={inputStyle}>
-                                                    <option selected>Active</option>
-                                                    <option>Inactive</option>
-                                                    <option>Suspended</option>
+                                                <label className="admin-label">Status</label>
+                                                <select
+                                                    className="admin-input admin-input--disabled"
+                                                    defaultValue={currentAdminAccount?.status || 'active'}
+                                                    disabled
+                                                >
+                                                    <option value="active">Active</option>
+                                                    <option value="inactive">Inactive</option>
+                                                    <option value="suspended">Suspended</option>
                                                 </select>
+                                                <div className="admin-field-help">
+                                                    Your own account status can only be changed by another administrator.
+                                                </div>
                                             </div>
                                             <button type="button" className="admin-button">Update Profile</button>
                                         </div>

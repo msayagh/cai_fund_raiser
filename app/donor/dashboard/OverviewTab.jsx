@@ -1,50 +1,50 @@
-export default function OverviewTab({ profile, paymentTotal, engagementTarget, progressPct, remainingAmount, requests, latestPayments, latestRequests, sectionCardStyle, setActiveTab }) {
+export default function OverviewTab({ profile, paymentTotal, engagementTarget, progressPct, remainingAmount, requests, latestPayments, latestRequests, setActiveTab }) {
     return (
         <>
-            <div style={sectionCardStyle}>
+            <div className="dashboard-card">
                 <div className="dashboard-section-title">Giving Summary</div>
                 <div className="dashboard-stat-grid">
                     <div className="dashboard-stat">
-                        <div style={{ color: 'var(--text-muted)' }}>Committed</div>
-                        <div style={{ fontSize: 28, fontWeight: 700 }}>${engagementTarget.toLocaleString()}</div>
+                        <div className="dashboard-stat-label">Committed</div>
+                        <div className="dashboard-stat-value">${engagementTarget.toLocaleString()}</div>
                     </div>
                     <div className="dashboard-stat">
-                        <div style={{ color: 'var(--text-muted)' }}>Received</div>
-                        <div style={{ fontSize: 28, fontWeight: 700 }}>${paymentTotal.toLocaleString()}</div>
+                        <div className="dashboard-stat-label">Received</div>
+                        <div className="dashboard-stat-value">${paymentTotal.toLocaleString()}</div>
                     </div>
                     <div className="dashboard-stat">
-                        <div style={{ color: 'var(--text-muted)' }}>Progress</div>
-                        <div style={{ fontSize: 28, fontWeight: 700 }}>{progressPct}%</div>
+                        <div className="dashboard-stat-label">Progress</div>
+                        <div className="dashboard-stat-value">{progressPct}%</div>
                     </div>
                 </div>
-                <div style={{ marginTop: 18 }}>
+                <div className="dashboard-field">
                     <div className="dashboard-progress">
                         <div className="dashboard-progress-bar" style={{ width: `${progressPct}%` }}></div>
                     </div>
                 </div>
             </div>
 
-            <div style={sectionCardStyle}>
+            <div className="dashboard-card">
                 <div className="dashboard-section-title">Engagement Details</div>
                 <div className="dashboard-stat-grid">
                     <div className="dashboard-stat">
-                        <div style={{ color: 'var(--text-muted)' }}>Remaining</div>
-                        <div style={{ fontSize: 28, fontWeight: 700 }}>${remainingAmount.toLocaleString()}</div>
+                        <div className="dashboard-stat-label">Remaining</div>
+                        <div className="dashboard-stat-value">${remainingAmount.toLocaleString()}</div>
                     </div>
                     <div className="dashboard-stat">
-                        <div style={{ color: 'var(--text-muted)' }}>End date</div>
-                        <div style={{ fontSize: 22, fontWeight: 700 }}>
+                        <div className="dashboard-stat-label">End date</div>
+                        <div className="dashboard-stat-value dashboard-stat-value--sm">
                             {profile?.engagement?.endDate ? new Date(profile.engagement.endDate).toLocaleDateString() : 'Open'}
                         </div>
                     </div>
                     <div className="dashboard-stat">
-                        <div style={{ color: 'var(--text-muted)' }}>Requests filed</div>
-                        <div style={{ fontSize: 28, fontWeight: 700 }}>{requests.length}</div>
+                        <div className="dashboard-stat-label">Requests filed</div>
+                        <div className="dashboard-stat-value">{requests.length}</div>
                     </div>
                 </div>
             </div>
 
-            <div style={sectionCardStyle}>
+            <div className="dashboard-card">
                 <div className="dashboard-section-title">Quick Actions</div>
                 <div className="dashboard-list">
                     <button type="button" className="dashboard-action" onClick={() => setActiveTab('payments')}>
@@ -59,13 +59,13 @@ export default function OverviewTab({ profile, paymentTotal, engagementTarget, p
                 </div>
             </div>
 
-            <div style={sectionCardStyle}>
+            <div className="dashboard-card">
                 <div className="dashboard-section-title">Recent Payments</div>
                 <div className="dashboard-list">
                     {latestPayments.map((payment) => (
                         <div key={payment.id} className="dashboard-list-item">
-                            <div style={{ fontWeight: 700 }}>${Number(payment.amount || 0).toLocaleString()}</div>
-                            <div style={{ color: 'var(--text-muted)' }}>
+                            <div className="dashboard-list-title">${Number(payment.amount || 0).toLocaleString()}</div>
+                            <div className="dashboard-list-meta">
                                 {new Date(payment.date).toLocaleDateString()} · {payment.method}
                             </div>
                         </div>
@@ -74,14 +74,14 @@ export default function OverviewTab({ profile, paymentTotal, engagementTarget, p
                 </div>
             </div>
 
-            <div style={sectionCardStyle}>
+            <div className="dashboard-card">
                 <div className="dashboard-section-title">Recent Requests</div>
                 <div className="dashboard-list">
                     {latestRequests.map((request) => (
                         <div key={request.id} className="dashboard-list-item">
-                            <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{request.type.replace(/_/g, ' ')}</div>
-                            <div style={{ color: 'var(--accent-gold)', marginTop: 4 }}>{request.status}</div>
-                            <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{request.message}</div>
+                            <div className="dashboard-list-title dashboard-list-title--caps">{request.type.replace(/_/g, ' ')}</div>
+                            <div className="dashboard-list-status">{request.status}</div>
+                            <div className="dashboard-list-meta">{request.message}</div>
                         </div>
                     ))}
                     {latestRequests.length === 0 ? <div className="dashboard-list-item">No requests submitted yet.</div> : null}

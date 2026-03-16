@@ -1,0 +1,92 @@
+.admin-setup-page {
+    min-height: 100vh;
+    background: #090c18;
+    color: #f0e8d8;
+}
+
+.admin-setup-shell {
+    width: 100%;
+    max-width: var(--page-max-width);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+}
+
+.admin-setup-card {
+    width: 100%;
+    max-width: 540px;
+    padding: 32px;
+    border-radius: 24px;
+    border: 1px solid #2e3250;
+    background: #131628;
+}
+
+.admin-setup-title {
+    margin-bottom: 12px;
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    color: #d4a96e;
+}
+
+.admin-setup-description,
+.admin-setup-status {
+    margin-bottom: 20px;
+    color: #c0c0d8;
+    line-height: 1.6;
+}
+
+.admin-setup-alert {
+    margin-bottom: 16px;
+
+    &--error {
+        color: #ffb4b4;
+    }
+
+    &--success {
+        color: #a6f0c1;
+    }
+}
+
+.admin-setup-emphasis {
+    color: #d4a96e;
+}
+
+.admin-setup-form {
+    display: grid;
+    gap: 14px;
+}
+
+.admin-setup-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid #2e3250;
+    background: #0e1020;
+    color: #f0e8d8;
+}
+
+.admin-setup-button {
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    background: #d4a96e;
+    color: #000;
+    font-weight: 700;
+    cursor: pointer;
+
+    &.is-submitting {
+        background: #2e3250;
+        color: #a8acc6;
+        cursor: not-allowed;
+    }
+}
+
+.admin-setup-footer {
+    margin-top: 20px;
+}
+
+.admin-setup-link {
+    color: #d4a96e;
+}

@@ -162,3 +162,19 @@
         color: #ffc2c2;
     }
 }
+
+.donation-dialog-external-link-wrapper {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.donation-dialog-external-link-button {
+    display: inline-block;
+    padding: 0.5em 1em;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #eee;
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+}
