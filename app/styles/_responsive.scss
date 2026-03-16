@@ -75,7 +75,7 @@
     .layout-main {
         flex: 1;
         width: 100%;
-        padding: 20px 14px 84px;
+        padding: 20px 14px 48px;
     }
 
     .layout-main-inner {
@@ -91,6 +91,10 @@
     }
 
     .layout-right {
+        display: none;
+    }
+
+    .layout-donations-row {
         display: none;
     }
 
@@ -331,7 +335,7 @@
 // Mobile phone adjustments (@480px)
 @media (max-width: 480px) {
     .layout-main {
-        padding: 14px 10px 96px;
+        padding: 14px 10px 40px;
     }
 
     .donation-dialog-overlay {

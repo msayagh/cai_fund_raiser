@@ -43,6 +43,12 @@
     gap: 20px;
 }
 
+.layout-donations-row {
+    grid-column: 1 / -1;
+    min-width: 0;
+    display: none;
+}
+
 .layout-left--mobile,
 .layout-right--mobile,
 .sidebar-backdrop,
