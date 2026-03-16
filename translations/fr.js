@@ -257,7 +257,7 @@ const fr = {
     note:            "Note",
     sendReq:         "Envoyer la demande",
     attachFiles:     "Fichiers joints (optionnel)",
-    zeffySoon:       "Zeffy en ligne — bientôt disponible",
+    zeffySoon:       "Une fois votre paiement Zeffy effectué, il apparaîtra dans votre tableau de bord dans quelques minutes.",
     payDesc:         "Payez en ligne ou soumettez un reçu de paiement comptant.",
     contactDesc:     "Envoyez-nous un message pour toute aide ou question.",
     cashOk:          "Demande de paiement en espèces envoyée.",
@@ -298,6 +298,10 @@ const fr = {
     confirmCancel:   "Êtes-vous sûr de vouloir annuler ce paiement en attente ?",
     paymentCancelled:"Paiement en attente annulé.",
     paymentUpdated:  "Paiement en attente mis à jour.",
+    chooseMethod:    "Comment souhaitez-vous payer ?",
+    payByCash:       "Espèces / Interac",
+    cashGuidance:    "Pour nous aider à valider votre paiement, veuillez inclure : votre nom sur l'enveloppe (espèces), ou le numéro de transaction Interac / une capture d'écran du virement.",
+    backToMethod:    "← Retour",
   },
 };
 

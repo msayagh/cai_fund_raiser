@@ -257,7 +257,7 @@ const es = {
     note:            "Nota",
     sendReq:         "Enviar solicitud",
     attachFiles:     "Adjuntar archivos (opcional)",
-    zeffySoon:       "Zeffy en línea — próximamente",
+    zeffySoon:       "Una vez completado su pago en Zeffy, aparecerá en su panel en pocos minutos.",
     payDesc:         "Paga en línea o envía un recibo de pago en efectivo.",
     contactDesc:     "Envíanos un mensaje para soporte o cualquier pregunta.",
     cashOk:          "Solicitud de pago en efectivo enviada.",
@@ -297,6 +297,10 @@ const es = {
     confirmCancel:   "¿Está seguro de que desea cancelar este pago pendiente?",
     paymentCancelled:"Pago pendiente cancelado.",
     paymentUpdated:  "Pago pendiente actualizado.",
+    chooseMethod:    "¿Cómo desea pagar?",
+    payByCash:       "Efectivo / Interac",
+    cashGuidance:    "Para ayudarnos a validar su pago, incluya: su nombre en el sobre (efectivo), el número de transacción Interac o una captura de pantalla de la transferencia.",
+    backToMethod:    "← Atrás",
   },
 };
 

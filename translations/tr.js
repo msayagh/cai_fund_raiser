@@ -257,7 +257,7 @@ const tr = {
         note:            "Not",
         sendReq:         "Talep gönder",
         attachFiles:     "Dosya ekle (isteğe bağlı)",
-        zeffySoon:       "Zeffy çevrimiçi ödeme — yakında",
+        zeffySoon:       "Zeffy ödemesi tamamlandıktan sonra birkaç dakika içinde panoınızda görünecektir.",
         payDesc:         "Çevrimiçi ödeyin veya nakit makbuzu gönderin.",
         contactDesc:     "Destek veya soru için bize mesaj gönderin.",
         cashOk:          "Nakit ödeme talebi gönderildi.",
@@ -297,6 +297,10 @@ const tr = {
         confirmCancel:   "Bu bekleyen ödemeyi iptal etmek istediğinizden emin misiniz?",
         paymentCancelled:"Bekleyen ödeme iptal edildi.",
         paymentUpdated:  "Bekleyen ödeme güncellendi.",
+        chooseMethod:    "Nasıl ödeme yapmak istersiniz?",
+        payByCash:       "Nakit / Interac",
+        cashGuidance:    "Ödemenizi doğrulamamıza yardımcı olmak için lütfen şunları ekleyin: zarfta adınız (nakit), Interac işlem numarası veya transferin ekran görüntüsü.",
+        backToMethod:    "← Geri",
     },
 };
 

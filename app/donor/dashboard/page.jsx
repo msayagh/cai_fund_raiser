@@ -89,8 +89,10 @@ const EN_DONOR = {
     note:            'Note',
     sendReq:         'Send request',
     attachFiles:     'Attach files (optional)',
-    zeffySoon:       'Zeffy online payment — coming soon',
+    zeffySoon:       'Once your Zeffy payment is completed, it will be reflected in your dashboard within a few minutes.',
     payDesc:         'Pay online or submit a cash payment receipt.',
+    payZeffyNote:    'Your payment will appear here automatically within a few minutes after completion.',
+    zeffyBtnLabel:   'Pay via Zeffy (new tab)',
     contactDesc:     'Send us a message for support or any question.',
     cashOk:          'Cash payment request submitted.',
     pwdMismatch:     'Passwords do not match.',
@@ -132,6 +134,10 @@ const EN_DONOR = {
     confirmCancel:   'Are you sure you want to cancel this pending payment?',
     paymentCancelled:'Pending payment cancelled.',
     paymentUpdated:  'Pending payment updated.',
+    chooseMethod:    'How would you like to pay?',
+    payByCash:       'Cash / Interac',
+    cashGuidance:    'To help us validate your payment, please include: your name on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
+    backToMethod:    '← Back',
 };
 
 // ─────────────────────────────────────────────
@@ -205,6 +211,7 @@ export default function DonorDashboardPage() {
     const [contactForm,    setContactForm]    = useState({ type: 'other', message: '' });
     const [cashForm,       setCashForm]       = useState({ amount: '', adminNote: '', personalNote: '' });
     const [attachedFiles,  setAttachedFiles]  = useState([]);
+    const [payStep,        setPayStep]        = useState(null); // null | 'zeffy' | 'cash'
     const [pendingPayments,setPendingPayments]= useState([]);
     const [editingPendingId,setEditingPendingId]=useState(null);
     // receipt cache: { "100.00": [{id, requestId, filename, mimeType}] }
@@ -400,11 +407,12 @@ export default function DonorDashboardPage() {
         setEditingPendingId(pmt.id);
         setCashForm({ amount: String(pmt.amount), adminNote: pmt.adminNote || '', personalNote: pmt.personalNote || '' });
         setAttachedFiles([]);
+        setPayStep('cash');
         setModal('payment');
     }
 
     // ── Modal actions ──
-    function closeModal() { setModal(null); setError(''); setSuccess(''); setEditingPendingId(null); }
+    function closeModal() { setModal(null); setError(''); setSuccess(''); setEditingPendingId(null); setPayStep(null); }
 
     function openSettings()   { setModal('settings'); }
     function openContact(type = 'other') { setContactForm(p => ({ ...p, type })); setModal('contact'); }
@@ -419,6 +427,7 @@ export default function DonorDashboardPage() {
         setEditingPendingId(null);
         setCashForm({ amount: '100', adminNote: '', personalNote: '' });
         setAttachedFiles([]);
+        setPayStep(null);
         setModal('payment');
     }
 
@@ -1001,7 +1010,9 @@ export default function DonorDashboardPage() {
 
             {/* Payment */}
             {modal === 'payment' && (
-                <Modal title={editingPendingId ? ui.editPayment + ' — ' + ui.pendingBadge : ui.makePayment} description={editingPendingId ? ui.pendingInfo : ui.payDesc} onClose={closeModal}>
+                <Modal title={editingPendingId ? ui.editPayment + ' — ' + ui.pendingBadge : ui.makePayment}
+                       description={editingPendingId ? ui.pendingInfo : payStep === null ? ui.payDesc : ''}
+                       onClose={closeModal}>
                     {error   && <div className="banner banner--error"   role="alert">{error}</div>}
                     {success && <div className="banner banner--success" role="status">{success}</div>}
 
@@ -1011,43 +1022,76 @@ export default function DonorDashboardPage() {
                         <span className="pay-badge-value">${remaining.toLocaleString()}</span>
                     </div>
 
-                    {/* Zeffy option — hidden when editing a pending payment */}
-                    {!editingPendingId && (<>
-                        <button type="button" className="btn btn--zeffy" onClick={() => setSuccess(ui.zeffySoon)}>
+                    {/* Step 0: Choose payment method */}
+                    {!editingPendingId && payStep === null && (
+                        <div className="pay-method-grid">
+                            <button type="button" className="pay-method-btn" onClick={() => setPayStep('zeffy')}>
+                                <Ico size={22}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></Ico>
+                                <span className="pay-method-label">{ui.payViaZeffy}</span>
+                                <span className="pay-method-sub">Online</span>
+                            </button>
+                            <button type="button" className="pay-method-btn" onClick={() => setPayStep('cash')}>
+                                <Ico size={22}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Ico>
+                                <span className="pay-method-label">{ui.payByCash}</span>
+                                <span className="pay-method-sub">Cash / Interac</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Step 1a: Zeffy */}
+                    {!editingPendingId && payStep === 'zeffy' && (<>
+                        <a
+                            href="https://www.zeffy.com/fr-CA/donation-form/nouveau-centre-al-imane"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn--zeffy"
+                            onClick={closeModal}
+                        >
                             <Ico size={16}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></Ico>
                             {ui.payViaZeffy}
-                        </button>
+                        </a>
                         <p className="pay-soon-note">{ui.zeffySoon}</p>
-                        <div className="or-sep"><span>{ui.or}</span></div>
+                        <button type="button" className="btn btn--ghost-sm" onClick={() => setPayStep(null)}>{ui.backToMethod}</button>
                     </>)}
 
-                    {/* Cash form */}
-                    <form className="mform" onSubmit={onCashPayment}>
-                        <label className="flabel">
-                            {ui.amount}
-                            <input className="finput" type="number" min="1" value={cashForm.amount}
-                                onChange={e => setCashForm(p => ({ ...p, amount: e.target.value }))}
-                                placeholder="0" />
-                        </label>
-                        <label className="flabel">
-                            {ui.adminNote}
-                            <textarea className="finput ftextarea" value={cashForm.adminNote}
-                                onChange={e => setCashForm(p => ({ ...p, adminNote: e.target.value }))}
-                                placeholder={ui.adminNotePh} />
-                        </label>
-                        <label className="flabel">
-                            {ui.personalNote}
-                            <textarea className="finput ftextarea" value={cashForm.personalNote}
-                                onChange={e => setCashForm(p => ({ ...p, personalNote: e.target.value }))}
-                                placeholder={ui.personalNotePh} />
-                        </label>
-                        <label className="flabel">
-                            {ui.attachFiles}
-                            <input className="finput" type="file" multiple
-                                onChange={e => setAttachedFiles(Array.from(e.target.files || []))} />
-                        </label>
-                        <button type="submit" className="btn btn--outline-gold">{ui.submitCash}</button>
-                    </form>
+                    {/* Step 1b: Cash / Interac form */}
+                    {(editingPendingId || payStep === 'cash') && (
+                        <form className="mform" onSubmit={onCashPayment}>
+                            <div className="cash-guidance">
+                                <Ico size={15}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Ico>
+                                <span>{ui.cashGuidance}</span>
+                            </div>
+                            <label className="flabel">
+                                {ui.amount}
+                                <input className="finput" type="number" min="1" value={cashForm.amount}
+                                    onChange={e => setCashForm(p => ({ ...p, amount: e.target.value }))}
+                                    placeholder="0" />
+                            </label>
+                            <label className="flabel">
+                                {ui.adminNote}
+                                <textarea className="finput ftextarea" value={cashForm.adminNote}
+                                    onChange={e => setCashForm(p => ({ ...p, adminNote: e.target.value }))}
+                                    placeholder={ui.adminNotePh} />
+                            </label>
+                            <label className="flabel">
+                                {ui.personalNote}
+                                <textarea className="finput ftextarea" value={cashForm.personalNote}
+                                    onChange={e => setCashForm(p => ({ ...p, personalNote: e.target.value }))}
+                                    placeholder={ui.personalNotePh} />
+                            </label>
+                            <label className="flabel">
+                                {ui.attachFiles}
+                                <input className="finput" type="file" multiple
+                                    onChange={e => setAttachedFiles(Array.from(e.target.files || []))} />
+                            </label>
+                            <div className="pay-form-actions">
+                                {!editingPendingId && (
+                                    <button type="button" className="btn btn--ghost-sm" onClick={() => setPayStep(null)}>{ui.backToMethod}</button>
+                                )}
+                                <button type="submit" className="btn btn--outline-gold">{ui.submitCash}</button>
+                            </div>
+                        </form>
+                    )}
                 </Modal>
             )}
 
@@ -1698,6 +1742,7 @@ const STYLES = `
     font-size: 16px;
     font-weight: 700;
     padding: 13px 20px;
+    text-decoration: none;
 }
 .btn--zeffy:hover {
     background: rgba(100,148,230,.22);
@@ -1921,6 +1966,74 @@ select.finput option { background: #0f1d3e; color: #f0f4ff; }
     flex: 1;
     height: 1px;
     background: rgba(255,255,255,.08);
+}
+.pay-method-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.pay-method-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 16px;
+    border-radius: 14px;
+    background: rgba(100,148,230,.18);
+    border: 1.5px solid rgba(100,148,230,.50);
+    color: #c8dcfc;
+    cursor: pointer;
+    transition: background .18s, border-color .18s, transform .12s;
+    font-family: inherit;
+}
+.pay-method-btn:hover {
+    background: rgba(100,148,230,.28);
+    border-color: rgba(226,185,100,.70);
+    transform: translateY(-2px);
+}
+.pay-method-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e8f0ff;
+}
+.pay-method-sub {
+    font-size: 12px;
+    color: rgba(185,205,245,.80);
+}
+.cash-guidance {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(92,200,160,.18);
+    border: 1px solid rgba(92,200,160,.50);
+    font-size: 13px;
+    line-height: 1.5;
+    color: #c0f0d8;
+}
+.cash-guidance svg { flex-shrink: 0; margin-top: 2px; }
+.pay-form-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+}
+.btn--ghost-sm {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.28);
+    color: #c4cfe8;
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color .15s, border-color .15s, background .15s;
+}
+.btn--ghost-sm:hover {
+    background: rgba(255,255,255,.11);
+    color: #e8f0ff;
+    border-color: rgba(255,255,255,.50);
 }
 
 /* ══════════════════════════════════════
@@ -2171,4 +2284,30 @@ select.finput option { background: #0f1d3e; color: #f0f4ff; }
 [data-theme="light"] .or-sep { color: #9a9080; }
 [data-theme="light"] .or-sep::before,
 [data-theme="light"] .or-sep::after { background: #e5e2dc; }
+[data-theme="light"] .pay-method-btn {
+    background: rgba(60,100,190,.07);
+    border-color: rgba(60,100,190,.30);
+    color: #3a5ca8;
+}
+[data-theme="light"] .pay-method-btn:hover {
+    background: rgba(60,100,190,.13);
+    border-color: rgba(154,123,79,.55);
+}
+[data-theme="light"] .pay-method-label { color: #1a2a5a; }
+[data-theme="light"] .pay-method-sub   { color: #5a6a90; }
+[data-theme="light"] .cash-guidance {
+    background: rgba(40,140,90,.07);
+    border-color: rgba(40,140,90,.28);
+    color: #1a6040;
+}
+[data-theme="light"] .btn--ghost-sm {
+    background: rgba(0,0,0,.04);
+    border-color: rgba(0,0,0,.18);
+    color: #3a3028;
+}
+[data-theme="light"] .btn--ghost-sm:hover {
+    background: rgba(0,0,0,.07);
+    border-color: rgba(0,0,0,.32);
+    color: #1a1208;
+}
 `;

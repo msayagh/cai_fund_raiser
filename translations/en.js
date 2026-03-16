@@ -433,7 +433,7 @@ const en = {
     note:            "Note",
     sendReq:         "Send request",
     attachFiles:     "Attach files (optional)",
-    zeffySoon:       "Zeffy online payment — coming soon",
+    zeffySoon:       "Once your Zeffy payment is completed, it will be reflected in your dashboard within a few minutes.",
     payDesc:         "Pay online or submit a cash payment receipt.",
     contactDesc:     "Send us a message for support or any question.",
     cashOk:          "Cash payment request submitted.",
@@ -448,6 +448,10 @@ const en = {
     reqPayment:      "Payment upload",
     reqEngagement:   "Engagement change",
     reqAccount:      "Account help",
+    chooseMethod:    "How would you like to pay?",
+    payByCash:       "Cash / Interac",
+    cashGuidance:    "To help us validate your payment, please include: your name on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.",
+    backToMethod:    "← Back",
   },
 };
 

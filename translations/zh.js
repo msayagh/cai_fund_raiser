@@ -257,7 +257,7 @@ const zh = {
         note:            "备注",
         sendReq:         "发送请求",
         attachFiles:     "附加文件（可选）",
-        zeffySoon:       "Zeffy 在线付款 — 即将推出",
+        zeffySoon:       "Zeffy 付款完成后，将在几分钟内显示在您的仪表板中。",
         payDesc:         "在线付款或提交现金付款收据。",
         contactDesc:     "发送消息以获得支持或提问。",
         cashOk:          "现金付款请求已提交。",
@@ -297,6 +297,10 @@ const zh = {
         confirmCancel:   "您确定要取消这笔待处理的付款吗？",
         paymentCancelled:"待处理付款已取消。",
         paymentUpdated:  "待处理付款已更新。",
+        chooseMethod:    "您希望如何付款？",
+        payByCash:       "现金 / Interac",
+        cashGuidance:    "为帮助我们验证您的付款，请提供：信封上的姓名（现金），或Interac交易编号/转账截图。",
+        backToMethod:    "← 返回",
     },
 };
 
