@@ -104,6 +104,10 @@
     position: relative;
 }
 
+.login-button.header-mobile-login {
+    display: none;
+}
+
 .header-menu-trigger {
     display: inline-flex;
     align-items: center;

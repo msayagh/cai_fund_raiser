@@ -222,6 +222,18 @@ export function Header({
                         </div>
                     </div>
 
+                    {session ? (
+                        <Link href={dashboardHref} className="login-button header-mobile-login" title={session.email}>
+                            <i className="fas fa-user-check" aria-hidden="true"></i>
+                            <span className="login-button-text">{session.name || session.email}</span>
+                        </Link>
+                    ) : (
+                        <Link href="/login" className="login-button header-mobile-login" title="Login">
+                            <i className="fas fa-user" aria-hidden="true"></i>
+                            <span className="login-button-text">{t.loginTitle}</span>
+                        </Link>
+                    )}
+
                     <div className="header-menu" ref={headerMenuRef}>
                         <button
                             type="button"
