@@ -153,22 +153,13 @@ async function main() {
   console.log(`  ✓ Donor: ${youssef.email} (${youssef.payments.length} payment)`);
 
   // ─── Requests ───────────────────────────────────────────────────────────────
-  const req1 = await prisma.request.create({
-    data: {
-      type: 'account_creation',
-      name: 'Hassan Al-Farsi',
-      email: 'hassan@example.com',
-      message: 'I would like to register as a donor and commit to a $500 pledge.',
-      status: 'pending',
-    },
-  });
 
   const req2 = await prisma.request.create({
     data: {
       type: 'payment_upload',
       name: ahmed.name,
       email: ahmed.email,
-      message: 'I made a $300 cash payment during the Friday prayer last week.',
+      message: 'Cash payment request\nAmount: $100\nAdmin note: test\nPersonal note: test',
       status: 'pending',
       donorId: ahmed.id,
     },
@@ -184,7 +175,7 @@ async function main() {
       donorId: fatima.id,
     },
   });
-  console.log(`  ✓ Requests: ${[req1, req2, req3].length} created`);
+  console.log(`  ✓ Requests: ${[req2, req3].length} created`);
 
   // ─── Activity Logs ──────────────────────────────────────────────────────────
   const logsData = [
