@@ -107,6 +107,20 @@ const adminAddPayment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const adminUpdatePayment = async (req, res, next) => {
+  try {
+    const data = await service.adminUpdatePayment(req.admin.id, req.admin.name, req.params.id, req.params.paymentId, req.body);
+    sendSuccess(res, data, 'Payment updated');
+  } catch (err) { next(err); }
+};
+
+const adminDeletePayment = async (req, res, next) => {
+  try {
+    await service.adminDeletePayment(req.admin.id, req.admin.name, req.params.id, req.params.paymentId);
+    sendSuccess(res, null, 'Payment deleted');
+  } catch (err) { next(err); }
+};
+
 const adminGetPayments = async (req, res, next) => {
   try {
     const data = await service.adminGetDonorPayments(req.params.id);
@@ -171,5 +185,5 @@ module.exports = {
   getMe, updateMe, updateMyPassword,
   getMyEngagement, createEngagement, updateEngagement,
   getMyPayments, getMyRequests,
-  list, getById, adminUpdate, adminDelete, adminUpdatePassword, adminGetPayments, adminAddPayment, adminCreate, adminDeactivate, adminReactivate, adminSetEngagement, adminGetPaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
+  list, getById, adminUpdate, adminDelete, adminUpdatePassword, adminGetPayments, adminAddPayment, adminUpdatePayment, adminDeletePayment, adminCreate, adminDeactivate, adminReactivate, adminSetEngagement, adminGetPaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
 };

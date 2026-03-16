@@ -79,7 +79,11 @@ const approveRequest = async (adminId, adminName, id, body) => {
     include: { attachments: true },
   });
   if (!request) throw new AppError('Request not found', 404, 'NOT_FOUND');
-  if (!['pending', 'on_hold'].includes(request.status)) {
+  const canApprove =
+    ['pending', 'on_hold'].includes(request.status) ||
+    (request.type === 'payment_upload' && request.status === 'declined');
+
+  if (!canApprove) {
     throw new AppError('Request has already been processed', 400, 'ALREADY_PROCESSED');
   }
 
@@ -119,11 +123,11 @@ const approveRequest = async (adminId, adminName, id, body) => {
       adminId,
     });
 
-    // Send registration confirmation email
+    // Send account creation email with temporary password
     try {
-      await mailService.sendRegistrationConfirmation(donor.email, donor.name);
+      await mailService.sendDonorAccountCreation(donor.email, donor.name, password);
     } catch (error) {
-      console.error('Failed to send registration confirmation email:', error);
+      console.error('Failed to send donor account creation email:', error);
     }
   } else if (request.type === 'payment_upload') {
     const { amount, date, method, note } = body;
@@ -227,7 +231,11 @@ const approveRequest = async (adminId, adminName, id, body) => {
 const declineRequest = async (adminId, adminName, id) => {
   const request = await prisma.request.findUnique({ where: { id } });
   if (!request) throw new AppError('Request not found', 404, 'NOT_FOUND');
-  if (!['pending', 'on_hold'].includes(request.status)) {
+  const canDecline =
+    ['pending', 'on_hold'].includes(request.status) ||
+    (request.type === 'payment_upload' && request.status === 'approved');
+
+  if (!canDecline) {
     throw new AppError('Request has already been processed', 400, 'ALREADY_PROCESSED');
   }
 

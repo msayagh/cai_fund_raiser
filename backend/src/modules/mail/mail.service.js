@@ -156,6 +156,20 @@ async function sendAdminAccountCreation(email, name, password) {
 }
 
 /**
+ * Send donor account creation email with temporary password
+ */
+async function sendDonorAccountCreation(email, name, password) {
+    const { donorAccountCreationTemplate } = require('./mail.templates');
+    const html = donorAccountCreationTemplate({ email, name, password });
+
+    return sendEmail(
+        email,
+        'Your Donor Account - Centre Zad Al-Imane',
+        html
+    );
+}
+
+/**
  * Send donor deactivation notification
  */
 async function sendDonorDeactivationNotice(email, name, reason = '') {
@@ -204,6 +218,7 @@ module.exports = {
     sendPaymentConfirmation,
     sendRequestStatusUpdate,
     sendAdminAccountCreation,
+    sendDonorAccountCreation,
     sendDonorDeactivationNotice,
     sendAdminActionNotification,
     sendEngagementConfirmation,

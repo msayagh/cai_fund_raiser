@@ -215,12 +215,35 @@ const engagementConfirmationTemplate = ({ email, name, totalPledge, startDate, e
   </div>
 `);
 
+const donorAccountCreationTemplate = ({ email, name, password }) => baseTemplate(`
+  <div class="header">
+    <h1>Welcome to Centre Zad Al-Imane</h1>
+    <p>Your donor account has been created</p>
+  </div>
+  <div class="content">
+    <p>Dear ${name},</p>
+    <p>Your donor account has been approved and created. Please use the temporary password below to log in and change it immediately.</p>
+    
+    <div class="section">
+      <p><span class="label">Email:</span> ${email}</p>
+      <p><span class="label">Temporary Password:</span> <code>${password}</code></p>
+      <p style="color: #e6a817; font-weight: bold;">Please change your password immediately after your first login.</p>
+    </div>
+    
+    <p><a href="https://centrezadalimane.org/login" class="cta-button">Log In to Your Account</a></p>
+    
+    <p>If you did not request this account, please contact us at support@centrezadalimane.org</p>
+    <p>Best regards,<br>The Centre Zad Al-Imane Team</p>
+  </div>
+`);
+
 module.exports = {
     registrationConfirmationTemplate,
     passwordResetTemplate,
     paymentConfirmationTemplate,
     requestStatusTemplate,
     adminAccountTemplate,
+    donorAccountCreationTemplate,
     donorDeactivationTemplate,
     adminActionTemplate,
     engagementConfirmationTemplate,

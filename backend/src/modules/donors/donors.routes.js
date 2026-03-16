@@ -35,8 +35,17 @@ const adminDonorPasswordSchema = z.object({
 const adminPaymentSchema = z.object({
   amount: z.number().positive(),
   date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format'),
-  method: z.enum(['card', 'bank_transfer', 'cash', 'check']),
+  method: z.enum(['cash', 'card', 'zeffy']),
   note: z.string().max(500).optional(),
+});
+
+const adminUpdatePaymentSchema = z.object({
+  amount: z.number().positive().optional(),
+  date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format').optional(),
+  method: z.enum(['cash', 'card', 'zeffy']).optional(),
+  note: z.string().max(500).nullable().optional(),
+}).refine((data) => data.amount !== undefined || data.date !== undefined || data.method !== undefined || data.note !== undefined, {
+  message: 'At least one field is required',
 });
 
 const adminCreateDonorSchema = z.object({
@@ -71,6 +80,8 @@ adminDonorRouter.put('/:id/password', requireAdmin, requireCapability('admin.don
 adminDonorRouter.put('/:id', requireAdmin, requireCapability('admin.donors.edit'), validate(adminUpdateDonorSchema), ctrl.adminUpdate);
 adminDonorRouter.delete('/:id', requireAdmin, requireCapability('admin.donors.delete'), ctrl.adminDelete);
 adminDonorRouter.post('/:id/payments', requireAdmin, requireCapability('admin.donors.edit'), validate(adminPaymentSchema), ctrl.adminAddPayment);
+adminDonorRouter.put('/:id/payments/:paymentId', requireAdmin, requireCapability('admin.donors.edit'), validate(adminUpdatePaymentSchema), ctrl.adminUpdatePayment);
+adminDonorRouter.delete('/:id/payments/:paymentId', requireAdmin, requireCapability('admin.donors.edit'), ctrl.adminDeletePayment);
 adminDonorRouter.post('/:id/payments/:paymentId/receipt', requireAdmin, requireCapability('admin.donors.edit'), ctrl.uploadPaymentReceipt);
 
 module.exports.adminDonorRouter = adminDonorRouter;

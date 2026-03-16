@@ -1,8 +1,10 @@
 import { downloadPaymentConfirmation } from '@/lib/adminApi.js';
 import { useState } from 'react';
 
-export default function PaymentPanel({ donor, payments, onAddPayment, loading, inputStyle, cardStyle, t }) {
+export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePayment, onDeletePayment, loading, inputStyle, cardStyle, t }) {
     const [paymentDateError, setPaymentDateError] = useState('');
+    const [editingPaymentId, setEditingPaymentId] = useState(null);
+    const [editForm, setEditForm] = useState({ amount: '', date: '', method: '', note: '' });
 
     if (!donor) return null;
 
@@ -16,6 +18,48 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
             e.target.value = '';
         } else {
             setPaymentDateError('');
+        }
+    };
+
+    const beginEdit = (payment) => {
+        setEditingPaymentId(payment.id);
+        setEditForm({
+            amount: String(payment.amount ?? ''),
+            date: String(payment.date || '').slice(0, 10),
+            method: payment.method || '',
+            note: payment.note || '',
+        });
+    };
+
+    const cancelEdit = () => {
+        setEditingPaymentId(null);
+        setEditForm({ amount: '', date: '', method: '', note: '' });
+    };
+
+    const saveEdit = async (paymentId) => {
+        if (!editForm.amount || !editForm.date || !editForm.method) {
+            alert('Amount, method, and date are required.');
+            return;
+        }
+
+        try {
+            await onUpdatePayment(paymentId, {
+                amount: Number(editForm.amount),
+                date: editForm.date,
+                method: editForm.method,
+                note: editForm.note || '',
+            });
+            cancelEdit();
+        } catch (err) {
+            alert(err?.message || 'Unable to update payment.');
+        }
+    };
+
+    const handleRemovePayment = async (paymentId) => {
+        try {
+            await onDeletePayment(paymentId);
+        } catch (err) {
+            alert(err?.message || 'Unable to remove payment.');
         }
     };
 
@@ -129,11 +173,10 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
                             id="payment-amount"
                         />
                         <select style={inputStyle} id="payment-method" required>
-                            <option value="">Select method</option>
-                            <option value="card">Card</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                            <option value="cash">Cash</option>
-                            <option value="check">Check</option>
+                            <option value="">— Select method —</option>
+                            <option value="cash">💵 Cash</option>
+                            <option value="card">💳 Card</option>
+                            <option value="zeffy">📱 Zeffy</option>
                         </select>
                     </div>
                     <div>
@@ -147,7 +190,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
                         />
                         {paymentDateError && (
                             <div style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>
-                                ⚠️ {paymentDateError}
+                                {paymentDateError}
                             </div>
                         )}
                     </div>
@@ -175,7 +218,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
                                 style={{ display: 'none' }}
                                 id="payment-receipt"
                             />
-                            📎 Attach Receipt (optional)
+                            Attach Receipt (optional)
                         </label>
                         <button
                             type="submit"
@@ -233,33 +276,93 @@ export default function PaymentPanel({ donor, payments, onAddPayment, loading, i
                                     alignItems: 'center',
                                 }}
                             >
-                                <div>
-                                    <div style={{ fontWeight: 700 }}>${Number(payment.amount || 0).toLocaleString()}</div>
-                                    <div style={{
-                                        fontSize: 12,
-                                        color: 'var(--text-muted)',
-                                        marginTop: 4,
-                                    }}>
-                                        {new Date(payment.date).toLocaleDateString()} · {payment.method} {payment.note && `· ${payment.note}`}
+                                {editingPaymentId === payment.id ? (
+                                    <div style={{ display: 'grid', gap: 10, gridColumn: '1 / -1' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                style={inputStyle}
+                                                value={editForm.amount}
+                                                onChange={(e) => setEditForm((prev) => ({ ...prev, amount: e.target.value }))}
+                                                disabled={loading}
+                                            />
+                                            <input
+                                                type="date"
+                                                style={inputStyle}
+                                                value={editForm.date}
+                                                onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))}
+                                                max={new Date().toISOString().split('T')[0]}
+                                                disabled={loading}
+                                            />
+                                            <select
+                                                style={inputStyle}
+                                                value={editForm.method}
+                                                onChange={(e) => setEditForm((prev) => ({ ...prev, method: e.target.value }))}
+                                                disabled={loading}
+                                            >
+                                                    <option value="">— Select method —</option>
+                                                    <option value="cash">💵 Cash</option>
+                                                    <option value="card">💳 Card</option>
+                                                    <option value="zeffy">📱 Zeffy</option>
+                                            </select>
+                                        </div>
+                                        <textarea
+                                            style={{ ...inputStyle, minHeight: 70 }}
+                                            value={editForm.note}
+                                            onChange={(e) => setEditForm((prev) => ({ ...prev, note: e.target.value }))}
+                                            disabled={loading}
+                                        />
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            <button type="button" className="admin-button" disabled={loading} onClick={() => saveEdit(payment.id)}>
+                                                ✅ Save
+                                            </button>
+                                            <button type="button" className="admin-button secondary" disabled={loading} onClick={cancelEdit}>
+                                                ✕ Cancel
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handleDownloadConfirmation(payment)}
-                                    style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--border)',
-                                        background: 'rgba(255,255,255,0.03)',
-                                        color: 'var(--text-primary)',
-                                        fontSize: 12,
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        whiteSpace: 'nowrap',
-                                    }}
-                                >
-                                    📄 PDF
-                                </button>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <div style={{ fontWeight: 700 }}>${Number(payment.amount || 0).toLocaleString()}</div>
+                                            <div style={{
+                                                fontSize: 12,
+                                                color: 'var(--text-muted)',
+                                                marginTop: 4,
+                                            }}>
+                                                {new Date(payment.date).toLocaleDateString()} · {payment.method} {payment.note && `· ${payment.note}`}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDownloadConfirmation(payment)}
+                                                className="admin-button secondary"
+                                                disabled={loading}
+                                            >
+                                                    📄 PDF
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => beginEdit(payment)}
+                                                className="admin-button secondary"
+                                                disabled={loading}
+                                            >
+                                                    ✏️ Edit
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemovePayment(payment.id)}
+                                                    className="admin-button danger"
+                                                disabled={loading}
+                                            >
+                                                    🗑️ Remove
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ))
                     )}

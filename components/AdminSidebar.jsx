@@ -7,17 +7,13 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout 
 
     const mainTabs = [
         { key: 'overview', label: 'Overview', icon: '📊' },
-        { key: 'donors', label: 'Donors', icon: '👥' },
         { key: 'requests', label: 'Requests', icon: '📋' },
     ];
 
     const otherTabs = [
         { key: 'admins', label: 'Admins', icon: '🔐' },
         { key: 'logs', label: 'Activity Logs', icon: '📝' },
-        { key: 'settings', label: 'Settings', icon: '⚙️' },
-        { key: 'payment', label: 'Payment', icon: '💳' },
         { key: 'accounts', label: 'Accounts', icon: '👤' },
-        { key: 'help', label: 'Help', icon: 'ℹ️' },
     ];
 
     return (

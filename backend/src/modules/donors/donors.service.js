@@ -472,6 +472,68 @@ const adminAddPayment = async (adminId, adminName, donorId, { amount, date, meth
   return payment;
 };
 
+const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amount, date, method, note }) => {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    include: {
+      donor: { select: { id: true, email: true } },
+    },
+  });
+
+  if (!payment || payment.donorId !== donorId) {
+    throw new AppError('Payment not found', 404, 'PAYMENT_NOT_FOUND');
+  }
+
+  const updatedPayment = await prisma.payment.update({
+    where: { id: paymentId },
+    data: {
+      ...(amount !== undefined ? { amount } : {}),
+      ...(date !== undefined ? { date: new Date(date) } : {}),
+      ...(method !== undefined ? { method } : {}),
+      ...(note !== undefined ? { note: note || null } : {}),
+      recordedByAdminId: adminId,
+    },
+    include: { recordedByAdmin: { select: { id: true, name: true } } },
+  });
+
+  await createLog({
+    actor: `Admin: ${adminName}`,
+    actorType: 'admin',
+    actorId: adminId,
+    action: 'payment_updated',
+    details: `Payment ${paymentId} updated for donor: ${payment.donor?.email || donorId}`,
+    donorId,
+    adminId,
+  });
+
+  return updatedPayment;
+};
+
+const adminDeletePayment = async (adminId, adminName, donorId, paymentId) => {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    include: {
+      donor: { select: { id: true, email: true } },
+    },
+  });
+
+  if (!payment || payment.donorId !== donorId) {
+    throw new AppError('Payment not found', 404, 'PAYMENT_NOT_FOUND');
+  }
+
+  await prisma.payment.delete({ where: { id: paymentId } });
+
+  await createLog({
+    actor: `Admin: ${adminName}`,
+    actorType: 'admin',
+    actorId: adminId,
+    action: 'payment_deleted',
+    details: `Payment ${paymentId} deleted for donor: ${payment.donor?.email || donorId}`,
+    donorId,
+    adminId,
+  });
+};
+
 const adminCreateDonor = async (adminId, adminName, { name, email, password, pledgeAmount }) => {
   const existing = await prisma.donor.findUnique({ where: { email } });
   if (existing) throw new AppError('Email already in use', 409, 'EMAIL_TAKEN');
@@ -684,6 +746,8 @@ module.exports = {
   adminGetDonorPayments,
   adminSetEngagement,
   adminAddPayment,
+  adminUpdatePayment,
+  adminDeletePayment,
   adminCreateDonor,
   generatePaymentConfirmation,
   uploadPaymentReceipt,
