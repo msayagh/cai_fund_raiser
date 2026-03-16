@@ -48,6 +48,18 @@
         display: block;
     }
 
+    .header-menu-panel {
+        position: fixed;
+        top: 84px;
+        inset-inline-start: 50%;
+        inset-inline-end: auto;
+        transform: translateX(-50%);
+        width: min(560px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        max-height: calc(100vh - 96px);
+        overflow: auto;
+    }
+
     .header-center {
         order: 3;
         width: 100%;

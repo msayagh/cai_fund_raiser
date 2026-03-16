@@ -346,6 +346,8 @@
     transition: background .16s, color .16s, border-color .16s;
 }
 
+.sidenav-toggle--mobile { display: none; }
+
 .sidenav-toggle:hover,
 .sidenav-toggle:focus-visible {
     background: rgba(255,255,255,.08);
@@ -1203,14 +1205,40 @@ select.finput option { background: #0f1d3e; color: #f0f4ff; }
         position: static;
         flex-direction: row;
         flex-wrap: wrap;
-        padding: 14px;
+        padding: 10px 14px 14px;
         gap: 8px;
     }
-    .sidenav-head,
-    .sidenav-toggle,
+    .sidenav-head {
+        width: 100%;
+        justify-content: space-between;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+    }
     .sidenav-spacer { display: none; }
-    .sidenav-label { display: none; }
+    .sidenav-label {
+        display: block;
+        padding-bottom: 0;
+        border-bottom: none;
+        margin-bottom: 0;
+    }
     .sidenav-btn { width: auto; flex: 1 1 auto; min-width: 120px; justify-content: center; }
+
+    /* swap toggles: show mobile chevron, hide desktop chevron */
+    .sidenav-toggle--desktop { display: none; }
+    .sidenav-toggle--mobile  { display: inline-flex; }
+
+    /* mobile collapsed state: keep header visible, hide menu items */
+    .sidenav--mobile-closed {
+        padding-bottom: 10px;
+    }
+    .sidenav--mobile-closed .sidenav-head {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .sidenav--mobile-closed .sidenav-btn {
+        display: none;
+    }
+
     .welcome-name { font-size: 29px; }
 }
 

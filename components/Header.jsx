@@ -385,44 +385,7 @@ export function Header({
                                             <span>{t.campaignOverview || 'Campaign overview'}</span>
                                         </button>
                                     )}
-                                    {session ? (
-                                        <>
-                                            {onOpenAccountSettings ? (
-                                                <button
-                                                    type="button"
-                                                    className="header-menu-item"
-                                                    onClick={() => {
-                                                        onOpenAccountSettings();
-                                                        setShowHeaderMenu(false);
-                                                    }}
-                                                >
-                                                    <i className="fas fa-gear" aria-hidden="true"></i>
-                                                    <span>{settingsLabel}</span>
-                                                </button>
-                                            ) : null}
-                                            {onOpenAccountContact ? (
-                                                <button
-                                                    type="button"
-                                                    className="header-menu-item"
-                                                    onClick={() => {
-                                                        onOpenAccountContact();
-                                                        setShowHeaderMenu(false);
-                                                    }}
-                                                >
-                                                    <i className="fas fa-envelope" aria-hidden="true"></i>
-                                                    <span>{contactLabel}</span>
-                                                </button>
-                                            ) : null}
-                                            <button
-                                                type="button"
-                                                className="header-menu-item"
-                                                onClick={handleLogout}
-                                            >
-                                                <i className="fas fa-right-from-bracket" aria-hidden="true"></i>
-                                                <span>{logoutLabel}</span>
-                                            </button>
-                                        </>
-                                    ) : (
+                                    {!session ? (
                                         <Link
                                             href="/login"
                                             className="header-menu-item"
@@ -431,7 +394,7 @@ export function Header({
                                             <i className="fas fa-user" aria-hidden="true"></i>
                                             <span>{t.loginTitle}</span>
                                         </Link>
-                                    )}
+                                    ) : null}
                                     <div className="header-menu-item header-menu-item--inline">
                                         <span className="header-menu-item-label">{themeMode === "dark" ? "Light mode" : "Dark mode"}</span>
                                         <button

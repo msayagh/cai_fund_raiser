@@ -134,12 +134,10 @@ const EN_DONOR = {
     confirmCancel:   'Are you sure you want to cancel this pending payment?',
     paymentCancelled:'Pending payment cancelled.',
     paymentUpdated:  'Pending payment updated.',
-<<<<<<< HEAD
     chooseMethod:    'How would you like to pay?',
     payByCash:       'Cash / Interac',
     cashGuidance:    'To help us validate your payment, please include: your name on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
     backToMethod:    '← Back',
-=======
     close:           'Close',
     loadingDashboard:'Loading dashboard',
     loading:         'Loading',
@@ -155,7 +153,6 @@ const EN_DONOR = {
     paymentMethodZeffy: 'Zeffy',
     collapseSidebar: 'Collapse sidebar',
     expandSidebar: 'Expand sidebar',
->>>>>>> be09028 (donar dashboard fixed)
 };
 
 // ─────────────────────────────────────────────
@@ -225,6 +222,7 @@ export default function DonorDashboardPage() {
     const [isSidenavCollapsed, setIsSidenavCollapsed] = useState(false);
 
     // ── Active modal: null | 'settings' | 'engagement' | 'payment' | 'contact' ──
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(true);
     const [modal, setModal] = useState(null);
 
     // ── Form state ──
@@ -450,9 +448,6 @@ export default function DonorDashboardPage() {
     }
 
     // ── Modal actions ──
-<<<<<<< HEAD
-    function closeModal() { setModal(null); setError(''); setSuccess(''); setEditingPendingId(null); setPayStep(null); }
-=======
     function closeModal() {
         setModal(null);
         setError('');
@@ -462,8 +457,8 @@ export default function DonorDashboardPage() {
         setPasswordError('');
         setPasswordSuccess('');
         setEditingPendingId(null);
+        setPayStep(null);
     }
->>>>>>> be09028 (donar dashboard fixed)
 
     function openSettings() {
         setProfileError('');
@@ -665,12 +660,13 @@ export default function DonorDashboardPage() {
                         {/* ══════════════════════════════════════
                             LEFT NAV
                         ══════════════════════════════════════ */}
-                        <nav className={`sidenav${isSidenavCollapsed ? ' sidenav--collapsed' : ''}`} aria-label={ui.donorNavigation}>
+                            <nav className={`sidenav${isSidenavCollapsed ? ' sidenav--collapsed' : ''}${!isMobileNavOpen ? ' sidenav--mobile-closed' : ''}`} aria-label={ui.donorNavigation}>
                             <div className="sidenav-head">
                                 {!isSidenavCollapsed ? <p className="sidenav-label">{ui.menu}</p> : <span className="sidenav-spacer" aria-hidden="true"></span>}
+                                {/* Desktop collapse toggle (icon-only sidebar) */}
                                 <button
                                     type="button"
-                                    className="sidenav-toggle"
+                                    className="sidenav-toggle sidenav-toggle--desktop"
                                     onClick={() => setIsSidenavCollapsed((value) => !value)}
                                     aria-label={isSidenavCollapsed ? ui.expandSidebar : ui.collapseSidebar}
                                     title={isSidenavCollapsed ? ui.expandSidebar : ui.collapseSidebar}
@@ -685,6 +681,21 @@ export default function DonorDashboardPage() {
                                                 ? <polyline points="9 18 15 12 9 6" />
                                                 : <polyline points="15 18 9 12 15 6" />
                                         )}
+                                    </Ico>
+                                </button>
+                                {/* Mobile collapse toggle (show/hide menu buttons only) */}
+                                <button
+                                    type="button"
+                                    className="sidenav-toggle sidenav-toggle--mobile"
+                                    onClick={() => setIsMobileNavOpen((value) => !value)}
+                                    aria-label={isMobileNavOpen ? ui.collapseSidebar : ui.expandSidebar}
+                                    title={isMobileNavOpen ? ui.collapseSidebar : ui.expandSidebar}
+                                >
+                                    <Ico size={16}>
+                                        {isMobileNavOpen
+                                            ? <polyline points="18 15 12 9 6 15" />
+                                            : <polyline points="6 9 12 15 18 9" />
+                                        }
                                     </Ico>
                                 </button>
                             </div>
@@ -1154,7 +1165,6 @@ export default function DonorDashboardPage() {
                         <button type="button" className="btn btn--ghost-sm" onClick={() => setPayStep(null)}>{ui.backToMethod}</button>
                     </>)}
 
-<<<<<<< HEAD
                     {/* Step 1b: Cash / Interac form */}
                     {(editingPendingId || payStep === 'cash') && (
                         <form className="mform" onSubmit={onCashPayment}>
@@ -1166,7 +1176,7 @@ export default function DonorDashboardPage() {
                                 {ui.amount}
                                 <input className="finput" type="number" min="1" value={cashForm.amount}
                                     onChange={e => setCashForm(p => ({ ...p, amount: e.target.value }))}
-                                    placeholder="0" />
+                                    placeholder={ui.zeroPlaceholder} />
                             </label>
                             <label className="flabel">
                                 {ui.adminNote}
@@ -1193,35 +1203,6 @@ export default function DonorDashboardPage() {
                             </div>
                         </form>
                     )}
-=======
-                    {/* Cash form */}
-                    <form className="mform" onSubmit={onCashPayment}>
-                        <label className="flabel">
-                            {ui.amount}
-                            <input className="finput" type="number" min="1" value={cashForm.amount}
-                                onChange={e => setCashForm(p => ({ ...p, amount: e.target.value }))}
-                                placeholder={ui.zeroPlaceholder} />
-                        </label>
-                        <label className="flabel">
-                            {ui.adminNote}
-                            <textarea className="finput ftextarea" value={cashForm.adminNote}
-                                onChange={e => setCashForm(p => ({ ...p, adminNote: e.target.value }))}
-                                placeholder={ui.adminNotePh} />
-                        </label>
-                        <label className="flabel">
-                            {ui.personalNote}
-                            <textarea className="finput ftextarea" value={cashForm.personalNote}
-                                onChange={e => setCashForm(p => ({ ...p, personalNote: e.target.value }))}
-                                placeholder={ui.personalNotePh} />
-                        </label>
-                        <label className="flabel">
-                            {ui.attachFiles}
-                            <input className="finput" type="file" multiple
-                                onChange={e => setAttachedFiles(Array.from(e.target.files || []))} />
-                        </label>
-                        <button type="submit" className="btn btn--outline-gold">{ui.submitCash}</button>
-                    </form>
->>>>>>> be09028 (donar dashboard fixed)
                 </Modal>
             )}
 
