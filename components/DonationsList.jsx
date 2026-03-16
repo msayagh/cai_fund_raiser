@@ -1,10 +1,91 @@
-import { memo } from 'react';
+'use client';
+
+import { memo, useEffect, useRef, useState } from 'react';
 import { THEMES, TIER_CONFIG } from '../constants/config.js';
 
-function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoading, error }) {
+function DragScrollLane({ className, axis = 'x', children }) {
+    const laneRef = useRef(null);
+    const dragRef = useRef({ active: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
+
+    const endDrag = () => {
+        dragRef.current.active = false;
+        laneRef.current?.classList.remove('is-dragging');
+    };
+
+    const handlePointerDown = (event) => {
+        const lane = laneRef.current;
+        if (!lane) return;
+
+        dragRef.current = {
+            active: true,
+            startX: event.clientX,
+            startY: event.clientY,
+            scrollLeft: lane.scrollLeft,
+            scrollTop: lane.scrollTop,
+        };
+
+        lane.classList.add('is-dragging');
+
+        if (lane.setPointerCapture) {
+            lane.setPointerCapture(event.pointerId);
+        }
+    };
+
+    const handlePointerMove = (event) => {
+        const lane = laneRef.current;
+        if (!lane || !dragRef.current.active) return;
+
+        const deltaX = event.clientX - dragRef.current.startX;
+        const deltaY = event.clientY - dragRef.current.startY;
+
+        if (axis === 'y') {
+            lane.scrollTop = dragRef.current.scrollTop - deltaY;
+            return;
+        }
+
+        lane.scrollLeft = dragRef.current.scrollLeft - deltaX;
+    };
+
+    const handlePointerUp = (event) => {
+        const lane = laneRef.current;
+        if (lane?.releasePointerCapture && lane.hasPointerCapture?.(event.pointerId)) {
+            lane.releasePointerCapture(event.pointerId);
+        }
+        endDrag();
+    };
+
+    return (
+        <div
+            ref={laneRef}
+            className={className}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={endDrag}
+            onPointerLeave={endDrag}
+        >
+            {children}
+        </div>
+    );
+}
+
+function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoading, error, variant = 'sidebar' }) {
     const th = theme ?? THEMES.dark;
     const dollarFirst = language === "en";
     const tierByName = Object.fromEntries(tiers.map((t) => [t.name.toLowerCase(), t]));
+    const [isSmallViewport, setIsSmallViewport] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const mediaQuery = window.matchMedia('(max-width: 640px)');
+        const syncViewport = () => setIsSmallViewport(mediaQuery.matches);
+
+        syncViewport();
+        mediaQuery.addEventListener('change', syncViewport);
+
+        return () => mediaQuery.removeEventListener('change', syncViewport);
+    }, []);
 
     console.log('[DonationsList] totalsByEmail:', totalsByEmail);
     console.log('[DonationsList] tiers:', tiers);
@@ -53,8 +134,10 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
         columns[index % 2].push(donor);
         return columns;
     }, [[], []]);
+    const mobileRows = isSmallViewport ? donorColumns : [sortedDonors];
     const renderDonationCard = (d, idx, keySuffix = 'primary') => {
         const tier = d.tier ? tierByName[d.tier.toLowerCase()] : null;
+        const hasKnownTier = Boolean(tier || TIER_CONFIG[d.tier]);
         const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
         const amount = tier ? tier.amount : 500;
         const progressPct = amount > 0 ? Math.min(100, (d.totalDonated / amount) * 100) : 0;
@@ -72,6 +155,8 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
                 style={{
                     "--tier-color": tierColor,
                     "--progress-angle": `${progressPct * 3.6}deg`,
+                    "--amount-color": hasKnownTier ? tierColor : "var(--text-primary)",
+                    "--item-opacity": hasKnownTier ? 1 : 0.72,
                 }}
             >
                 <div className="donation-item-top">
@@ -95,25 +180,53 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
     };
 
     return (
-        <div className="donations-list">
+        <div className={`donations-list donations-list--${variant}`}>
             <div className="donations-list-title">
                 {t.donorsList}
             </div>
-            <div className="donations-list-scroll donations-list-scroll--marquee">
-                {donorColumns.map((column, columnIndex) => (
-                    <div
-                        key={`donation-column-${columnIndex}`}
-                        className={`donations-list-marquee-column donations-list-marquee-column--${columnIndex % 2 === 0 ? 'down' : 'up'}`}
-                    >
-                        <div className="donations-list-marquee-track">
-                            {column.map((d, idx) => renderDonationCard(d, idx, `col-${columnIndex}`))}
-                        </div>
-                        <div className="donations-list-marquee-track" aria-hidden="true">
-                            {column.map((d, idx) => renderDonationCard(d, idx, `col-${columnIndex}-clone`))}
-                        </div>
-                    </div>
-                ))}
-            </div>
+            {variant === 'sidebar' ? (
+                <div className="donations-list-scroll donations-list-scroll--sidebar-marquee">
+                    {donorColumns.map((column, columnIndex) => (
+                        <DragScrollLane
+                            key={`donation-column-${columnIndex}`}
+                            className={`donations-list-marquee-column donations-list-marquee-column--${columnIndex % 2 === 0 ? 'down' : 'up'}`}
+                            axis="y"
+                        >
+                            <div className="donations-list-marquee-track">
+                                {column.map((d, idx) => renderDonationCard(d, idx, `col-${columnIndex}`))}
+                            </div>
+                            <div className="donations-list-marquee-track" aria-hidden="true">
+                                {column.map((d, idx) => renderDonationCard(d, idx, `col-${columnIndex}-clone`))}
+                            </div>
+                        </DragScrollLane>
+                    ))}
+                </div>
+            ) : variant === 'mobile' ? (
+                <div className="donations-list-scroll donations-list-scroll--mobile-marquee">
+                    {mobileRows.map((column, columnIndex) => (
+                        <DragScrollLane
+                            key={`donation-mobile-row-${columnIndex}`}
+                            className={`donations-list-marquee-row donations-list-marquee-row--${columnIndex % 2 === 0 ? 'left' : 'right'}`}
+                        >
+                            <div
+                                className={`donations-list-marquee-track donations-list-marquee-track--horizontal donations-list-marquee-track--${columnIndex % 2 === 0 ? 'left' : 'right'}`}
+                            >
+                                {column.map((d, idx) => renderDonationCard(d, idx, `mobile-row-${columnIndex}`))}
+                            </div>
+                            <div
+                                className={`donations-list-marquee-track donations-list-marquee-track--horizontal donations-list-marquee-track--${columnIndex % 2 === 0 ? 'right' : 'left'}`}
+                                aria-hidden="true"
+                            >
+                                {column.map((d, idx) => renderDonationCard(d, idx, `mobile-row-${columnIndex}-clone`))}
+                            </div>
+                        </DragScrollLane>
+                    ))}
+                </div>
+            ) : (
+                <div className="donations-list-scroll">
+                    {sortedDonors.map((d, idx) => renderDonationCard(d, idx))}
+                </div>
+            )}
         </div>
     );
 }

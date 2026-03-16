@@ -348,6 +348,7 @@ export default function MosqueDonation() {
               t={t}
               isLoading={donationsLoading}
               error={donationsError}
+              variant="sidebar"
             />
           </div>
 
@@ -372,6 +373,7 @@ export default function MosqueDonation() {
               t={t}
               isLoading={donationsLoading}
               error={donationsError}
+              variant="sidebar"
             />
           </LeftSidebar>
 
@@ -465,6 +467,7 @@ export default function MosqueDonation() {
               statusTone={donationFeedback?.tone || (tiersError ? 'error' : 'info')}
             />
           </RightSidebar>
+
         </div>
       </div>
 
