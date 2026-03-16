@@ -222,6 +222,7 @@ export default function DonorDashboardPage() {
     const [isSidenavCollapsed, setIsSidenavCollapsed] = useState(false);
 
     // ── Active modal: null | 'settings' | 'engagement' | 'payment' | 'contact' ──
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(true);
     const [modal, setModal] = useState(null);
 
     // ── Form state ──
@@ -659,12 +660,13 @@ export default function DonorDashboardPage() {
                         {/* ══════════════════════════════════════
                             LEFT NAV
                         ══════════════════════════════════════ */}
-                        <nav className={`sidenav${isSidenavCollapsed ? ' sidenav--collapsed' : ''}`} aria-label={ui.donorNavigation}>
+                            <nav className={`sidenav${isSidenavCollapsed ? ' sidenav--collapsed' : ''}${!isMobileNavOpen ? ' sidenav--mobile-closed' : ''}`} aria-label={ui.donorNavigation}>
                             <div className="sidenav-head">
                                 {!isSidenavCollapsed ? <p className="sidenav-label">{ui.menu}</p> : <span className="sidenav-spacer" aria-hidden="true"></span>}
+                                {/* Desktop collapse toggle (icon-only sidebar) */}
                                 <button
                                     type="button"
-                                    className="sidenav-toggle"
+                                    className="sidenav-toggle sidenav-toggle--desktop"
                                     onClick={() => setIsSidenavCollapsed((value) => !value)}
                                     aria-label={isSidenavCollapsed ? ui.expandSidebar : ui.collapseSidebar}
                                     title={isSidenavCollapsed ? ui.expandSidebar : ui.collapseSidebar}
@@ -679,6 +681,21 @@ export default function DonorDashboardPage() {
                                                 ? <polyline points="9 18 15 12 9 6" />
                                                 : <polyline points="15 18 9 12 15 6" />
                                         )}
+                                    </Ico>
+                                </button>
+                                {/* Mobile collapse toggle (show/hide menu buttons only) */}
+                                <button
+                                    type="button"
+                                    className="sidenav-toggle sidenav-toggle--mobile"
+                                    onClick={() => setIsMobileNavOpen((value) => !value)}
+                                    aria-label={isMobileNavOpen ? ui.collapseSidebar : ui.expandSidebar}
+                                    title={isMobileNavOpen ? ui.collapseSidebar : ui.expandSidebar}
+                                >
+                                    <Ico size={16}>
+                                        {isMobileNavOpen
+                                            ? <polyline points="18 15 12 9 6 15" />
+                                            : <polyline points="6 9 12 15 18 9" />
+                                        }
                                     </Ico>
                                 </button>
                             </div>
