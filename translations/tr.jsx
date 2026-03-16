@@ -8,6 +8,7 @@ const tr = {
     goal: "hedef",
     bricks: "tuğla",
     scanToDonate: "Bağış Vermek İçin Tara",
+    openDonationFormNewTab: "Yeni sekmede aç",
     qrAlt: "Bağış QR Kodu",
     qrHelp: "Doğrudan bağış vermek için kameranızı yönlendirin",
     selectTier: "Tier Seçin",
