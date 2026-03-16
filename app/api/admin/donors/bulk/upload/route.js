@@ -1,126 +1,47 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:3001';
+/**
+ * Next.js proxy route for CSV donor upload.
+ *
+ * In local development, the browser sends relative XHR to
+ * /api/admin/donors/bulk/upload which hits this Next.js server.
+ * This handler forwards the multipart request to the Express backend.
+ *
+ * In production (Traefik), PathPrefix('/api') routes the browser request
+ * directly to the Express backend — this handler is not invoked at all.
+ */
+import { NextResponse } from 'next/server';
 
-const BACKEND_PATH_CANDIDATES = [
-  '/api/admin/donors/bulk/upload',
-  '/api/admin/donors/bulk/import',
-  '/api/admin/donors/import/csv',
-  '/admin/donors/bulk/upload',
-  '/admin/donors/bulk/import',
-  '/admin/donors/import/csv',
-];
-
-function unique(items) {
-  return [...new Set(items.filter(Boolean))];
-}
-
-function normalizeBase(base) {
-  const raw = String(base || '').trim().replace(/\/+$/, '');
-  return {
-    raw,
-    withoutApiSuffix: raw.replace(/\/api$/i, ''),
-  };
-}
-
-function buildBackendBaseCandidates() {
-  const envBase = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL;
-  const normalized = normalizeBase(envBase);
-  return unique([
-    normalized.raw,
-    normalized.withoutApiSuffix,
-  ]);
-}
-
-function buildCandidateUrls() {
-  const baseCandidates = buildBackendBaseCandidates();
-  const urls = [];
-
-  baseCandidates.forEach((base) => {
-    BACKEND_PATH_CANDIDATES.forEach((path) => {
-      urls.push(`${base}${path}`);
-    });
-  });
-
-  return unique(urls);
-}
-
-function isRetriableNotFound(status, textBody = '') {
-  if (status !== 404) return false;
-  const text = String(textBody || '').toLowerCase();
-  return text.includes('route post') || text.includes('not found') || text.includes('server action not found');
-}
-
-async function forwardCsvUpload(request) {
-  const incomingForm = await request.formData();
-  const file = incomingForm.get('file');
-
-  if (!file || typeof file.arrayBuffer !== 'function') {
-    return new Response(JSON.stringify({ success: false, message: 'No CSV file provided' }), {
-      status: 400,
-      headers: { 'content-type': 'application/json' },
-    });
-  }
-
-  const candidateUrls = buildCandidateUrls();
-  const authHeader = request.headers.get('authorization');
-
-  for (let i = 0; i < candidateUrls.length; i += 1) {
-    const targetUrl = candidateUrls[i];
-
-    const form = new FormData();
-    form.append('file', file, file.name || 'import.csv');
-
-    const response = await fetch(targetUrl, {
-      method: 'POST',
-      headers: authHeader ? { authorization: authHeader } : undefined,
-      body: form,
-    });
-
-    const responseText = await response.text();
-
-    if (response.ok) {
-      const contentType = response.headers.get('content-type') || 'application/json';
-      return new Response(responseText, {
-        status: response.status,
-        headers: { 'content-type': contentType },
-      });
-    }
-
-    if (isRetriableNotFound(response.status, responseText)) {
-      continue;
-    }
-
-    const contentType = response.headers.get('content-type') || 'application/json';
-    return new Response(responseText, {
-      status: response.status,
-      headers: { 'content-type': contentType },
-    });
-  }
-
-  return new Response(
-    JSON.stringify({
-      success: false,
-      message: 'CSV import failed. No compatible upload route was found on the backend.',
-    }),
-    {
-      status: 404,
-      headers: { 'content-type': 'application/json' },
-    }
-  );
-}
+const BACKEND_BASE = (
+    process.env.API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:3001'
+).trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
 export async function POST(request) {
-  try {
-    return await forwardCsvUpload(request);
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: error?.message || 'CSV proxy upload failed',
-      }),
-      {
-        status: 500,
-        headers: { 'content-type': 'application/json' },
-      }
-    );
-  }
+    const backendUrl = `${BACKEND_BASE}/api/admin/donors/bulk/upload`;
+
+    try {
+        const formData = await request.formData();
+        const authHeader = request.headers.get('authorization');
+
+        const headers = {};
+        if (authHeader) headers['authorization'] = authHeader;
+
+        const backendResponse = await fetch(backendUrl, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+
+        const payload = await backendResponse.json().catch(() => ({
+            success: false,
+            error: { code: 'UPSTREAM_ERROR', message: 'Backend returned a non-JSON response' },
+        }));
+
+        return NextResponse.json(payload, { status: backendResponse.status });
+    } catch (err) {
+        return NextResponse.json(
+            { success: false, error: { code: 'PROXY_ERROR', message: String(err.message) } },
+            { status: 502 },
+        );
+    }
 }
