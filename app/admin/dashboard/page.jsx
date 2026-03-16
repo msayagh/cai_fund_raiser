@@ -71,6 +71,8 @@ export default function AdminDashboardPage() {
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [modalError, setModalError] = useState('');
+    const [modalMessage, setModalMessage] = useState('');
     const [stats, setStats] = useState({ totalDonors: 0, totalRaised: 0, activeEngagements: 0, pendingRequests: 0 });
     const [donors, setDonors] = useState([]);
     const [admins, setAdmins] = useState([]);
@@ -400,6 +402,8 @@ export default function AdminDashboardPage() {
     }
 
     function closeRequestDecision() {
+        setModalError('');
+        setModalMessage('');
         setRequestDecisionModal((prev) => ({ ...prev, open: false, request: null, approving: false, declining: false, holding: false }));
     }
 
@@ -426,11 +430,12 @@ export default function AdminDashboardPage() {
         return { canApprove, canHold, canDecline };
     }
 
-    function buildApproveBody(request) {
+    function buildApproveBody(request, inModal = false) {
         if (request?.type === 'payment_upload') {
             const amount = parsePaymentAmount(request.message);
             if (!amount) {
                 setError('Could not parse amount. Use "To Review" to approve manually.');
+                if (inModal) setModalError('Could not parse amount. Use "To Review" to approve manually.');
                 return null;
             }
             return { amount, method: 'cash', date: new Date().toISOString().split('T')[0] };
@@ -447,7 +452,9 @@ export default function AdminDashboardPage() {
         const request = requestDecisionModal.request;
         if (!request) return;
 
-        const body = buildApproveBody(request);
+        setModalError('');
+        setModalMessage('');
+        const body = buildApproveBody(request, true);
         if (body === null) return;
 
         setRequestDecisionModal((prev) => ({ ...prev, approving: true }));
@@ -463,6 +470,8 @@ export default function AdminDashboardPage() {
         const request = requestDecisionModal.request;
         if (!request) return;
 
+        setModalError('');
+        setModalMessage('');
         setRequestDecisionModal((prev) => ({ ...prev, declining: true }));
         try {
             await handleRequestAction(request.id, 'declined');
@@ -476,6 +485,8 @@ export default function AdminDashboardPage() {
         const request = requestDecisionModal.request;
         if (!request) return;
 
+        setModalError('');
+        setModalMessage('');
         setRequestDecisionModal((prev) => ({ ...prev, holding: true }));
         try {
             await handleRequestAction(request.id, 'on_hold');
@@ -496,12 +507,15 @@ export default function AdminDashboardPage() {
         event.preventDefault();
         if (!selectedDonorId) {
             setError('Select a donor first.');
+            setModalError('Select a donor first.');
             return;
         }
 
         setSelectedDonorSaving(true);
         setError('');
         setMessage('');
+        setModalError('');
+        setModalMessage('');
 
         try {
             const updatePayload = {
@@ -535,13 +549,17 @@ export default function AdminDashboardPage() {
             }
 
             if (hasProfileChanges && hasPasswordChange) {
+                setModalMessage('Donor profile and password updated.');
                 setMessage('Donor profile and password updated.');
             } else if (hasPasswordChange) {
+                setModalMessage('Donor password updated.');
                 setMessage('Donor password updated.');
             } else {
+                setModalMessage('Donor details updated.');
                 setMessage('Donor details updated.');
             }
         } catch (err) {
+            setModalError(err?.message || 'Unable to update donor.');
             setError(err?.message || 'Unable to update donor.');
         } finally {
             setSelectedDonorSaving(false);
@@ -556,6 +574,8 @@ export default function AdminDashboardPage() {
 
     function closeProfileModal() {
         setIsProfileModalOpen(false);
+        setModalError('');
+        setModalMessage('');
         setSelectedDonorPassword('');
             setSelectedDonorPasswordConfirm('');
             setSelectedDonorEngagementForm({ totalPledge: '' });
@@ -563,12 +583,16 @@ export default function AdminDashboardPage() {
 
     function closePaymentsModal() {
         setIsPaymentsModalOpen(false);
+        setModalError('');
+        setModalMessage('');
     }
 
     async function loadSelectedDonorData(donorId) {
         setSelectedDonorId(donorId);
         setSelectedDonorLoading(true);
         setError('');
+        setModalError('');
+        setModalMessage('');
         try {
             const [donor, payments] = await Promise.all([
                 getDonor(donorId),
@@ -587,6 +611,7 @@ export default function AdminDashboardPage() {
         } catch (err) {
             setSelectedDonor(null);
             setDonorPayments([]);
+            setModalError(err?.message || 'Unable to load donor details.');
             setError(err?.message || 'Unable to load donor details.');
             return null;
         } finally {
@@ -627,12 +652,15 @@ export default function AdminDashboardPage() {
 
         if (!amountInput?.value || !methodSelect?.value || !dateInput?.value) {
             setError('Amount, method, and date are required.');
+            setModalError('Amount, method, and date are required.');
             return;
         }
 
         setSelectedDonorSaving(true);
         setError('');
         setMessage('');
+        setModalError('');
+        setModalMessage('');
 
         try {
             await addPayment(selectedDonorId, {
@@ -650,6 +678,7 @@ export default function AdminDashboardPage() {
             dateInput.value = '';
             noteInput.value = '';
 
+            setModalMessage('Payment recorded successfully.');
             setMessage('Payment recorded successfully.');
 
             // Reload all data with error handling
@@ -660,6 +689,7 @@ export default function AdminDashboardPage() {
                 // Don't throw - allow UI to remain responsive
             }
         } catch (err) {
+            setModalError(err?.message || 'Unable to record payment.');
             setError(err?.message || 'Unable to record payment.');
         } finally {
             setSelectedDonorSaving(false);
@@ -672,14 +702,22 @@ export default function AdminDashboardPage() {
         setSelectedDonorSaving(true);
         setError('');
         setMessage('');
+        setModalError('');
+        setModalMessage('');
 
         try {
             await updateDonorPayment(selectedDonorId, paymentId, payload);
             await reloadSelectedDonorPayments();
+            setModalMessage('Payment updated successfully.');
             setMessage('Payment updated successfully.');
             await loadAllData();
         } catch (err) {
             const isMissingRoute = err?.status === 404 && String(err?.message || '').toLowerCase().includes('route put');
+            const modalErr =
+                isMissingRoute
+                    ? 'Payment update route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
+                    : (err?.message || 'Unable to update payment.');
+            setModalError(modalErr);
             setError(
                 isMissingRoute
                     ? 'Payment update route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
@@ -700,14 +738,22 @@ export default function AdminDashboardPage() {
         setSelectedDonorSaving(true);
         setError('');
         setMessage('');
+        setModalError('');
+        setModalMessage('');
 
         try {
             await deleteDonorPayment(selectedDonorId, paymentId);
             await reloadSelectedDonorPayments();
+            setModalMessage('Payment removed successfully.');
             setMessage('Payment removed successfully.');
             await loadAllData();
         } catch (err) {
             const isMissingRoute = err?.status === 404 && String(err?.message || '').toLowerCase().includes('route delete');
+            const modalErr =
+                isMissingRoute
+                    ? 'Payment delete route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
+                    : (err?.message || 'Unable to remove payment.');
+            setModalError(modalErr);
             setError(
                 isMissingRoute
                     ? 'Payment delete route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
@@ -723,12 +769,15 @@ export default function AdminDashboardPage() {
         event.preventDefault();
         if (newDonorForm.password !== newDonorForm.passwordConfirm) {
             setError('Passwords do not match.');
+            setModalError('Passwords do not match.');
             return;
         }
 
         setNewDonorSaving(true);
         setError('');
         setMessage('');
+        setModalError('');
+        setModalMessage('');
 
         try {
             await createDonor({
@@ -742,6 +791,7 @@ export default function AdminDashboardPage() {
             await loadAllData();
             setMessage('✅ Donor account created. A welcome email has been sent.');
         } catch (err) {
+            setModalError(err?.message || 'Unable to create donor.');
             setError(err?.message || 'Unable to create donor.');
         } finally {
             setNewDonorSaving(false);
@@ -753,19 +803,24 @@ export default function AdminDashboardPage() {
         const pledge = Number(selectedDonorEngagementForm.totalPledge);
         if (!pledge || pledge <= 0) {
             setError('Enter a valid pledge amount greater than 0.');
+            setModalError('Enter a valid pledge amount greater than 0.');
             return;
         }
 
         setSelectedDonorSaving(true);
         setError('');
         setMessage('');
+        setModalError('');
+        setModalMessage('');
 
         try {
             await setDonorEngagement(selectedDonorId, { totalPledge: pledge });
             await reloadSelectedDonorPayments();
             setSelectedDonorEngagementForm({ totalPledge: String(pledge) });
+            setModalMessage('Engagement updated successfully.');
             setMessage('Engagement updated successfully.');
         } catch (err) {
+            setModalError(err?.message || 'Unable to update engagement.');
             setError(err?.message || 'Unable to update engagement.');
         } finally {
             setSelectedDonorSaving(false);
@@ -804,15 +859,15 @@ export default function AdminDashboardPage() {
                 .admin-table-actions{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap}
                 .admin-button{padding:10px 14px;border-radius:12px;border:none;background:var(--accent-gold);color:#111;font-weight:700;cursor:pointer}
                 .admin-button.secondary{background:rgba(255,255,255,0.06);color:var(--text-primary);border:1px solid var(--border)}
-                                .admin-button.danger{background:rgba(176,52,52,0.15);color:#ffb4b4;border:1px solid rgba(224,96,96,0.45)}
-                                .admin-button.danger:hover{background:rgba(176,52,52,0.28)}
-                                .admin-search-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
-                                .admin-per-page{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px}
+                .admin-button.danger{background:rgba(180,52,52,0.15);color:#e46767;border:1px solid rgba(228,103,103,0.45)}
+                .admin-button.danger:hover{background:rgba(180,52,52,0.26)}
+                .admin-search-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+                .admin-per-page{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px}
                 .admin-actions{display:flex;gap:10px;flex-wrap:wrap}
                 .admin-form{display:grid;gap:14px}
                 .admin-alert{padding:14px 16px;border-radius:14px}
-                .admin-alert.error{background:rgba(176,52,52,0.12);border:1px solid rgba(224,96,96,0.45);color:#ffb4b4}
-                .admin-alert.success{background:rgba(82,154,106,0.12);border:1px solid rgba(126,184,160,0.45);color:#b5f0c4}
+                .admin-alert.error{background:rgba(180,52,52,0.12);border:1px solid rgba(220,90,90,0.3);color:#ffb4b4}
+                .admin-alert.success{background:rgba(80,155,100,0.12);border:1px solid rgba(120,185,150,0.3);color:#a8edbe}
                 .admin-two-col{display:grid;grid-template-columns:1.2fr .8fr;gap:24px}
                 .admin-donor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
                 .admin-chart-card{padding:18px;border-radius:18px;border:1px solid var(--border);background:rgba(255,255,255,0.03)}
@@ -822,10 +877,10 @@ export default function AdminDashboardPage() {
                 .admin-donor-card{padding:18px;border-radius:20px;border:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));display:grid;gap:14px}
                 .admin-donor-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
                 .admin-chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--border);font-size:12px;color:var(--text-muted);background:rgba(255,255,255,0.03)}
-                .admin-chip.status-pending{background:rgba(212,169,110,0.15);border-color:rgba(212,169,110,0.4);color:#e6c86e}
+                .admin-chip.status-pending{background:rgba(232,164,74,0.1);border-color:rgba(232,164,74,0.3);color:#e8a44a}
                 .admin-chip.status-on_hold{background:rgba(120,120,220,0.15);border-color:rgba(120,120,220,0.4);color:#a0a0ff}
-                .admin-chip.status-approved{background:rgba(82,154,106,0.15);border-color:rgba(82,154,106,0.4);color:#80d4a0}
-                .admin-chip.status-declined{background:rgba(176,52,52,0.15);border-color:rgba(176,52,52,0.4);color:#ffb4b4}
+                .admin-chip.status-approved{background:rgba(92,200,160,0.13);border-color:rgba(92,200,160,0.32);color:#5cc8a0}
+                .admin-chip.status-declined{background:rgba(228,103,103,0.13);border-color:rgba(228,103,103,0.32);color:#e46767}
                 .admin-donor-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
                 .admin-donor-metric{padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)}
                 .admin-donor-progress{display:grid;gap:8px}
@@ -840,6 +895,20 @@ export default function AdminDashboardPage() {
                 .admin-modal{width:min(960px,100%);max-height:min(90vh,920px);overflow:auto;border-radius:24px;border:1px solid var(--border);background:linear-gradient(180deg,#14192e,#0b1020);box-shadow:0 24px 90px rgba(0,0,0,0.45);padding:24px;display:grid;gap:18px}
                 .admin-modal-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
                 .admin-modal-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:18px}
+                [data-theme="light"] .admin-modal-backdrop{background:rgba(0,0,0,0.42)}
+                [data-theme="light"] .admin-modal{background:linear-gradient(155deg,#ffffff 0%,#faf8f4 52%,#f4f0e6 100%);border-color:rgba(154,123,79,0.28);box-shadow:0 28px 64px rgba(0,0,0,0.14),0 0 0 1px rgba(0,0,0,0.03)}
+                [data-theme="light"] .admin-modal-header{border-bottom:1px solid #e5e2dc;padding-bottom:14px}
+                [data-theme="light"] .admin-modal .admin-button.secondary{background:rgba(0,0,0,0.04);border-color:#e5e2dc;color:#5a5040}
+                [data-theme="light"] .admin-modal .admin-button.secondary:hover{background:rgba(0,0,0,0.07);border-color:rgba(154,123,79,0.4);color:#1a1208}
+                [data-theme="light"] .admin-modal .admin-button.danger{background:rgba(180,50,50,0.07);border-color:rgba(180,50,50,0.28);color:#9a2d2d}
+                [data-theme="light"] .admin-modal .admin-button.danger:hover{background:rgba(180,50,50,0.12);border-color:rgba(180,50,50,0.4);color:#7f1f1f}
+                [data-theme="light"] .admin-modal input,[data-theme="light"] .admin-modal textarea,[data-theme="light"] .admin-modal select{background:#f9f7f3;color:#1a1208;border-color:#e5e2dc}
+                [data-theme="light"] .admin-modal input:focus,[data-theme="light"] .admin-modal textarea:focus,[data-theme="light"] .admin-modal select:focus{outline:none;border-color:rgba(154,123,79,0.55);box-shadow:0 0 0 3px rgba(154,123,79,0.1)}
+                [data-theme="light"] .admin-alert.error{background:rgba(160,40,40,0.06);border-color:rgba(180,60,60,0.22);color:#8b2020}
+                [data-theme="light"] .admin-alert.success{background:rgba(50,110,70,0.06);border-color:rgba(80,150,100,0.22);color:#235234}
+                [data-theme="light"] .admin-chip.status-pending{background:rgba(154,123,79,0.09);border-color:rgba(154,123,79,0.28);color:#9a7b4f}
+                [data-theme="light"] .admin-chip.status-approved{background:rgba(50,110,70,0.08);border-color:rgba(80,150,100,0.24);color:#235234}
+                [data-theme="light"] .admin-chip.status-declined{background:rgba(160,40,40,0.08);border-color:rgba(180,60,60,0.22);color:#8b2020}
                 .admin-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px}
                 .admin-pagination-buttons{display:flex;gap:10px;align-items:center}
                 .admin-loading-overlay{position:fixed;inset:0;background:rgba(3,6,16,0.5);backdrop-filter:blur(4px);display:grid;place-items:center;z-index:50;pointer-events:none}
@@ -898,6 +967,8 @@ export default function AdminDashboardPage() {
                                         ✕ Close
                                     </button>
                                 </div>
+                                {modalError ? <div className="admin-alert error">{modalError}</div> : null}
+                                {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 <form className="admin-form" onSubmit={handleAddNewDonor}>
                                     <div>
                                         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 }}>👤 Full Name *</label>
@@ -985,6 +1056,8 @@ export default function AdminDashboardPage() {
                                         ✕ Close
                                     </button>
                                 </div>
+                                {modalError ? <div className="admin-alert error">{modalError}</div> : null}
+                                {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 <div>
                                     {selectedDonorLoading ? <div>Loading donor details...</div> : null}
                                     {!selectedDonorLoading && !selectedDonor ? (
@@ -1093,6 +1166,8 @@ export default function AdminDashboardPage() {
                                         Close
                                     </button>
                                 </div>
+                                {modalError ? <div className="admin-alert error">{modalError}</div> : null}
+                                {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 {selectedDonorLoading ? <div>Loading donor payments...</div> : null}
                                 {!selectedDonorLoading && !selectedDonor ? (
                                     <div style={{ color: 'var(--text-muted)' }}>
@@ -1131,6 +1206,8 @@ export default function AdminDashboardPage() {
                                         ✕ Close
                                     </button>
                                 </div>
+                                {modalError ? <div className="admin-alert error">{modalError}</div> : null}
+                                {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 <div style={{ color: 'var(--text-muted)' }}>
                                     {requestDecisionModal.request?.name
                                         ? <div><strong style={{ color: 'var(--text-primary)' }}>{requestDecisionModal.request.name}</strong> &middot; {requestDecisionModal.request.email}</div>
@@ -1148,7 +1225,7 @@ export default function AdminDashboardPage() {
 
                                 {/* Type-specific info panels */}
                                 {requestDecisionModal.request?.type === 'payment_upload' && (
-                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(212,169,110,0.08)', border: '1px solid rgba(212,169,110,0.3)' }}>
+                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(232,164,74,0.08)', border: '1px solid rgba(232,164,74,0.3)' }}>
                                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>💵 Payment that will be recorded on approval:</div>
                                         <div>
                                             <strong>Amount:</strong>{' '}
@@ -1161,7 +1238,7 @@ export default function AdminDashboardPage() {
                                     </div>
                                 )}
                                 {requestDecisionModal.request?.type === 'account_creation' && (
-                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(82,154,106,0.08)', border: '1px solid rgba(82,154,106,0.3)', fontSize: 13 }}>
+                                    <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(80,155,100,0.1)', border: '1px solid rgba(120,185,150,0.3)', fontSize: 13 }}>
                                         <strong>👤 Approval will:</strong> create a donor account, generate a temporary password, and email it to the donor with instructions to change it on first login.
                                     </div>
                                 )}
