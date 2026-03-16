@@ -88,6 +88,8 @@ const csvUpload = multer({
 
 adminDonorRouter.get('/', requireAdmin, requireCapability('admin.donors.view'), ctrl.list);
 adminDonorRouter.post('/bulk/upload', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
+adminDonorRouter.post('/bulk/import', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
+adminDonorRouter.post('/import/csv', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
 adminDonorRouter.post('/', requireAdmin, requireCapability('admin.donors.create'), validate(adminCreateDonorSchema), ctrl.adminCreate);
 adminDonorRouter.get('/:id', requireAdmin, requireCapability('admin.donors.view'), ctrl.getById);
 adminDonorRouter.get('/:id/payments', requireAdmin, requireCapability('admin.donors.view'), ctrl.adminGetPayments);
