@@ -20,7 +20,7 @@ import { useTranslation, useThemeMode, useTiers, useDonations, useResponsiveSide
 import { useFirstVisitPreloader } from "@/hooks/useFirstVisitPreloader.js";
 
 // Utilities
-import { truncateText, getSiteUrl, getAbsoluteUrl } from "@/lib/translationUtils.js";
+import { DEFAULT_TRANSLATION, truncateText, getSiteUrl, getAbsoluteUrl } from "@/lib/translationUtils.js";
 import { setupSEOMetaTags } from "@/lib/seoUtils.js";
 
 // Constants
@@ -135,13 +135,14 @@ export default function MosqueDonation() {
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
 
   const currencyFirst = language === "en";
+  const delayedDonationMessage = t.donationFormDelayed || DEFAULT_TRANSLATION.donationFormDelayed;
   const siteUrl = getSiteUrl();
   const pageUrl = getAbsoluteUrl(`/?lang=${language}`, siteUrl);
   const socialImageUrl = getAbsoluteUrl(DEFAULT_SOCIAL_IMAGE, siteUrl);
   const pageTitle = `${t.title} | ${t.centerName}`;
   const pageDescription = truncateText(
     t.aboutCampaignText ||
-    "Support the Centre Zad Al-Imane masjid establishment campaign and help fund a new place of prayer, learning, and community service."
+    DEFAULT_TRANSLATION.campaignSeoDescription
   );
   const locale = t.locale ?? language;
   const logoAlt = `${t.centerName} logo`;
@@ -173,14 +174,14 @@ export default function MosqueDonation() {
     const timeoutId = window.setTimeout(() => {
       setDonationFeedback({
         tone: 'error',
-        message: 'The donation form is taking longer than expected. You can wait a moment or close and try again.',
+        message: delayedDonationMessage,
       });
     }, 9000);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [showDonationDialog, donationIframeLoaded]);
+  }, [showDonationDialog, donationIframeLoaded, delayedDonationMessage]);
 
   // Don't render anything that depends on hydration until theme and language are ready
   if (!appReady && shouldShowPreloader && preloaderResolved) {
@@ -190,7 +191,7 @@ export default function MosqueDonation() {
         data-theme="dark"
         suppressHydrationWarning
       >
-        <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading campaign" />
+        <SitePreloader title="Centre Zad Al-Imane" subtitle={t.loadingCampaign || DEFAULT_TRANSLATION.loadingCampaign} />
       </div>
     );
   }
@@ -289,8 +290,8 @@ export default function MosqueDonation() {
               setShowLeftSidebar(!showLeftSidebar);
             }
           }}
-          ariaLabel="Toggle left sidebar"
-          title="Donations & QR"
+          ariaLabel={t.donationsAndQr || DEFAULT_TRANSLATION.donationsAndQr}
+          title={t.donationsAndQr || DEFAULT_TRANSLATION.donationsAndQr}
         >
           <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" fill="none" stroke="currentColor" strokeWidth="1.8" />
           <path d="M15 15h2v2h-2zM18 15h2v5h-2zM15 18h2v2h-2z" fill="currentColor" />
@@ -303,8 +304,8 @@ export default function MosqueDonation() {
               setShowRightSidebar(!showRightSidebar);
             }
           }}
-          ariaLabel="Toggle right sidebar"
-          title="Tier Selection"
+          ariaLabel={t.tierSelectionTitle || DEFAULT_TRANSLATION.tierSelectionTitle}
+          title={t.tierSelectionTitle || DEFAULT_TRANSLATION.tierSelectionTitle}
         >
           <path d="M12 20s-6.5-3.9-6.5-9.1A3.9 3.9 0 0 1 9.4 7c1.1 0 2.1.5 2.6 1.4.5-.9 1.5-1.4 2.6-1.4a3.9 3.9 0 0 1 3.9 3.9C18.5 16.1 12 20 12 20Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           <path d="M9.2 12h5.6M12 9.2v5.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -477,7 +478,7 @@ export default function MosqueDonation() {
               <button
                 type="button"
                 onClick={closeDonationDialog}
-                aria-label="Close donation dialog"
+                aria-label={t.closeDonationDialog || DEFAULT_TRANSLATION.closeDonationDialog}
                 className="donation-dialog-close"
               >
                 ×
@@ -486,16 +487,16 @@ export default function MosqueDonation() {
                 {!donationIframeLoaded && (
                   <div className="donation-dialog-loading">
                     <div className="donation-dialog-spinner" aria-hidden="true"></div>
-                    <div className="donation-dialog-loading-title">Preparing secure checkout</div>
+                    <div className="donation-dialog-loading-title">{t.preparingSecureCheckout || DEFAULT_TRANSLATION.preparingSecureCheckout}</div>
                     <div className="donation-dialog-loading-text">
-                      Your donation form is loading in a protected window.
+                      {t.donationDialogLoadingText || DEFAULT_TRANSLATION.donationDialogLoadingText}
                     </div>
                   </div>
                 )}
                 <iframe
-                  title="Donation form powered by Zeffy"
+                  title={t.donationFormPoweredByZeffy || DEFAULT_TRANSLATION.donationFormPoweredByZeffy}
                   src="https://www.zeffy.com/embed/ticketing/travaux-damenagement-dans-le-nouveau-centre"
-                  aria-label="Secure donation form"
+                  aria-label={t.secureDonationForm || DEFAULT_TRANSLATION.secureDonationForm}
                   onLoad={() => {
                     setDonationIframeLoaded(true);
                   }}

@@ -14,7 +14,7 @@ import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
-import { getAbsoluteUrl, getSiteUrl, truncateText, TRANSLATION_MODULES } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText, TRANSLATION_MODULES } from '@/lib/translationUtils.js';
 import {
     createEngagement, getMe, getMyPayments, getMyRequests,
     updateEngagement, updateMe, updateMyPassword,
@@ -134,10 +134,28 @@ const EN_DONOR = {
     confirmCancel:   'Are you sure you want to cancel this pending payment?',
     paymentCancelled:'Pending payment cancelled.',
     paymentUpdated:  'Pending payment updated.',
+<<<<<<< HEAD
     chooseMethod:    'How would you like to pay?',
     payByCash:       'Cash / Interac',
     cashGuidance:    'To help us validate your payment, please include: your name on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
     backToMethod:    '← Back',
+=======
+    close:           'Close',
+    loadingDashboard:'Loading dashboard',
+    loading:         'Loading',
+    donorNavigation: 'Donor navigation',
+    menu:            'Menu',
+    sessionExpired:  'Session expired. Please log in again.',
+    unableLoadDashboard: 'Unable to load dashboard.',
+    fullNamePlaceholder: 'Full name',
+    emailPlaceholder: 'Email',
+    pledgeExample:   'e.g. 2000',
+    zeroPlaceholder: '0',
+    paymentMethodCash: 'Cash',
+    paymentMethodZeffy: 'Zeffy',
+    collapseSidebar: 'Collapse sidebar',
+    expandSidebar: 'Expand sidebar',
+>>>>>>> be09028 (donar dashboard fixed)
 };
 
 // ─────────────────────────────────────────────
@@ -170,7 +188,7 @@ function Modal({ title, description, onClose, children }) {
             <div className="modal">
                 <div className="modal-hd">
                     <h3 className="modal-ttl">{title}</h3>
-                    <button type="button" className="modal-x" onClick={onClose} aria-label="Close">&times;</button>
+                    <button type="button" className="modal-x" onClick={onClose} aria-label={DEFAULT_TRANSLATION.donor?.close || 'Close'}>&times;</button>
                 </div>
                 {description && <p className="modal-desc">{description}</p>}
                 <div className="modal-bd">{children}</div>
@@ -200,6 +218,11 @@ export default function DonorDashboardPage() {
     // ── UI feedback ──
     const [error,   setError]   = useState('');
     const [success, setSuccess] = useState('');
+    const [profileError, setProfileError] = useState('');
+    const [profileSuccess, setProfileSuccess] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [passwordSuccess, setPasswordSuccess] = useState('');
+    const [isSidenavCollapsed, setIsSidenavCollapsed] = useState(false);
 
     // ── Active modal: null | 'settings' | 'engagement' | 'payment' | 'contact' ──
     const [modal, setModal] = useState(null);
@@ -214,12 +237,20 @@ export default function DonorDashboardPage() {
     const [payStep,        setPayStep]        = useState(null); // null | 'zeffy' | 'cash'
     const [pendingPayments,setPendingPayments]= useState([]);
     const [editingPendingId,setEditingPendingId]=useState(null);
+    const profileMessageRef = useRef(null);
+    const passwordMessageRef = useRef(null);
     // receipt cache: { "100.00": [{id, requestId, filename, mimeType}] }
     // populated when a pending payment transitions to confirmed so the link survives
     const [paymentReceipts,setPaymentReceipts]= useState({});
 
     const appReady = tMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
+    const hasOpenModal = modal !== null;
+    const canSubmitPassword = Boolean(
+        passwordForm.currentPassword.trim() &&
+        passwordForm.newPassword.trim() &&
+        passwordForm.confirmPassword.trim()
+    );
 
     // ── SEO ──
     const siteUrl    = getSiteUrl();
@@ -268,7 +299,7 @@ export default function DonorDashboardPage() {
                 const ok = await tryAutoLogin();
                 if (!ok) {
                     clearTokens(); clearStoredSession();
-                    if (alive) setError('Session expired. Please log in again.');
+                    if (alive) setError(ui.sessionExpired);
                     router.replace('/login');
                     return;
                 }
@@ -343,7 +374,7 @@ export default function DonorDashboardPage() {
             } catch (err) {
                 if (!alive) return;
                 clearTokens(); clearStoredSession();
-                setError(err?.message || 'Unable to load dashboard.');
+                setError(err?.message || ui.unableLoadDashboard);
                 router.replace('/login');
             } finally {
                 if (alive) setLoading(false);
@@ -388,13 +419,20 @@ export default function DonorDashboardPage() {
     function methodInfo(method) {
         const s = String(method || '').toLowerCase();
         const isCard = s.includes('zeffy') || s.includes('card') || s.includes('stripe');
-        return isCard ? { key: 'card', label: 'Zeffy' } : { key: 'cash', label: 'Cash' };
+        return isCard ? { key: 'card', label: ui.paymentMethodZeffy } : { key: 'cash', label: ui.paymentMethodCash };
     }
 
     // ── Pending-payment localStorage helpers ──
     function savePendingToStorage(list) {
         if (!profile?.email) return;
         try { localStorage.setItem(`pending_pmts_${profile.email}`, JSON.stringify(list)); } catch { /* ignore */ }
+    }
+    function scrollToMessage(ref) {
+        if (typeof window === 'undefined') return;
+        window.setTimeout(() => {
+            ref.current?.focus?.({ preventScroll: true });
+            ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 40);
     }
     function deletePendingPayment(id) {
         if (!window.confirm(ui.confirmCancel)) return;
@@ -412,9 +450,28 @@ export default function DonorDashboardPage() {
     }
 
     // ── Modal actions ──
+<<<<<<< HEAD
     function closeModal() { setModal(null); setError(''); setSuccess(''); setEditingPendingId(null); setPayStep(null); }
+=======
+    function closeModal() {
+        setModal(null);
+        setError('');
+        setSuccess('');
+        setProfileError('');
+        setProfileSuccess('');
+        setPasswordError('');
+        setPasswordSuccess('');
+        setEditingPendingId(null);
+    }
+>>>>>>> be09028 (donar dashboard fixed)
 
-    function openSettings()   { setModal('settings'); }
+    function openSettings() {
+        setProfileError('');
+        setProfileSuccess('');
+        setPasswordError('');
+        setPasswordSuccess('');
+        setModal('settings');
+    }
     function openContact(type = 'other') { setContactForm(p => ({ ...p, type })); setModal('contact'); }
     function openEngagement() {
         setEngForm({
@@ -435,23 +492,40 @@ export default function DonorDashboardPage() {
 
     // ── Form handlers ──
     async function onProfileSave(e) {
-        e.preventDefault(); setError(''); setSuccess('');
+        e.preventDefault();
+        setProfileError('');
+        setProfileSuccess('');
         try {
             const up = await updateMe({ name: profileForm.name.trim(), email: profileForm.email.trim().toLowerCase() });
             setProfile(p => ({ ...p, ...up }));
             setStoredSession({ ...(getStoredSession() || {}), ...up, role: 'donor' });
-            setSuccess(ui.profileUpdated);
-        } catch (err) { setError(err?.message || ui.errUpdateProfile); }
+            setProfileSuccess(ui.profileUpdated);
+            scrollToMessage(profileMessageRef);
+        } catch (err) {
+            setProfileError(err?.message || ui.errUpdateProfile);
+            scrollToMessage(profileMessageRef);
+        }
     }
 
     async function onPasswordSave(e) {
-        e.preventDefault(); setError(''); setSuccess('');
-        if (passwordForm.newPassword !== passwordForm.confirmPassword) { setError(ui.pwdMismatch); return; }
+        e.preventDefault();
+        setPasswordError('');
+        setPasswordSuccess('');
+        if (!canSubmitPassword) return;
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+            setPasswordError(ui.pwdMismatch);
+            scrollToMessage(passwordMessageRef);
+            return;
+        }
         try {
             await updateMyPassword({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
             setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-            setSuccess(ui.passwordUpdated);
-        } catch (err) { setError(err?.message || ui.errUpdatePassword); }
+            setPasswordSuccess(ui.passwordUpdated);
+            scrollToMessage(passwordMessageRef);
+        } catch (err) {
+            setPasswordError(err?.message || ui.errUpdatePassword);
+            scrollToMessage(passwordMessageRef);
+        }
     }
 
     async function onEngSave(e) {
@@ -560,7 +634,7 @@ export default function DonorDashboardPage() {
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div className="mosque-donation dashboard-preloader-shell" data-theme="dark">
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading dashboard" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle={ui.loadingDashboard} />
             </div>
         );
     }
@@ -575,44 +649,67 @@ export default function DonorDashboardPage() {
                 theme={theme} themeMode={themeMode} setThemeMode={setThemeMode}
                 showLanguageMenu={showLangMenu} setShowLanguageMenu={setShowLangMenu}
                 languageDropdownRef={langDropRef}
+                onOpenAccountSettings={openSettings}
+                onOpenAccountContact={() => openContact('other')}
                 isLoginPage={false} showHeaderCenter={false}
             />
 
             <main className="pg-shell">
                 {loading ? (
-                    <div className="pg-loading" role="status" aria-label="Loading">
+                    <div className="pg-loading" role="status" aria-label={ui.loading}>
                         <span className="pg-spinner" />
                     </div>
                 ) : (
-                    <div className="pg-cols">
+                    <div className={`pg-cols${isSidenavCollapsed ? ' pg-cols--collapsed' : ''}`}>
 
                         {/* ══════════════════════════════════════
                             LEFT NAV
                         ══════════════════════════════════════ */}
-                        <nav className="sidenav" aria-label="Donor navigation">
-                            <p className="sidenav-label">Menu</p>
+                        <nav className={`sidenav${isSidenavCollapsed ? ' sidenav--collapsed' : ''}`} aria-label={ui.donorNavigation}>
+                            <div className="sidenav-head">
+                                {!isSidenavCollapsed ? <p className="sidenav-label">{ui.menu}</p> : <span className="sidenav-spacer" aria-hidden="true"></span>}
+                                <button
+                                    type="button"
+                                    className="sidenav-toggle"
+                                    onClick={() => setIsSidenavCollapsed((value) => !value)}
+                                    aria-label={isSidenavCollapsed ? ui.expandSidebar : ui.collapseSidebar}
+                                    title={isSidenavCollapsed ? ui.expandSidebar : ui.collapseSidebar}
+                                >
+                                    <Ico size={16}>
+                                        {isRTL ? (
+                                            isSidenavCollapsed
+                                                ? <polyline points="15 18 9 12 15 6" />
+                                                : <polyline points="9 18 15 12 9 6" />
+                                        ) : (
+                                            isSidenavCollapsed
+                                                ? <polyline points="9 18 15 12 9 6" />
+                                                : <polyline points="15 18 9 12 15 6" />
+                                        )}
+                                    </Ico>
+                                </button>
+                            </div>
 
-                            <button type="button" className="sidenav-btn" onClick={openSettings}>
+                            <button type="button" className="sidenav-btn" onClick={openSettings} title={isSidenavCollapsed ? ui.settings : undefined}>
                                 <span className="sidenav-icon">
                                     <Ico size={17}>
                                         <circle cx="12" cy="12" r="3"/>
                                         <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
                                     </Ico>
                                 </span>
-                                {ui.settings}
+                                {!isSidenavCollapsed ? ui.settings : null}
                             </button>
 
-                            <button type="button" className="sidenav-btn" onClick={() => openContact('other')}>
+                            <button type="button" className="sidenav-btn" onClick={() => openContact('other')} title={isSidenavCollapsed ? ui.contactAdmin : undefined}>
                                 <span className="sidenav-icon">
                                     <Ico size={17}>
                                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                                         <polyline points="22,6 12,13 2,6"/>
                                     </Ico>
                                 </span>
-                                {ui.contactAdmin}
+                                {!isSidenavCollapsed ? ui.contactAdmin : null}
                             </button>
 
-                            <button type="button" className="sidenav-btn sidenav-btn--danger" onClick={handleLogout}>
+                            <button type="button" className="sidenav-btn sidenav-btn--danger" onClick={handleLogout} title={isSidenavCollapsed ? ui.logout : undefined}>
                                 <span className="sidenav-icon">
                                     <Ico size={17}>
                                         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -620,7 +717,7 @@ export default function DonorDashboardPage() {
                                         <line x1="21" y1="12" x2="9" y2="12"/>
                                     </Ico>
                                 </span>
-                                {ui.logout}
+                                {!isSidenavCollapsed ? ui.logout : null}
                             </button>
                         </nav>
 
@@ -638,8 +735,8 @@ export default function DonorDashboardPage() {
                             </header>
 
                             {/* Global feedback banners */}
-                            {error   && <div className="banner banner--error"   role="alert">{error}</div>}
-                            {success && <div className="banner banner--success" role="status">{success}</div>}
+                            {!hasOpenModal && error   ? <div className="banner banner--error"   role="alert">{error}</div> : null}
+                            {!hasOpenModal && success ? <div className="banner banner--success" role="status">{success}</div> : null}
 
                             {/* ─────────────────────────────────
                                 ENGAGEMENT CARD
@@ -935,23 +1032,24 @@ export default function DonorDashboardPage() {
             {/* Settings */}
             {modal === 'settings' && (
                 <Modal title={ui.settings} onClose={closeModal}>
-                    {error   && <div className="banner banner--error"   role="alert">{error}</div>}
-                    {success && <div className="banner banner--success" role="status">{success}</div>}
-
                     <fieldset className="fset">
                         <legend className="fset-legend">{ui.profile}</legend>
                         <form className="mform" onSubmit={onProfileSave}>
+                            <div ref={profileMessageRef} tabIndex={-1}>
+                                {profileError ? <div className="banner banner--error" role="alert">{profileError}</div> : null}
+                                {profileSuccess ? <div className="banner banner--success" role="status">{profileSuccess}</div> : null}
+                            </div>
                             <label className="flabel">
                                 {ui.yourName}
                                 <input className="finput" value={profileForm.name}
                                     onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
-                                    placeholder="Full name" />
+                                    placeholder={ui.fullNamePlaceholder} />
                             </label>
                             <label className="flabel">
                                 {ui.yourEmail}
                                 <input className="finput" type="email" value={profileForm.email}
                                     onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
-                                    placeholder="Email" />
+                                    placeholder={ui.emailPlaceholder} />
                             </label>
                             <button type="submit" className="btn btn--primary">{ui.saveProfile}</button>
                         </form>
@@ -960,6 +1058,10 @@ export default function DonorDashboardPage() {
                     <fieldset className="fset">
                         <legend className="fset-legend">{ui.password}</legend>
                         <form className="mform" onSubmit={onPasswordSave}>
+                            <div ref={passwordMessageRef} tabIndex={-1}>
+                                {passwordError ? <div className="banner banner--error" role="alert">{passwordError}</div> : null}
+                                {passwordSuccess ? <div className="banner banner--success" role="status">{passwordSuccess}</div> : null}
+                            </div>
                             <label className="flabel">
                                 {ui.curPwd}
                                 <input className="finput" type="password" value={passwordForm.currentPassword}
@@ -975,7 +1077,7 @@ export default function DonorDashboardPage() {
                                 <input className="finput" type="password" value={passwordForm.confirmPassword}
                                     onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))} />
                             </label>
-                            <button type="submit" className="btn btn--primary">{ui.updatePwd}</button>
+                            <button type="submit" className="btn btn--primary" disabled={!canSubmitPassword} aria-disabled={!canSubmitPassword}>{ui.updatePwd}</button>
                         </form>
                     </fieldset>
                 </Modal>
@@ -991,7 +1093,7 @@ export default function DonorDashboardPage() {
                             {ui.pledgeAmt}
                             <input className="finput" type="number" min="1" value={engForm.totalPledge}
                                 onChange={e => setEngForm(p => ({ ...p, totalPledge: e.target.value }))}
-                                placeholder="e.g. 2000" />
+                                placeholder={ui.pledgeExample} />
                         </label>
                         <label className="flabel">
                             {ui.deadline}
@@ -1052,6 +1154,7 @@ export default function DonorDashboardPage() {
                         <button type="button" className="btn btn--ghost-sm" onClick={() => setPayStep(null)}>{ui.backToMethod}</button>
                     </>)}
 
+<<<<<<< HEAD
                     {/* Step 1b: Cash / Interac form */}
                     {(editingPendingId || payStep === 'cash') && (
                         <form className="mform" onSubmit={onCashPayment}>
@@ -1090,6 +1193,35 @@ export default function DonorDashboardPage() {
                             </div>
                         </form>
                     )}
+=======
+                    {/* Cash form */}
+                    <form className="mform" onSubmit={onCashPayment}>
+                        <label className="flabel">
+                            {ui.amount}
+                            <input className="finput" type="number" min="1" value={cashForm.amount}
+                                onChange={e => setCashForm(p => ({ ...p, amount: e.target.value }))}
+                                placeholder={ui.zeroPlaceholder} />
+                        </label>
+                        <label className="flabel">
+                            {ui.adminNote}
+                            <textarea className="finput ftextarea" value={cashForm.adminNote}
+                                onChange={e => setCashForm(p => ({ ...p, adminNote: e.target.value }))}
+                                placeholder={ui.adminNotePh} />
+                        </label>
+                        <label className="flabel">
+                            {ui.personalNote}
+                            <textarea className="finput ftextarea" value={cashForm.personalNote}
+                                onChange={e => setCashForm(p => ({ ...p, personalNote: e.target.value }))}
+                                placeholder={ui.personalNotePh} />
+                        </label>
+                        <label className="flabel">
+                            {ui.attachFiles}
+                            <input className="finput" type="file" multiple
+                                onChange={e => setAttachedFiles(Array.from(e.target.files || []))} />
+                        </label>
+                        <button type="submit" className="btn btn--outline-gold">{ui.submitCash}</button>
+                    </form>
+>>>>>>> be09028 (donar dashboard fixed)
                 </Modal>
             )}
 

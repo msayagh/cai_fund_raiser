@@ -30,7 +30,8 @@
         display: none;
     }
 
-    .login-button.header-mobile-login {
+    .login-button.header-mobile-login,
+    .account-menu.header-mobile-login {
         display: inline-flex;
         max-width: min(180px, calc(100vw - 120px));
     }

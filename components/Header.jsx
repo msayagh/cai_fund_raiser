@@ -5,6 +5,107 @@ import AccessibilityWidget from '@/components/AccessibilityWidget.jsx';
 import { getStoredSession, subscribeToSessionChange } from '@/lib/session.js';
 import { logout } from '@/lib/auth.js';
 
+function AccountMenu({
+    session,
+    dashboardHref,
+    dashboardLabel,
+    settingsLabel,
+    contactLabel,
+    logoutLabel,
+    onOpenSettings,
+    onOpenContact,
+    onLogout,
+    className = '',
+}) {
+    const [open, setOpen] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const handlePointerDown = (event) => {
+            if (!menuRef.current?.contains(event.target)) {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        return () => document.removeEventListener('pointerdown', handlePointerDown);
+    }, [open]);
+
+    return (
+        <div className={`account-menu ${className}`.trim()} ref={menuRef}>
+            <button
+                type="button"
+                className={`login-button login-button--account ${open ? 'open' : ''}`}
+                title={session.email}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                onClick={() => setOpen((value) => !value)}
+            >
+                <i className="fas fa-user-check" aria-hidden="true"></i>
+                <span className="login-button-text">{session.name || session.email}</span>
+                <i className="fas fa-chevron-down account-menu-caret" aria-hidden="true"></i>
+            </button>
+            {open && (
+                <div className="account-menu-panel" role="menu">
+                    {!onOpenSettings && dashboardHref ? (
+                        <Link
+                            href={dashboardHref}
+                            className="account-menu-item"
+                            role="menuitem"
+                            onClick={() => setOpen(false)}
+                        >
+                            <i className="fas fa-gauge" aria-hidden="true"></i>
+                            <span>{dashboardLabel}</span>
+                        </Link>
+                    ) : null}
+                    {onOpenSettings ? (
+                        <button
+                            type="button"
+                            className="account-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                                onOpenSettings();
+                                setOpen(false);
+                            }}
+                        >
+                            <i className="fas fa-gear" aria-hidden="true"></i>
+                            <span>{settingsLabel}</span>
+                        </button>
+                    ) : null}
+                    {onOpenContact ? (
+                        <button
+                            type="button"
+                            className="account-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                                onOpenContact();
+                                setOpen(false);
+                            }}
+                        >
+                            <i className="fas fa-envelope" aria-hidden="true"></i>
+                            <span>{contactLabel}</span>
+                        </button>
+                    ) : null}
+                    <button
+                        type="button"
+                        className="account-menu-item account-menu-item--danger"
+                        role="menuitem"
+                        onClick={async () => {
+                            setOpen(false);
+                            await onLogout();
+                        }}
+                    >
+                        <i className="fas fa-right-from-bracket" aria-hidden="true"></i>
+                        <span>{logoutLabel}</span>
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function Header({
     language,
     setLanguage,
@@ -21,6 +122,8 @@ export function Header({
     currencyFirst = false,
     isLoginPage = false,
     onOpenStatistics,
+    onOpenAccountSettings,
+    onOpenAccountContact,
     showHeaderCenter = !isLoginPage,
 }) {
     const [showHeaderMenu, setShowHeaderMenu] = useState(false);
@@ -48,7 +151,11 @@ export function Header({
         return subscribeToSessionChange(setSession);
     }, []);
 
+    const settingsLabel = t?.donor?.settings || t?.admin?.accounts || 'Settings';
+    const contactLabel = t?.donor?.contactAdmin || 'Contact';
+    const logoutLabel = t?.auth?.signOut || 'Sign out';
     const dashboardHref = session?.role === 'admin' ? '/admin/dashboard' : '/donor/dashboard';
+    const dashboardLabel = 'Dashboard';
 
     async function handleLogout() {
         await logout();
@@ -153,10 +260,17 @@ export function Header({
                             </button>
                         )}
                         {session ? (
-                            <Link href={dashboardHref} className="login-button" title={session.email}>
-                                <i className="fas fa-user-check" aria-hidden="true"></i>
-                                <span className="login-button-text">{session.name || session.email}</span>
-                            </Link>
+                            <AccountMenu
+                                session={session}
+                                dashboardHref={dashboardHref}
+                                dashboardLabel={dashboardLabel}
+                                settingsLabel={settingsLabel}
+                                contactLabel={contactLabel}
+                                logoutLabel={logoutLabel}
+                                onOpenSettings={onOpenAccountSettings}
+                                onOpenContact={onOpenAccountContact}
+                                onLogout={handleLogout}
+                            />
                         ) : (
                             <Link href="/login" className="login-button" title="Login">
                                 <i className="fas fa-user" aria-hidden="true"></i>
@@ -223,10 +337,18 @@ export function Header({
                     </div>
 
                     {session ? (
-                        <Link href={dashboardHref} className="login-button header-mobile-login" title={session.email}>
-                            <i className="fas fa-user-check" aria-hidden="true"></i>
-                            <span className="login-button-text">{session.name || session.email}</span>
-                        </Link>
+                        <AccountMenu
+                            session={session}
+                            dashboardHref={dashboardHref}
+                            dashboardLabel={dashboardLabel}
+                            settingsLabel={settingsLabel}
+                            contactLabel={contactLabel}
+                            logoutLabel={logoutLabel}
+                            onOpenSettings={onOpenAccountSettings}
+                            onOpenContact={onOpenAccountContact}
+                            onLogout={handleLogout}
+                            className="header-mobile-login"
+                        />
                     ) : (
                         <Link href="/login" className="login-button header-mobile-login" title="Login">
                             <i className="fas fa-user" aria-hidden="true"></i>
@@ -265,21 +387,39 @@ export function Header({
                                     )}
                                     {session ? (
                                         <>
-                                            <Link
-                                                href={dashboardHref}
-                                                className="header-menu-item"
-                                                onClick={() => setShowHeaderMenu(false)}
-                                            >
-                                                <i className="fas fa-gauge" aria-hidden="true"></i>
-                                                <span>{session.name || session.email}</span>
-                                            </Link>
+                                            {onOpenAccountSettings ? (
+                                                <button
+                                                    type="button"
+                                                    className="header-menu-item"
+                                                    onClick={() => {
+                                                        onOpenAccountSettings();
+                                                        setShowHeaderMenu(false);
+                                                    }}
+                                                >
+                                                    <i className="fas fa-gear" aria-hidden="true"></i>
+                                                    <span>{settingsLabel}</span>
+                                                </button>
+                                            ) : null}
+                                            {onOpenAccountContact ? (
+                                                <button
+                                                    type="button"
+                                                    className="header-menu-item"
+                                                    onClick={() => {
+                                                        onOpenAccountContact();
+                                                        setShowHeaderMenu(false);
+                                                    }}
+                                                >
+                                                    <i className="fas fa-envelope" aria-hidden="true"></i>
+                                                    <span>{contactLabel}</span>
+                                                </button>
+                                            ) : null}
                                             <button
                                                 type="button"
                                                 className="header-menu-item"
                                                 onClick={handleLogout}
                                             >
                                                 <i className="fas fa-right-from-bracket" aria-hidden="true"></i>
-                                                <span>Sign out</span>
+                                                <span>{logoutLabel}</span>
                                             </button>
                                         </>
                                     ) : (

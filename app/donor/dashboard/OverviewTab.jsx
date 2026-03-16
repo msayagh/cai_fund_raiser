@@ -1,19 +1,25 @@
+import { useTranslation } from '@/hooks/index.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
+
 export default function OverviewTab({ profile, paymentTotal, engagementTarget, progressPct, remainingAmount, requests, latestPayments, latestRequests, setActiveTab }) {
+    const { t } = useTranslation();
+    const donorText = { ...(DEFAULT_TRANSLATION.donor ?? {}), ...(t.donor ?? {}) };
+
     return (
         <>
             <div className="dashboard-card">
-                <div className="dashboard-section-title">Giving Summary</div>
+                <div className="dashboard-section-title">{donorText.givingSummary}</div>
                 <div className="dashboard-stat-grid">
                     <div className="dashboard-stat">
-                        <div className="dashboard-stat-label">Committed</div>
+                        <div className="dashboard-stat-label">{donorText.committed}</div>
                         <div className="dashboard-stat-value">${engagementTarget.toLocaleString()}</div>
                     </div>
                     <div className="dashboard-stat">
-                        <div className="dashboard-stat-label">Received</div>
+                        <div className="dashboard-stat-label">{donorText.paid}</div>
                         <div className="dashboard-stat-value">${paymentTotal.toLocaleString()}</div>
                     </div>
                     <div className="dashboard-stat">
-                        <div className="dashboard-stat-label">Progress</div>
+                        <div className="dashboard-stat-label">{donorText.progress}</div>
                         <div className="dashboard-stat-value">{progressPct}%</div>
                     </div>
                 </div>
@@ -25,42 +31,42 @@ export default function OverviewTab({ profile, paymentTotal, engagementTarget, p
             </div>
 
             <div className="dashboard-card">
-                <div className="dashboard-section-title">Engagement Details</div>
+                <div className="dashboard-section-title">{donorText.engagementDetails}</div>
                 <div className="dashboard-stat-grid">
                     <div className="dashboard-stat">
-                        <div className="dashboard-stat-label">Remaining</div>
+                        <div className="dashboard-stat-label">{donorText.remaining}</div>
                         <div className="dashboard-stat-value">${remainingAmount.toLocaleString()}</div>
                     </div>
                     <div className="dashboard-stat">
-                        <div className="dashboard-stat-label">End date</div>
+                        <div className="dashboard-stat-label">{donorText.endDate}</div>
                         <div className="dashboard-stat-value dashboard-stat-value--sm">
-                            {profile?.engagement?.endDate ? new Date(profile.engagement.endDate).toLocaleDateString() : 'Open'}
+                            {profile?.engagement?.endDate ? new Date(profile.engagement.endDate).toLocaleDateString() : donorText.openEnded}
                         </div>
                     </div>
                     <div className="dashboard-stat">
-                        <div className="dashboard-stat-label">Requests filed</div>
+                        <div className="dashboard-stat-label">{donorText.requestsFiled}</div>
                         <div className="dashboard-stat-value">{requests.length}</div>
                     </div>
                 </div>
             </div>
 
             <div className="dashboard-card">
-                <div className="dashboard-section-title">Quick Actions</div>
+                <div className="dashboard-section-title">{donorText.quickActions}</div>
                 <div className="dashboard-list">
                     <button type="button" className="dashboard-action" onClick={() => setActiveTab('payments')}>
-                        Review your payment history and current progress
+                        {donorText.reviewPaymentHistoryAction}
                     </button>
                     <button type="button" className="dashboard-action" onClick={() => setActiveTab('profile')}>
-                        Update your profile, password, and pledge details
+                        {donorText.updateProfileAction}
                     </button>
                     <button type="button" className="dashboard-action" onClick={() => setActiveTab('requests')}>
-                        Contact the admin team or submit a help request
+                        {donorText.contactAdminAction}
                     </button>
                 </div>
             </div>
 
             <div className="dashboard-card">
-                <div className="dashboard-section-title">Recent Payments</div>
+                <div className="dashboard-section-title">{donorText.recentPayments}</div>
                 <div className="dashboard-list">
                     {latestPayments.map((payment) => (
                         <div key={payment.id} className="dashboard-list-item">
@@ -70,12 +76,12 @@ export default function OverviewTab({ profile, paymentTotal, engagementTarget, p
                             </div>
                         </div>
                     ))}
-                    {latestPayments.length === 0 ? <div className="dashboard-list-item">No payments recorded yet.</div> : null}
+                    {latestPayments.length === 0 ? <div className="dashboard-list-item">{donorText.paymentHistoryEmpty}</div> : null}
                 </div>
             </div>
 
             <div className="dashboard-card">
-                <div className="dashboard-section-title">Recent Requests</div>
+                <div className="dashboard-section-title">{donorText.recentRequests}</div>
                 <div className="dashboard-list">
                     {latestRequests.map((request) => (
                         <div key={request.id} className="dashboard-list-item">
@@ -84,7 +90,7 @@ export default function OverviewTab({ profile, paymentTotal, engagementTarget, p
                             <div className="dashboard-list-meta">{request.message}</div>
                         </div>
                     ))}
-                    {latestRequests.length === 0 ? <div className="dashboard-list-item">No requests submitted yet.</div> : null}
+                    {latestRequests.length === 0 ? <div className="dashboard-list-item">{donorText.noRequestsSubmittedYet}</div> : null}
                 </div>
             </div>
         </>

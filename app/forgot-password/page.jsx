@@ -11,45 +11,9 @@ import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
-import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import { apiFetch } from '@/lib/apiClient.js';
 import '../login/page.scss';
-
-const DEFAULT_AUTH_TEXT = {
-    roleSwitcherLabel: 'Account type',
-    donorTab: 'Donor',
-    adminTab: 'Admin',
-    resetKicker: 'Password reset',
-    resetShowcaseTitle: 'Recover access in 3 steps',
-    resetShowcaseCopy: 'Use the email connected to your donor or admin account and follow the secure OTP reset flow.',
-    resetStep1: 'Request a reset code by email',
-    resetStep2: 'Verify the code you received',
-    resetStep3: 'Choose a new password and return to login',
-    recoverAccessTitle: 'Recover your access',
-    recoverAccessDescription: 'Choose the account type, then follow the OTP reset flow.',
-    emailLabel: 'Email',
-    sendResetCode: 'Send reset code',
-    sendingResetCode: 'Sending reset code...',
-    resetCodeSent: 'A reset code has been sent to your email.',
-    unableToSendResetCode: 'Unable to send reset code right now.',
-    verificationCode: 'Verification code',
-    otpPlaceholder: '6-digit code',
-    verifyCode: 'Verify code',
-    verifying: 'Verifying...',
-    back: 'Back',
-    codeVerified: 'Code verified. Set your new password.',
-    invalidOrExpiredResetCode: 'Invalid or expired reset code.',
-    newPassword: 'New password',
-    confirmPassword: 'Confirm password',
-    resetPassword: 'Reset password',
-    resettingPassword: 'Resetting...',
-    passwordMinLength: 'Password must be at least 8 characters.',
-    passwordsDoNotMatch: 'Passwords do not match.',
-    passwordResetSuccess: 'Password reset successfully. Redirecting to login...',
-    unableToResetPassword: 'Unable to reset password right now.',
-    returnToLogin: 'Return to login',
-    resetSeoDescription: 'Recover donor or admin access with a secure OTP reset flow.',
-};
 
 function ForgotPasswordPageContent() {
     const router = useRouter();
@@ -65,11 +29,11 @@ function ForgotPasswordPageContent() {
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/forgot-password?lang=${language}`, siteUrl);
     const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
-    const auth = { ...DEFAULT_AUTH_TEXT, ...(t.auth ?? {}) };
-    const pageTitle = `${auth.resetPassword} | ${t.centerName || 'Centre Zad Al-Imane'}`;
-    const pageDescription = truncateText(t.auth?.resetSeoDescription || auth.resetSeoDescription);
+    const auth = { ...(DEFAULT_TRANSLATION.auth ?? {}), ...(t.auth ?? {}) };
+    const pageTitle = `${auth.resetPassword} | ${t.centerName || DEFAULT_TRANSLATION.centerName || 'Centre Zad Al-Imane'}`;
+    const pageDescription = truncateText(auth.resetSeoDescription || DEFAULT_TRANSLATION.auth?.resetSeoDescription);
     const locale = t.locale ?? language;
-    const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
+    const logoAlt = `${t.centerName || DEFAULT_TRANSLATION.centerName || 'Centre Zad Al-Imane'} logo`;
 
     const initialRole = searchParams.get('role') === 'admin' ? 'admin' : 'donor';
     const [activeRole, setActiveRole] = useState(initialRole);
@@ -123,7 +87,7 @@ function ForgotPasswordPageContent() {
                 data-theme="dark"
                 suppressHydrationWarning
             >
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading site" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle={DEFAULT_TRANSLATION.loadingSite} />
             </div>
         );
     }

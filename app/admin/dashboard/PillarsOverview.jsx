@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import * as settingsApi from '@/lib/settingsApi.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 
 const getTranslation = (t, key, fallback) => {
-    if (typeof t === 'function') {
-        return t(key) || fallback;
-    }
-    return fallback;
+    const value = key.split('.').reduce((acc, part) => acc?.[part], t);
+    return value ?? fallback;
 };
 
 export default function PillarsOverview({ t, pillars = {} }) {
+    const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
     const [pillarAmounts, setPillarAmounts] = useState(pillars);
     const [isEditing, setIsEditing] = useState(false);
     const [editValues, setEditValues] = useState(pillars);
@@ -73,12 +73,12 @@ export default function PillarsOverview({ t, pillars = {} }) {
             setPillarAmounts(editValues);
             localStorage.setItem('adminPillars', JSON.stringify(editValues));
             setIsEditing(false);
-            setSaveMessage('✓ Pillar amounts saved');
+            setSaveMessage(adminText.pillarAmountsSaved || 'Pillar amounts saved');
             setTimeout(() => setSaveMessage(''), 3000);
             setIsSaving(false);
         } catch (err) {
             console.error('Error saving pillars:', err);
-            setSaveMessage('✗ Error saving');
+            setSaveMessage(adminText.errorSaving || 'Error saving');
             setTimeout(() => setSaveMessage(''), 3000);
             setIsSaving(false);
         }
@@ -140,7 +140,7 @@ export default function PillarsOverview({ t, pillars = {} }) {
                         }}
                         style={{ fontSize: 12, padding: '6px 12px' }}
                     >
-                        {isEditing ? 'Cancel' : 'Edit Amounts'}
+                        {isEditing ? (adminText.cancelButton || 'Cancel') : (adminText.editAmounts || 'Edit Amounts')}
                     </button>
                     {saveMessage && (
                         <span style={{ fontSize: 12, color: saveMessage.includes('✓') ? '#4CAF50' : '#F44336', fontWeight: 600, minWidth: 150, textAlign: 'right' }}>
@@ -152,7 +152,7 @@ export default function PillarsOverview({ t, pillars = {} }) {
 
             {totalPillarAmount === 0 && !isEditing ? (
                 <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
-                    No pillar donations yet. <button onClick={() => setIsEditing(true)} style={{ background: 'none', border: 'none', color: '#2196F3', cursor: 'pointer', textDecoration: 'underline' }}>Add amounts</button>?
+                    {adminText.noPillarDonationsYet || 'No pillar donations yet.'} <button onClick={() => setIsEditing(true)} style={{ background: 'none', border: 'none', color: '#2196F3', cursor: 'pointer', textDecoration: 'underline' }}>{adminText.addAmounts || 'Add amounts'}</button>
                 </div>
             ) : (
                 <>
@@ -237,7 +237,7 @@ export default function PillarsOverview({ t, pillars = {} }) {
                                 cursor: isSaving ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            {isSaving ? 'Saving...' : 'Save Pillar Amounts'}
+                            {isSaving ? (adminText.saving || 'Saving...') : (adminText.savePillarAmounts || 'Save Pillar Amounts')}
                         </button>
                     )}
                 </>
@@ -253,7 +253,7 @@ export default function PillarsOverview({ t, pillars = {} }) {
                     justifyContent: 'space-between',
                     alignItems: 'center'
                 }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Total Pillar Donations</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{adminText.totalPillarDonations || 'Total Pillar Donations'}</span>
                     <span style={{ fontWeight: 700, fontSize: 18 }}>${totalPillarAmount}</span>
                 </div>
             )}

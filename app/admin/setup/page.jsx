@@ -4,10 +4,15 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { bootstrapAdmin, getAdminSetupStatus } from '@/lib/auth.js';
+import { useTranslation } from '@/hooks/index.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 import './page.scss';
 
 export default function AdminSetupPage() {
     const router = useRouter();
+    const { t } = useTranslation();
+    const setupText = { ...(DEFAULT_TRANSLATION.adminSetup ?? {}), ...(t.adminSetup ?? {}) };
+    const unableToReachBackend = setupText.unableToReachBackend;
     const [status, setStatus] = useState({
         loading: true,
         checked: false,
@@ -46,7 +51,7 @@ export default function AdminSetupPage() {
                     checked: false,
                     adminExists: false,
                     adminCount: 0,
-                    error: error?.message || 'Unable to reach the backend.',
+                    error: error?.message || unableToReachBackend,
                 });
             }
         }
@@ -55,7 +60,7 @@ export default function AdminSetupPage() {
         return () => {
             active = false;
         };
-    }, []);
+    }, [unableToReachBackend]);
 
     async function handleSubmit(event) {
         event.preventDefault();
@@ -63,7 +68,7 @@ export default function AdminSetupPage() {
         setSubmitSuccess('');
 
         if (form.password !== form.confirmPassword) {
-            setSubmitError('Passwords do not match.');
+            setSubmitError(setupText.passwordsDoNotMatch);
             return;
         }
 
@@ -74,10 +79,10 @@ export default function AdminSetupPage() {
                 email: form.email.trim().toLowerCase(),
                 password: form.password,
             });
-            setSubmitSuccess(`Initial admin created for ${admin.email}.`);
+            setSubmitSuccess(setupText.initialAdminCreated(admin.email));
             router.replace('/admin/dashboard');
         } catch (error) {
-            setSubmitError(error?.message || 'Failed to create the initial admin.');
+            setSubmitError(error?.message || setupText.failedCreateInitialAdmin);
         } finally {
             setSubmitting(false);
         }
@@ -87,19 +92,19 @@ export default function AdminSetupPage() {
         <main className="admin-setup-page">
             <div className="admin-setup-shell">
                 <section className="admin-setup-card">
-                <div className="admin-setup-title">Admin Setup</div>
+                <div className="admin-setup-title">{setupText.title}</div>
                 <p className="admin-setup-description">
-                    Bootstrap the first administrator from the backend API when no admin account exists yet.
+                    {setupText.description}
                 </p>
 
-                {status.loading ? <p className="admin-setup-status">Checking backend status...</p> : null}
+                {status.loading ? <p className="admin-setup-status">{setupText.checkingStatus}</p> : null}
                 {status.error ? <div className="admin-setup-alert admin-setup-alert--error">{status.error}</div> : null}
                 {submitError ? <div className="admin-setup-alert admin-setup-alert--error">{submitError}</div> : null}
                 {submitSuccess ? <div className="admin-setup-alert admin-setup-alert--success">{submitSuccess}</div> : null}
 
                 {!status.loading && !status.error && status.adminExists ? (
                     <div className="admin-setup-status">
-                        Admin setup is closed. Existing admin accounts: <strong className="admin-setup-emphasis">{status.adminCount}</strong>
+                        {setupText.setupClosed} <strong className="admin-setup-emphasis">{status.adminCount}</strong>
                     </div>
                 ) : null}
 
@@ -107,7 +112,7 @@ export default function AdminSetupPage() {
                     <form onSubmit={handleSubmit} className="admin-setup-form">
                         <input
                             className="admin-setup-input"
-                            placeholder="Full name"
+                            placeholder={setupText.fullNamePlaceholder}
                             value={form.name}
                             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                             required
@@ -115,7 +120,7 @@ export default function AdminSetupPage() {
                         <input
                             className="admin-setup-input"
                             type="email"
-                            placeholder="Email"
+                            placeholder={setupText.emailPlaceholder}
                             value={form.email}
                             onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
                             required
@@ -123,7 +128,7 @@ export default function AdminSetupPage() {
                         <input
                             className="admin-setup-input"
                             type="password"
-                            placeholder="Password"
+                            placeholder={setupText.passwordPlaceholder}
                             value={form.password}
                             onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
                             required
@@ -131,7 +136,7 @@ export default function AdminSetupPage() {
                         <input
                             className="admin-setup-input"
                             type="password"
-                            placeholder="Confirm password"
+                            placeholder={setupText.confirmPasswordPlaceholder}
                             value={form.confirmPassword}
                             onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
                             required
@@ -141,13 +146,13 @@ export default function AdminSetupPage() {
                             disabled={submitting}
                             className={`admin-setup-button${submitting ? ' is-submitting' : ''}`}
                         >
-                            {submitting ? 'Creating...' : 'Create initial admin'}
+                            {submitting ? setupText.creating : setupText.createInitialAdmin}
                         </button>
                     </form>
                 ) : null}
 
                 <div className="admin-setup-footer">
-                    <Link href="/login" className="admin-setup-link">Back to login</Link>
+                    <Link href="/login" className="admin-setup-link">{setupText.backToLogin}</Link>
                 </div>
                 </section>
             </div>

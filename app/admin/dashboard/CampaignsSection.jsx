@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import * as settingsApi from '@/lib/settingsApi.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 
 const getTranslation = (t, key, fallback) => {
-    if (typeof t === 'function') {
-        return t(key) || fallback;
-    }
-    return fallback;
+    const value = key.split('.').reduce((acc, part) => acc?.[part], t);
+    return value ?? fallback;
 };
 
 export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns = [] }) {
+    const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
     const [campaignsList, setCampaignsList] = useState(campaigns);
     const [isAdding, setIsAdding] = useState(false);
     const [newCampaign, setNewCampaign] = useState({
@@ -55,7 +55,7 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
 
     const handleAddCampaign = async () => {
         if (!newCampaign.name || !newCampaign.goal) {
-            alert('Please fill in campaign name and goal');
+            alert(adminText.campaignNameAndGoalRequired || 'Please fill in campaign name and goal');
             return;
         }
 
@@ -97,12 +97,12 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
                 status: 'active'
             });
             setIsAdding(false);
-            setSaveMessage('✓ Campaign created');
+            setSaveMessage(adminText.campaignCreated || 'Campaign created');
             setTimeout(() => setSaveMessage(''), 3000);
             setIsSaving(false);
         } catch (err) {
             console.error('Error adding campaign:', err);
-            setSaveMessage('✗ Error creating campaign');
+            setSaveMessage(adminText.campaignCreateError || 'Error creating campaign');
             setTimeout(() => setSaveMessage(''), 3000);
             setIsSaving(false);
         }
@@ -121,11 +121,11 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
             const updated = campaignsList.filter(c => c.id !== id);
             setCampaignsList(updated);
             localStorage.setItem('adminCampaigns', JSON.stringify(updated));
-            setSaveMessage('✓ Campaign deleted');
+            setSaveMessage(adminText.campaignDeleted || 'Campaign deleted');
             setTimeout(() => setSaveMessage(''), 3000);
         } catch (err) {
             console.error('Error deleting campaign:', err);
-            setSaveMessage('✗ Error deleting campaign');
+            setSaveMessage(adminText.campaignDeleteError || 'Error deleting campaign');
             setTimeout(() => setSaveMessage(''), 3000);
         }
     };
@@ -149,7 +149,7 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
                         className="admin-button"
                         onClick={() => setIsAdding(!isAdding)}
                     >
-                        {isAdding ? 'Cancel' : getTranslation(t, 'admin.newCampaign', 'Create Campaign')}
+                        {isAdding ? adminText.cancelButton || 'Cancel' : getTranslation(t, 'admin.newCampaign', 'Create Campaign')}
                     </button>
                     {saveMessage && (
                         <span style={{ fontSize: 12, color: saveMessage.includes('✓') ? '#4CAF50' : '#F44336', fontWeight: 600 }}>
@@ -178,7 +178,7 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
                                 type="text"
                                 value={newCampaign.name}
                                 onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
-                                placeholder="Campaign name"
+                                placeholder={adminText.campaignNamePlaceholder || 'Campaign name'}
                             />
                         </div>
                         <div>
@@ -189,7 +189,7 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
                                 style={{ ...inputStyle, minHeight: 60 }}
                                 value={newCampaign.description}
                                 onChange={(e) => setNewCampaign({ ...newCampaign, description: e.target.value })}
-                                placeholder="Campaign description"
+                                placeholder={adminText.campaignDescriptionPlaceholder || 'Campaign description'}
                             />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -225,7 +225,7 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
                                 type="number"
                                 value={newCampaign.goal}
                                 onChange={(e) => setNewCampaign({ ...newCampaign, goal: Number(e.target.value) })}
-                                placeholder="0"
+                                placeholder={adminText.zeroPlaceholder || '0'}
                                 min="0"
                             />
                         </div>
@@ -236,7 +236,7 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
                             disabled={isSaving}
                             style={{ opacity: isSaving ? 0.6 : 1 }}
                         >
-                            {isSaving ? 'Creating...' : 'Create Campaign'}
+                            {isSaving ? adminText.creating || 'Creating...' : (adminText.newCampaign || 'Create Campaign')}
                         </button>
                     </div>
                 </div>
@@ -246,7 +246,7 @@ export default function CampaignsSection({ t, cardStyle, inputStyle, campaigns =
             <div style={{ display: 'grid', gap: 12 }}>
                 {campaignsList.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
-                        No campaigns yet. Create your first campaign!
+                        {adminText.noCampaignsYet || 'No campaigns yet. Create your first campaign!'}
                     </div>
                 ) : (
                     campaignsList.map((campaign) => {

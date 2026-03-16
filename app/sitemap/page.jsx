@@ -11,7 +11,7 @@ import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
-import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 
 export default function SitemapPage() {
     const { language, setLanguage, t, isMounted } = useTranslation();
@@ -25,22 +25,22 @@ export default function SitemapPage() {
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/sitemap?lang=${language}`, siteUrl);
     const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
-    const pageTitle = `${t.sitemap || 'Sitemap'} | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const pageTitle = `${t.sitemap || DEFAULT_TRANSLATION.sitemap} | ${t.centerName || DEFAULT_TRANSLATION.centerName}`;
     const pageDescription = truncateText(
-        t.sitemapDescription || 'Browse the main internal pages available on this site.'
+        t.sitemapDescription || DEFAULT_TRANSLATION.sitemapDescription
     );
     const locale = t.locale ?? language;
-    const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
+    const logoAlt = `${t.centerName || DEFAULT_TRANSLATION.centerName} logo`;
     const sitemapLinks = [
         {
             href: '/',
-            label: t.sitemapHomeLabel || 'Home',
-            description: t.sitemapHomeDescription || 'Main fundraising page and campaign overview.',
+            label: t.sitemapHomeLabel || DEFAULT_TRANSLATION.sitemapHomeLabel,
+            description: t.sitemapHomeDescription || DEFAULT_TRANSLATION.sitemapHomeDescription,
         },
         {
             href: '/login',
-            label: t.loginTitle || 'Login',
-            description: t.sitemapLoginDescription || 'Upcoming secure login entry point.',
+            label: t.loginTitle || DEFAULT_TRANSLATION.loginTitle,
+            description: t.sitemapLoginDescription || DEFAULT_TRANSLATION.sitemapLoginDescription,
         },
     ];
 
@@ -83,7 +83,7 @@ export default function SitemapPage() {
                 data-theme="dark"
                 suppressHydrationWarning
             >
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading sitemap" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle={t.loadingSitemap || DEFAULT_TRANSLATION.loadingSitemap} />
             </div>
         );
     }
@@ -120,10 +120,10 @@ export default function SitemapPage() {
             <main className="sitemap-container">
                 <section className="sitemap-card">
                     <div className="sitemap-content">
-                        <p className="sitemap-eyebrow">{t.sitemap || 'Sitemap'}</p>
-                        <h1 className="sitemap-title">{t.sitemap || 'Sitemap'}</h1>
+                        <p className="sitemap-eyebrow">{t.sitemap || DEFAULT_TRANSLATION.sitemap}</p>
+                        <h1 className="sitemap-title">{t.sitemap || DEFAULT_TRANSLATION.sitemap}</h1>
                         <p className="sitemap-description">
-                            {t.sitemapDescription || 'Browse the main internal pages available on this site.'}
+                            {t.sitemapDescription || DEFAULT_TRANSLATION.sitemapDescription}
                         </p>
                     </div>
 
@@ -137,7 +137,7 @@ export default function SitemapPage() {
                     </div>
 
                     <Link href="/" className="sitemap-back-button">
-                        {t.backToHome || 'Back to Home'}
+                        {t.backToHome || DEFAULT_TRANSLATION.backToHome}
                     </Link>
                 </section>
             </main>

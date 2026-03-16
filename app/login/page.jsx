@@ -15,50 +15,11 @@ import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
-import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import { adminLogin, clearTokens, donorLogin, logout, tryAutoLogin } from '@/lib/auth.js';
 import { hasRefreshToken } from '@/lib/apiClient.js';
 import { getStoredSession } from '@/lib/session.js';
 import './page.scss';
-
-// ─────────────────────────────────────────────
-// English fallbacks — merged with t.auth at render time
-// ─────────────────────────────────────────────
-const DEFAULT_AUTH_TEXT = {
-    loginSeoDescription: 'Secure donor and admin login for the Centre Zad Al-Imane platform.',
-    donorAccessTitle: 'Donor access',
-    adminAccessTitle: 'Admin access',
-    loginHeading: 'Sign in to your portal',
-    donorLoginDescription: 'Use the same email as your donations to link your history and follow your engagement.',
-    adminLoginDescription: 'Use your administrator credentials to manage donors, requests, and campaign activity.',
-    roleSwitcherLabel: 'Account type',
-    donorTab: 'Donor',
-    adminTab: 'Admin',
-    showcaseKicker: 'How it works',
-    donorShowcaseTitle: 'A simple 3-step donor journey',
-    donorShowcaseCopy: 'Create your account with the same email used for your donations.',
-    donorStep1: 'Create your account and link it to your donations.',
-    donorStep2: 'Choose an engagement.',
-    donorStep3: 'Pay at your own pace and monitor your progress.',
-    emailLabel: 'Email',
-    passwordLabel: 'Password',
-    rememberMe: 'Remember me',
-    forgotPassword: 'Forgot password?',
-    signInDonor: 'Sign in as donor',
-    signInAdmin: 'Sign in as admin',
-    signingIn: 'Signing in\u2026',
-    createDonorAccount: 'Create a donor account',
-    alignedEmailHint: 'Use the same email address as your donations to keep your history aligned.',
-    signedInAs: 'Signed in as',
-    signOut: 'Sign out',
-    signedOut: 'You have been signed out.',
-    adminSessionRestored: 'Admin session restored.',
-    donorSessionRestored: 'Donor session restored.',
-    sessionRestored: 'Session restored.',
-    adminLoginSuccess: 'Admin login successful.',
-    donorLoginSuccess: 'Donor login successful.',
-    unableToSignIn: 'Unable to sign in right now.',
-};
 
 function LoginPageContent() {
     const router = useRouter();
@@ -77,13 +38,13 @@ function LoginPageContent() {
     const pageUrl = getAbsoluteUrl(`/login?lang=${language}`, siteUrl);
     const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
 
-    const auth = { ...DEFAULT_AUTH_TEXT, ...(t.auth ?? {}) };
-    const pageTitle = `${t.loginTitle || 'Login'} | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const auth = { ...(DEFAULT_TRANSLATION.auth ?? {}), ...(t.auth ?? {}) };
+    const pageTitle = `${t.loginTitle || DEFAULT_TRANSLATION.loginTitle || 'Login'} | ${t.centerName || DEFAULT_TRANSLATION.centerName || 'Centre Zad Al-Imane'}`;
     const pageDescription = truncateText(
-        auth.loginSeoDescription || 'Secure donor and admin login for the Centre Zad Al-Imane platform.',
+        auth.loginSeoDescription || DEFAULT_TRANSLATION.auth?.loginSeoDescription || 'Secure donor and admin login for the Centre Zad Al-Imane platform.',
     );
     const locale = t.locale ?? language;
-    const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
+    const logoAlt = `${t.centerName || DEFAULT_TRANSLATION.centerName || 'Centre Zad Al-Imane'} logo`;
 
     const initialRole = searchParams.get('role') === 'admin' ? 'admin' : 'donor';
     const [activeRole, setActiveRole] = useState(initialRole);
@@ -172,7 +133,7 @@ function LoginPageContent() {
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div className="login-page-wrapper" data-theme="dark" suppressHydrationWarning>
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle={DEFAULT_TRANSLATION.loadingSite} />
             </div>
         );
     }

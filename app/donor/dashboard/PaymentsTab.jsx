@@ -1,8 +1,14 @@
+import { useTranslation } from '@/hooks/index.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
+
 export default function PaymentsTab({ payments, setActiveTab }) {
+    const { t } = useTranslation();
+    const donorText = { ...(DEFAULT_TRANSLATION.donor ?? {}), ...(t.donor ?? {}) };
+
     return (
         <>
             <div className="dashboard-card">
-                <div className="dashboard-section-title">Payment History</div>
+                <div className="dashboard-section-title">{donorText.historyTitle}</div>
                 <div className="dashboard-list">
                     {payments.map((payment) => (
                         <div key={payment.id} className="dashboard-list-item">
@@ -16,17 +22,17 @@ export default function PaymentsTab({ payments, setActiveTab }) {
                             {payment.note ? <div className="dashboard-list-meta">{payment.note}</div> : null}
                         </div>
                     ))}
-                    {payments.length === 0 ? <div className="dashboard-list-item">No payments recorded yet.</div> : null}
+                    {payments.length === 0 ? <div className="dashboard-list-item">{donorText.paymentHistoryEmpty}</div> : null}
                 </div>
             </div>
 
             <div className="dashboard-card">
-                <div className="dashboard-section-title">Need to report an offline payment?</div>
+                <div className="dashboard-section-title">{donorText.reportOfflinePayment}</div>
                 <p className="dashboard-page-subtitle">
-                    If you donated by cash or bank transfer, send a request so the admin team can record it for you.
+                    {donorText.offlinePaymentHelp}
                 </p>
                 <button className="dashboard-button" type="button" onClick={() => setActiveTab('requests')}>
-                    Open request form
+                    {donorText.openRequestForm}
                 </button>
             </div>
         </>

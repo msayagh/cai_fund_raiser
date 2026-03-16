@@ -11,7 +11,7 @@ import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
-import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import {
     approveRequest,
     createDonor,
@@ -95,6 +95,7 @@ export default function AdminDashboardPage() {
     const [csvImportLoading, setCsvImportLoading] = useState(false);
     const [csvImportSummary, setCsvImportSummary] = useState(null);
     const [csvUploadProgress, setCsvUploadProgress] = useState(null);
+    const hasOpenModal = isAddDonorModalOpen || isProfileModalOpen || isPaymentsModalOpen || requestDecisionModal.open;
 
     const appReady = translationMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
@@ -104,6 +105,19 @@ export default function AdminDashboardPage() {
     const pageUrl = getAbsoluteUrl(`/admin/dashboard?lang=${language}`, siteUrl);
     const pageTitle = `Admin Dashboard | ${t.centerName || 'Centre Zad Al-Imane'}`;
     const pageDescription = truncateText('Manage donors, admins, requests, and activity logs.');
+    const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
+    const requestStatusLabel = (status) => ({
+        pending: adminText.pendingOption,
+        on_hold: adminText.onHoldOption,
+        approved: adminText.approvedOption,
+        declined: adminText.declinedOption,
+    }[status] || status || '');
+    const requestTypeLabel = (type) => ({
+        account_creation: adminText.accountCreationOption,
+        payment_upload: adminText.paymentUploadOption,
+        engagement_change: adminText.engagementChangeOption,
+        other: adminText.otherOption,
+    }[type] || type || '');
 
     useEffect(() => {
         if (!translationMounted) return;
@@ -142,7 +156,7 @@ export default function AdminDashboardPage() {
             if (logsResult.status === 'fulfilled') setLogs(logsResult.value.items ?? []);
 
             if (results.every(r => r.status === 'rejected')) {
-                throw new Error('Unable to load dashboard data.');
+                throw new Error(adminText.unableLoadAdminDashboard);
             }
         } catch (err) {
             console.error('Error loading dashboard data:', err);
@@ -171,7 +185,7 @@ export default function AdminDashboardPage() {
                     clearStoredSession();
                     stopTokenRefreshManager();
                     if (active) {
-                        setError('Your session has expired. Please log in again.');
+                        setError(adminText.sessionExpired);
                     }
                     router.replace('/login');
                     return;
@@ -187,7 +201,7 @@ export default function AdminDashboardPage() {
                 clearTokens();
                 clearStoredSession();
                 stopTokenRefreshManager();
-                setError(err?.message || 'Unable to load admin dashboard.');
+                setError(err?.message || adminText.unableLoadAdminDashboard);
                 router.replace('/login');
                 return;
             } finally {
@@ -343,9 +357,9 @@ export default function AdminDashboardPage() {
             } catch (err) {
                 console.error('Error reloading dashboard data:', err);
             }
-            setMessage('Admin created.');
+            setMessage(adminText.adminCreated);
         } catch (err) {
-            setError(err?.message || 'Unable to create admin.');
+            setError(err?.message || adminText.unableCreateAdmin);
         }
     }
 
@@ -367,9 +381,9 @@ export default function AdminDashboardPage() {
             } catch (err) {
                 console.error('Error reloading dashboard data:', err);
             }
-            setMessage(`Request ${status}.`);
+            setMessage(adminText.requestUpdated(status));
         } catch (err) {
-            setError(err?.message || 'Unable to update request.');
+            setError(err?.message || adminText.unableUpdateRequest);
         } finally {
             setProcessingRequestId(null);
         }
@@ -418,8 +432,8 @@ export default function AdminDashboardPage() {
         if (request?.type === 'payment_upload') {
             const amount = parsePaymentAmount(request.message);
             if (!amount) {
-                setError('Could not parse amount. Use "To Review" to approve manually.');
-                if (inModal) setModalError('Could not parse amount. Use "To Review" to approve manually.');
+                setError(adminText.parsePaymentApproveError);
+                if (inModal) setModalError(adminText.parsePaymentApproveError);
                 return null;
             }
             return { amount, method: 'cash', date: new Date().toISOString().split('T')[0] };
@@ -490,8 +504,8 @@ export default function AdminDashboardPage() {
     async function handleUpdateSelectedDonor(event) {
         event.preventDefault();
         if (!selectedDonorId) {
-            setError('Select a donor first.');
-            setModalError('Select a donor first.');
+            setError(adminText.selectDonorFirst);
+            setModalError(adminText.selectDonorFirst);
             return;
         }
 
@@ -513,13 +527,13 @@ export default function AdminDashboardPage() {
             const isActivatingAccount = selectedDonor?.accountCreated === false && updatePayload.accountCreated === true;
 
             if (hasPasswordChange && nextPassword.length < 8) {
-                throw new Error('Password must be at least 8 characters.');
+                throw new Error(adminText.passwordMinEight);
             }
                 if (hasPasswordChange && nextPassword !== selectedDonorPasswordConfirm.trim()) {
-                    throw new Error('Passwords do not match.');
+                    throw new Error(adminText.passwordsDoNotMatch);
                 }
             if (isActivatingAccount && !hasPasswordChange) {
-                throw new Error('Set a password when activating an account.');
+                throw new Error(adminText.setPasswordWhenActivating);
             }
 
             let updated = selectedDonor;
@@ -538,18 +552,18 @@ export default function AdminDashboardPage() {
             }
 
             if (hasProfileChanges && hasPasswordChange) {
-                setModalMessage('Donor profile and password updated.');
-                setMessage('Donor profile and password updated.');
+                setModalMessage(adminText.donorProfilePasswordUpdated);
+                setMessage(adminText.donorProfilePasswordUpdated);
             } else if (hasPasswordChange) {
-                setModalMessage('Donor password updated.');
-                setMessage('Donor password updated.');
+                setModalMessage(adminText.donorPasswordUpdated);
+                setMessage(adminText.donorPasswordUpdated);
             } else {
-                setModalMessage('Donor profile/account status updated.');
-                setMessage('Donor profile/account status updated.');
+                setModalMessage(adminText.donorProfileUpdated);
+                setMessage(adminText.donorProfileUpdated);
             }
         } catch (err) {
-            setModalError(err?.message || 'Unable to update donor.');
-            setError(err?.message || 'Unable to update donor.');
+            setModalError(err?.message || adminText.unableUpdateDonor);
+            setError(err?.message || adminText.unableUpdateDonor);
         } finally {
             setSelectedDonorSaving(false);
         }
@@ -601,8 +615,8 @@ export default function AdminDashboardPage() {
         } catch (err) {
             setSelectedDonor(null);
             setDonorPayments([]);
-            setModalError(err?.message || 'Unable to load donor details.');
-            setError(err?.message || 'Unable to load donor details.');
+            setModalError(err?.message || adminText.unableLoadDonorDetails);
+            setError(err?.message || adminText.unableLoadDonorDetails);
             return null;
         } finally {
             setSelectedDonorLoading(false);
@@ -641,8 +655,8 @@ export default function AdminDashboardPage() {
         const noteInput = document.getElementById('payment-note');
 
         if (!amountInput?.value || !methodSelect?.value || !dateInput?.value) {
-            setError('Amount, method, and date are required.');
-            setModalError('Amount, method, and date are required.');
+            setError(adminText.amountMethodDateRequired);
+            setModalError(adminText.amountMethodDateRequired);
             return;
         }
 
@@ -668,8 +682,8 @@ export default function AdminDashboardPage() {
             dateInput.value = '';
             noteInput.value = '';
 
-            setModalMessage('Payment recorded successfully.');
-            setMessage('Payment recorded successfully.');
+            setModalMessage(adminText.paymentRecordedSuccessfully);
+            setMessage(adminText.paymentRecordedSuccessfully);
 
             // Reload all data with error handling
             try {
@@ -679,8 +693,8 @@ export default function AdminDashboardPage() {
                 // Don't throw - allow UI to remain responsive
             }
         } catch (err) {
-            setModalError(err?.message || 'Unable to record payment.');
-            setError(err?.message || 'Unable to record payment.');
+            setModalError(err?.message || adminText.unableRecordPayment);
+            setError(err?.message || adminText.unableRecordPayment);
         } finally {
             setSelectedDonorSaving(false);
         }
@@ -698,20 +712,20 @@ export default function AdminDashboardPage() {
         try {
             await updateDonorPayment(selectedDonorId, paymentId, payload);
             await reloadSelectedDonorPayments();
-            setModalMessage('Payment updated successfully.');
-            setMessage('Payment updated successfully.');
+            setModalMessage(adminText.paymentUpdatedSuccessfully);
+            setMessage(adminText.paymentUpdatedSuccessfully);
             await loadAllData();
         } catch (err) {
             const isMissingRoute = err?.status === 404 && String(err?.message || '').toLowerCase().includes('route put');
             const modalErr =
                 isMissingRoute
-                    ? 'Payment update route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
-                    : (err?.message || 'Unable to update payment.');
+                    ? adminText.paymentUpdateRouteMissing
+                    : (err?.message || adminText.unableUpdatePayment);
             setModalError(modalErr);
             setError(
                 isMissingRoute
-                    ? 'Payment update route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
-                    : (err?.message || 'Unable to update payment.')
+                    ? adminText.paymentUpdateRouteMissing
+                    : (err?.message || adminText.unableUpdatePayment)
             );
             throw err;
         } finally {
@@ -721,7 +735,7 @@ export default function AdminDashboardPage() {
 
     async function handleDeletePayment(paymentId) {
         if (!selectedDonorId) return;
-        if (typeof window !== 'undefined' && !window.confirm('Delete this payment record?')) {
+        if (typeof window !== 'undefined' && !window.confirm(adminText.deletePaymentRecordConfirm)) {
             return;
         }
 
@@ -734,20 +748,20 @@ export default function AdminDashboardPage() {
         try {
             await deleteDonorPayment(selectedDonorId, paymentId);
             await reloadSelectedDonorPayments();
-            setModalMessage('Payment removed successfully.');
-            setMessage('Payment removed successfully.');
+            setModalMessage(adminText.paymentRemovedSuccessfully);
+            setMessage(adminText.paymentRemovedSuccessfully);
             await loadAllData();
         } catch (err) {
             const isMissingRoute = err?.status === 404 && String(err?.message || '').toLowerCase().includes('route delete');
             const modalErr =
                 isMissingRoute
-                    ? 'Payment delete route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
-                    : (err?.message || 'Unable to remove payment.');
+                    ? adminText.paymentDeleteRouteMissing
+                    : (err?.message || adminText.unableRemovePayment);
             setModalError(modalErr);
             setError(
                 isMissingRoute
-                    ? 'Payment delete route is missing on the running backend. Restart/redeploy backend so latest admin payment routes are loaded.'
-                    : (err?.message || 'Unable to remove payment.')
+                    ? adminText.paymentDeleteRouteMissing
+                    : (err?.message || adminText.unableRemovePayment)
             );
             throw err;
         } finally {
@@ -760,20 +774,20 @@ export default function AdminDashboardPage() {
         const creatingActiveAccount = Boolean(newDonorForm.accountCreated);
 
         if (creatingActiveAccount && !newDonorForm.password.trim()) {
-            setError('Password is required for an active donor account.');
-            setModalError('Password is required for an active donor account.');
+            setError(adminText.activeDonorPasswordRequired);
+            setModalError(adminText.activeDonorPasswordRequired);
             return;
         }
 
         if (creatingActiveAccount && newDonorForm.password.length < 8) {
-            setError('Password must be at least 8 characters.');
-            setModalError('Password must be at least 8 characters.');
+            setError(adminText.passwordMinEight);
+            setModalError(adminText.passwordMinEight);
             return;
         }
 
         if (creatingActiveAccount && newDonorForm.password !== newDonorForm.passwordConfirm) {
-            setError('Passwords do not match.');
-            setModalError('Passwords do not match.');
+            setError(adminText.passwordsDoNotMatch);
+            setModalError(adminText.passwordsDoNotMatch);
             return;
         }
 
@@ -796,12 +810,12 @@ export default function AdminDashboardPage() {
             await loadAllData();
             setMessage(
                 creatingActiveAccount
-                    ? '✅ Donor account created. A welcome email has been sent.'
-                    : '✅ Placeholder donor created. The donor can activate their account later.'
+                    ? adminText.donorAccountCreatedWelcome
+                    : adminText.placeholderDonorCreated
             );
         } catch (err) {
-            setModalError(err?.message || 'Unable to create donor.');
-            setError(err?.message || 'Unable to create donor.');
+            setModalError(err?.message || adminText.unableCreateDonor);
+            setError(err?.message || adminText.unableCreateDonor);
         } finally {
             setNewDonorSaving(false);
         }
@@ -811,8 +825,8 @@ export default function AdminDashboardPage() {
         if (!selectedDonorId) return;
         const pledge = Number(selectedDonorEngagementForm.totalPledge);
         if (!pledge || pledge <= 0) {
-            setError('Enter a valid pledge amount greater than 0.');
-            setModalError('Enter a valid pledge amount greater than 0.');
+            setError(adminText.validPledgeGreaterThanZero);
+            setModalError(adminText.validPledgeGreaterThanZero);
             return;
         }
 
@@ -826,11 +840,11 @@ export default function AdminDashboardPage() {
             await setDonorEngagement(selectedDonorId, { totalPledge: pledge });
             await reloadSelectedDonorPayments();
             setSelectedDonorEngagementForm({ totalPledge: String(pledge) });
-            setModalMessage('Engagement updated successfully.');
-            setMessage('Engagement updated successfully.');
+            setModalMessage(adminText.engagementUpdatedSuccessfully);
+            setMessage(adminText.engagementUpdatedSuccessfully);
         } catch (err) {
-            setModalError(err?.message || 'Unable to update engagement.');
-            setError(err?.message || 'Unable to update engagement.');
+            setModalError(err?.message || adminText.unableUpdateEngagement);
+            setError(err?.message || adminText.unableUpdateEngagement);
         } finally {
             setSelectedDonorSaving(false);
         }
@@ -842,7 +856,7 @@ export default function AdminDashboardPage() {
         setMessage('');
 
         if (!csvFile) {
-            setError('Please choose a CSV file first.');
+            setError(adminText.chooseCsvFirst);
             return;
         }
 
@@ -853,12 +867,10 @@ export default function AdminDashboardPage() {
                 onProgress: (pct) => setCsvUploadProgress(pct),
             });
             setCsvImportSummary(summary);
-            setMessage(
-                `CSV import completed: ${summary.importedPayments} payment(s) imported, ${summary.createdDonors} donor(s) created, ${summary.failedRows} failed row(s).`
-            );
+            setMessage(adminText.csvImportCompleted(summary.importedPayments, summary.createdDonors, summary.failedRows));
             await loadAllData();
         } catch (err) {
-            setError(err?.message || 'CSV import failed.');
+            setError(err?.message || adminText.csvImportFailed);
         } finally {
             setCsvImportLoading(false);
             setCsvUploadProgress(null);
@@ -868,7 +880,7 @@ export default function AdminDashboardPage() {
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div className="mosque-donation admin-preloader-shell" data-theme="dark">
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading admin dashboard" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle={adminText.loadingAdminDashboard} />
             </div>
         );
     }
@@ -893,23 +905,21 @@ export default function AdminDashboardPage() {
                     <div className="admin-loading-overlay">
                         <div className="admin-loading-content">
                             <div className="admin-spinner"></div>
-                            <div className="admin-loading-title">
-                                Loading dashboard...
-                            </div>
+                            <div className="admin-loading-title">{adminText.loadingDashboard}</div>
                         </div>
                     </div>
                 ) : null}
                 <>
-                    {error ? <div className="admin-alert error">{error}</div> : null}
-                    {message ? <div className="admin-alert success">{message}</div> : null}
+                    {!hasOpenModal && error ? <div className="admin-alert error">{error}</div> : null}
+                    {!hasOpenModal && message ? <div className="admin-alert success">{message}</div> : null}
                     {isAddDonorModalOpen ? (
-                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Add new donor">
+                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label={adminText.addNewDonorTitle}>
                             <div className="admin-modal admin-modal--sm">
                                 <div className="admin-modal-header">
                                     <div>
-                                        <div className="admin-section-title admin-section-title--lg">➕ Add New Donor</div>
+                                        <div className="admin-section-title admin-section-title--lg">➕ {adminText.addNewDonorTitle}</div>
                                         <div className="admin-muted">
-                                            Choose whether to create an active donor account or a placeholder donor record.
+                                            {adminText.addNewDonorDescription}
                                         </div>
                                     </div>
                                     <button
@@ -920,17 +930,17 @@ export default function AdminDashboardPage() {
                                             setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
                                         }}
                                     >
-                                        ✕ Close
+                                        ✕ {adminText.close}
                                     </button>
                                 </div>
                                 {modalError ? <div className="admin-alert error">{modalError}</div> : null}
                                 {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 <form className="admin-form" onSubmit={handleAddNewDonor}>
                                     <div>
-                                        <label className="admin-label">👤 Full Name *</label>
+                                        <label className="admin-label">👤 {adminText.fullNameLabel} *</label>
                                         <input
                                             className="admin-input"
-                                            placeholder="Full name"
+                                            placeholder={adminText.donorFullNamePlaceholder}
                                             value={newDonorForm.name}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, name: e.target.value }))}
                                             required
@@ -939,11 +949,11 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="admin-label">📧 Email Address *</label>
+                                        <label className="admin-label">📧 {adminText.emailAddressLabel} *</label>
                                         <input
                                             className="admin-input"
                                             type="email"
-                                            placeholder="donor@example.com"
+                                            placeholder={adminText.donorEmailPlaceholder}
                                             value={newDonorForm.email}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, email: e.target.value }))}
                                             required
@@ -958,15 +968,15 @@ export default function AdminDashboardPage() {
                                                 onChange={(e) => setNewDonorForm((p) => ({ ...p, accountCreated: e.target.checked }))}
                                                 disabled={newDonorSaving}
                                             />
-                                            Create active account (donor can log in immediately)
+                                            {adminText.createActiveAccount}
                                         </label>
                                     </div>
                                     <div>
-                                        <label className="admin-label">🔒 Password * (min 8 characters)</label>
+                                        <label className="admin-label">🔒 {adminText.passwordMinChars} *</label>
                                         <input
                                             className="admin-input"
                                             type="password"
-                                            placeholder={newDonorForm.accountCreated ? 'Password' : 'Not required for placeholder donor'}
+                                            placeholder={newDonorForm.accountCreated ? adminText.donorPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
                                             value={newDonorForm.password}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, password: e.target.value }))}
                                             required={Boolean(newDonorForm.accountCreated)}
@@ -975,11 +985,11 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="admin-label">🔒 Confirm Password *</label>
+                                        <label className="admin-label">🔒 {adminText.confirmPasswordLabel} *</label>
                                         <input
                                             className="admin-input"
                                             type="password"
-                                            placeholder={newDonorForm.accountCreated ? 'Confirm password' : 'Not required for placeholder donor'}
+                                            placeholder={newDonorForm.accountCreated ? adminText.donorConfirmPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
                                             value={newDonorForm.passwordConfirm}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, passwordConfirm: e.target.value }))}
                                             required={Boolean(newDonorForm.accountCreated)}
@@ -988,13 +998,13 @@ export default function AdminDashboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="admin-label">🤝 Pledge Amount (optional)</label>
+                                        <label className="admin-label">🤝 {adminText.pledgeAmountOptional}</label>
                                         <input
                                             className="admin-input"
                                             type="number"
                                             min="1"
                                             step="0.01"
-                                            placeholder="e.g. 1000"
+                                            placeholder={adminText.donorPledgePlaceholder}
                                             value={newDonorForm.pledgeAmount}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, pledgeAmount: e.target.value }))}
                                             disabled={newDonorSaving}
@@ -1002,45 +1012,45 @@ export default function AdminDashboardPage() {
                                     </div>
                                     <button type="submit" className="admin-button" disabled={newDonorSaving}>
                                         {newDonorSaving
-                                            ? 'Creating donor...'
-                                            : (newDonorForm.accountCreated ? '➕ Create Donor & Send Welcome Email' : '➕ Create Placeholder Donor')}
+                                            ? adminText.creatingDonor
+                                            : (newDonorForm.accountCreated ? `➕ ${adminText.createDonorWelcome}` : `➕ ${adminText.createPlaceholderDonor}`)}
                                     </button>
                                 </form>
                             </div>
                         </div>
                     ) : null}
                     {isProfileModalOpen ? (
-                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Edit donor profile">
+                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label={adminText.editDonorProfileLabel}>
                             <div className="admin-modal admin-modal--profile">
                                 <div className="admin-modal-header">
                                     <div>
                                         <div className="admin-section-title admin-section-title--lg">
-                                            ✏️ {selectedDonor ? selectedDonor.name : 'Edit profile'}
+                                            ✏️ {selectedDonor ? selectedDonor.name : adminText.editProfileTitle}
                                         </div>
                                         <div className="admin-muted">
-                                            Update donor profile, engagement and password.
+                                            {adminText.updateDonorProfileDescription}
                                         </div>
                                     </div>
                                     <button type="button" className="admin-button secondary" onClick={closeProfileModal}>
-                                        ✕ Close
+                                        ✕ {adminText.close}
                                     </button>
                                 </div>
                                 {modalError ? <div className="admin-alert error">{modalError}</div> : null}
                                 {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
                                 <div>
-                                    {selectedDonorLoading ? <div>Loading donor details...</div> : null}
+                                    {selectedDonorLoading ? <div>{adminText.loadingDonorDetails}</div> : null}
                                     {!selectedDonorLoading && !selectedDonor ? (
-                                        <div className="admin-muted">We could not load this donor. Please try again.</div>
+                                        <div className="admin-muted">{adminText.unableLoadThisDonor}</div>
                                     ) : null}
                                     {!selectedDonorLoading && selectedDonor ? (
                                         <div className="admin-stack admin-stack--lg">
                                             <form className="admin-form" onSubmit={handleUpdateSelectedDonor}>
-                                                <div className="admin-section-title admin-section-title--sm">👤 Profile</div>
+                                                <div className="admin-section-title admin-section-title--sm">👤 {adminText.profileTitle}</div>
                                                 <div>
-                                                    <label className="admin-label">Full Name</label>
+                                                    <label className="admin-label">{adminText.fullNameLabel}</label>
                                                     <input
                                                         className="admin-input"
-                                                        placeholder="Full name"
+                                                        placeholder={adminText.donorFullNamePlaceholder}
                                                         value={selectedDonorForm.name}
                                                         onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, name: e.target.value }))}
                                                         disabled={selectedDonorSaving}
@@ -1048,11 +1058,11 @@ export default function AdminDashboardPage() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="admin-label">📧 Email</label>
+                                                    <label className="admin-label">📧 {adminText.emailLabel}</label>
                                                     <input
                                                         className="admin-input"
                                                         type="email"
-                                                        placeholder="Email address"
+                                                        placeholder={adminText.emailAddressLabel}
                                                         value={selectedDonorForm.email}
                                                         onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, email: e.target.value }))}
                                                         disabled={selectedDonorSaving}
@@ -1067,19 +1077,19 @@ export default function AdminDashboardPage() {
                                                             onChange={(e) => setSelectedDonorForm((prev) => ({ ...prev, accountCreated: e.target.checked }))}
                                                             disabled={selectedDonorSaving}
                                                         />
-                                                        Active donor account (login enabled)
+                                                        {adminText.activeDonorAccount}
                                                     </label>
                                                     <div className="admin-field-help">
-                                                        If enabling this for a placeholder donor, set a password below.
+                                                        {adminText.enablingPlaceholderHelp}
                                                     </div>
                                                 </div>
                                                 <div className="admin-divider-top">
-                                                    <div className="admin-section-title admin-section-title--sm">🔒 Change Password (optional)</div>
+                                                    <div className="admin-section-title admin-section-title--sm">🔒 {adminText.changePasswordOptional}</div>
                                                     <div className="admin-stack">
                                                         <input
                                                             className="admin-input"
                                                             type="password"
-                                                            placeholder="New password (min 8 chars)"
+                                                            placeholder={`${adminText.newPassword} (min 8 chars)`}
                                                             value={selectedDonorPassword}
                                                             onChange={(e) => setSelectedDonorPassword(e.target.value)}
                                                             disabled={selectedDonorSaving}
@@ -1088,7 +1098,7 @@ export default function AdminDashboardPage() {
                                                         <input
                                                             className="admin-input"
                                                             type="password"
-                                                            placeholder="Confirm new password"
+                                                            placeholder={adminText.confirmNewPassword}
                                                             value={selectedDonorPasswordConfirm}
                                                             onChange={(e) => setSelectedDonorPasswordConfirm(e.target.value)}
                                                             disabled={selectedDonorSaving}
@@ -1096,22 +1106,22 @@ export default function AdminDashboardPage() {
                                                     </div>
                                                 </div>
                                                 <button type="submit" className="admin-button" disabled={selectedDonorSaving}>
-                                                    {selectedDonorSaving ? 'Saving...' : '✅ Save Profile Changes'}
+                                                    {selectedDonorSaving ? `${adminText.saveChanges}...` : `✅ ${adminText.saveProfileChanges}`}
                                                 </button>
                                             </form>
                                             <div className="admin-divider-top">
-                                                <div className="admin-section-title admin-section-title--sm">🤝 Engagement (Pledge Amount)</div>
+                                                <div className="admin-section-title admin-section-title--sm">🤝 {adminText.engagementPledgeAmount}</div>
                                                 <div className="admin-stack">
                                                     <div>
                                                         <label className="admin-label">
-                                                            Current pledge: ${Number(selectedDonor.engagement?.totalPledge || 0).toLocaleString()}
+                                                            {adminText.currentPledge}: ${Number(selectedDonor.engagement?.totalPledge || 0).toLocaleString()}
                                                         </label>
                                                         <input
                                                             className="admin-input"
                                                             type="number"
                                                             min="1"
                                                             step="0.01"
-                                                            placeholder="New pledge amount"
+                                                            placeholder={adminText.newPledgeAmount}
                                                             value={selectedDonorEngagementForm.totalPledge}
                                                             onChange={(e) => setSelectedDonorEngagementForm({ totalPledge: e.target.value })}
                                                             disabled={selectedDonorSaving}
@@ -1123,7 +1133,7 @@ export default function AdminDashboardPage() {
                                                         disabled={selectedDonorSaving || !selectedDonorEngagementForm.totalPledge}
                                                         onClick={handleUpdateEngagement}
                                                     >
-                                                        {selectedDonorSaving ? 'Saving...' : '🤝 Update Engagement'}
+                                                        {selectedDonorSaving ? `${adminText.saveChanges}...` : `🤝 ${adminText.updateEngagement}`}
                                                     </button>
                                                 </div>
                                             </div>
@@ -1134,27 +1144,27 @@ export default function AdminDashboardPage() {
                         </div>
                     ) : null}
                     {isPaymentsModalOpen ? (
-                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Payment history">
+                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label={adminText.paymentHistoryTitle}>
                             <div className="admin-modal admin-modal--lg">
                                 <div className="admin-modal-header">
                                     <div>
                                         <div className="admin-section-title admin-section-title--lg">
-                                            {selectedDonor ? `${selectedDonor.name} payment history` : 'Payment history'}
+                                            {selectedDonor ? `${selectedDonor.name} ${adminText.paymentHistoryTitle.toLowerCase()}` : adminText.paymentHistoryTitle}
                                         </div>
                                         <div className="admin-muted mt-sm">
-                                            Add, edit, and remove donor payments.
+                                            {adminText.paymentHistoryDescription}
                                         </div>
                                     </div>
                                     <button type="button" className="admin-button secondary" onClick={closePaymentsModal}>
-                                        Close
+                                        {adminText.close}
                                     </button>
                                 </div>
                                 {modalError ? <div className="admin-alert error">{modalError}</div> : null}
                                 {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
-                                {selectedDonorLoading ? <div>Loading donor payments...</div> : null}
+                                {selectedDonorLoading ? <div>{adminText.loadingDonorPayments}</div> : null}
                                 {!selectedDonorLoading && !selectedDonor ? (
                                     <div className="admin-muted">
-                                        We could not load this donor yet. Please try again.
+                                        {adminText.unableLoadDonor}
                                     </div>
                                 ) : null}
                                 {!selectedDonorLoading && selectedDonor ? (
@@ -1172,19 +1182,19 @@ export default function AdminDashboardPage() {
                         </div>
                     ) : null}
                     {requestDecisionModal.open ? (
-                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Review request">
+                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label={adminText.reviewRequest}>
                             <div className="admin-modal admin-modal--md">
                                 <div className="admin-modal-header">
                                     <div>
                                         <div className="admin-section-title">
-                                            👁️ Review Request
+                                            👁️ {adminText.reviewRequest}
                                         </div>
                                         <div className="admin-muted mt-sm admin-text-capitalize">
                                             {requestDecisionModal.request?.type?.replace(/_/g, ' ') || ''}
                                         </div>
                                     </div>
                                     <button type="button" className="admin-button secondary" onClick={closeRequestDecision}>
-                                        ✕ Close
+                                        ✕ {adminText.close}
                                     </button>
                                 </div>
                                 {modalError ? <div className="admin-alert error">{modalError}</div> : null}
@@ -1196,7 +1206,7 @@ export default function AdminDashboardPage() {
                                     }
                                 </div>
                                 <div className="admin-muted admin-muted--md">
-                                    Status: <span className="admin-text-capitalize">{requestDecisionModal.request?.status?.replace(/_/g, ' ')}</span>
+                                    {adminText.statusLabel}: <span className="admin-text-capitalize">{requestDecisionModal.request?.status?.replace(/_/g, ' ')}</span>
                                 </div>
                                 {requestDecisionModal.request?.message ? (
                                     <div className="admin-surface admin-surface--message">
@@ -1207,25 +1217,25 @@ export default function AdminDashboardPage() {
                                 {/* Type-specific info panels */}
                                 {requestDecisionModal.request?.type === 'payment_upload' && (
                                     <div className="admin-surface admin-surface--warn">
-                                        <div className="admin-field-help admin-field-help--spaced admin-field-help--strong">💵 Payment that will be recorded on approval:</div>
+                                        <div className="admin-field-help admin-field-help--spaced admin-field-help--strong">💵 {adminText.paymentRecordedOnApproval}</div>
                                         <div>
-                                            <strong>Amount:</strong>{' '}
+                                            <strong>{adminText.amount}:</strong>{' '}
                                             {parsePaymentAmount(requestDecisionModal.request?.message)
                                                 ? `$${parsePaymentAmount(requestDecisionModal.request?.message).toLocaleString()}`
-                                                : <span className="admin-error-text">⚠️ Could not parse — please check the message</span>}
+                                                : <span className="admin-error-text">⚠️ {adminText.parsePaymentWarning}</span>}
                                         </div>
-                                        <div><strong>Method:</strong> Cash</div>
-                                        <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
+                                        <div><strong>{adminText.method}:</strong> {adminText.methodCashStatic}</div>
+                                        <div><strong>{adminText.date}:</strong> {new Date().toLocaleDateString()}</div>
                                     </div>
                                 )}
                                 {requestDecisionModal.request?.type === 'account_creation' && (
                                     <div className="admin-surface admin-surface--success admin-muted admin-muted--md">
-                                        <strong>👤 Approval will:</strong> create a donor account, generate a temporary password, and email it to the donor with instructions to change it on first login.
+                                        <strong>👤 {adminText.approve}:</strong> {adminText.accountApprovalHelp}
                                     </div>
                                 )}
                                 {requestDecisionModal.request?.type === 'engagement_change' && (
                                     <div className="admin-surface admin-surface--info admin-muted admin-muted--md">
-                                        <strong>🔔 This is a notification of an engagement/pledge change.</strong> Clicking "Received" logs the acknowledgement. Update the pledge amount from the donor's profile if needed.
+                                        <strong>🔔 {adminText.engagementChangeHelp}</strong>
                                     </div>
                                 )}
 
@@ -1242,7 +1252,7 @@ export default function AdminDashboardPage() {
                                             disabled={requestDecisionModal.approving || requestDecisionModal.declining || requestDecisionModal.holding}
                                             onClick={handleApproveFromModal}
                                         >
-                                            {requestDecisionModal.approving ? 'Processing…' : '✓ Received notification'}
+                                            {requestDecisionModal.approving ? 'Processing…' : `✓ ${adminText.receivedNotification}`}
                                         </button>
                                             ) : null}
                                             {request?.type !== 'engagement_change' && canApprove ? (
@@ -1252,7 +1262,7 @@ export default function AdminDashboardPage() {
                                                     disabled={requestDecisionModal.approving || requestDecisionModal.declining || requestDecisionModal.holding}
                                                     onClick={handleApproveFromModal}
                                                 >
-                                                    {requestDecisionModal.approving ? 'Approving…' : (request?.type === 'account_creation' ? '✅ Approve & Create Account' : '✅ Approve')}
+                                                    {requestDecisionModal.approving ? 'Approving…' : (request?.type === 'account_creation' ? `✅ ${adminText.approveCreateAccount}` : `✅ ${adminText.approve}`)}
                                                 </button>
                                             ) : null}
                                             {canHold ? (
@@ -1262,7 +1272,7 @@ export default function AdminDashboardPage() {
                                                     disabled={requestDecisionModal.approving || requestDecisionModal.declining || requestDecisionModal.holding}
                                                     onClick={handleHoldFromModal}
                                                 >
-                                                    {requestDecisionModal.holding ? 'Holding…' : '⏸️ On Hold'}
+                                                    {requestDecisionModal.holding ? 'Holding…' : `⏸️ ${adminText.onHold}`}
                                                 </button>
                                             ) : null}
                                             {canDecline ? (
@@ -1272,12 +1282,12 @@ export default function AdminDashboardPage() {
                                                     disabled={requestDecisionModal.approving || requestDecisionModal.declining || requestDecisionModal.holding}
                                                     onClick={handleDeclineFromModal}
                                                 >
-                                                    {requestDecisionModal.declining ? 'Declining…' : '❌ Decline'}
+                                                    {requestDecisionModal.declining ? 'Declining…' : `❌ ${adminText.decline}`}
                                                 </button>
                                             ) : null}
                                             {!canApprove && !canHold && !canDecline ? (
                                                 <div className="admin-muted admin-muted--md">
-                                                    This request has no further available actions.
+                                                    {adminText.noFurtherActions}
                                                 </div>
                                             ) : null}
                                         </div>
@@ -1298,40 +1308,40 @@ export default function AdminDashboardPage() {
                             {activeTab === 'overview' ? (
                                 <>
                                     <div className="admin-card">
-                                        <div className="admin-section-title">📊 Overview</div>
+                                        <div className="admin-section-title">📊 {adminText.overviewTitle}</div>
                                         <div className="admin-grid admin-grid--4cols">
-                                            <div className="admin-stat"><div className="admin-muted">Total Donors</div><div className="admin-value-lg">{stats.totalDonors}</div></div>
-                                            <div className="admin-stat"><div className="admin-muted">Total Raised</div><div className="admin-value-lg">${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
-                                            <div className="admin-stat"><div className="admin-muted">Active Engagements</div><div className="admin-value-lg">{stats.activeEngagements}</div></div>
-                                            <div className="admin-stat"><div className="admin-muted">Pending Requests</div><div className="admin-value-lg">{stats.pendingRequests}</div></div>
+                                            <div className="admin-stat"><div className="admin-muted">{adminText.totalDonors}</div><div className="admin-value-lg">{stats.totalDonors}</div></div>
+                                            <div className="admin-stat"><div className="admin-muted">{adminText.totalRaised}</div><div className="admin-value-lg">${Number(stats.totalRaised || 0).toLocaleString()}</div></div>
+                                            <div className="admin-stat"><div className="admin-muted">{adminText.activeEngagements}</div><div className="admin-value-lg">{stats.activeEngagements}</div></div>
+                                            <div className="admin-stat"><div className="admin-muted">{adminText.pendingRequests}</div><div className="admin-value-lg">{stats.pendingRequests}</div></div>
                                         </div>
                                     </div>
 
                                     <div className="admin-card">
-                                        <div className="admin-section-title">👥 Donors Progress</div>
+                                        <div className="admin-section-title">👥 {adminText.donorsProgressTitle}</div>
                                         <div className="admin-search-row">
                                             <button
                                                 type="button"
                                                 className="admin-button"
                                                 onClick={() => setIsAddDonorModalOpen(true)}
                                             >
-                                                ➕ Add New Donor
+                                                ➕ {adminText.addNewDonor}
                                             </button>
                                             <input
                                                 className="admin-input admin-input--max-280"
-                                                placeholder="🔎 Search by name"
+                                                placeholder={`🔎 ${adminText.searchByName}`}
                                                 value={donorFilter.nameQuery}
                                                 onChange={(e) => setDonorFilter((prev) => ({ ...prev, nameQuery: e.target.value }))}
                                             />
                                             <input
                                                 className="admin-input admin-input--max-280"
-                                                placeholder="📧 Search by email"
+                                                placeholder={`📧 ${adminText.searchByEmail}`}
                                                 value={donorFilter.emailQuery}
                                                 onChange={(e) => setDonorFilter((prev) => ({ ...prev, emailQuery: e.target.value }))}
                                             />
                                             <input
                                                 className="admin-input admin-input--max-220"
-                                                placeholder="🤝 Search by pledge"
+                                                placeholder={`🤝 ${adminText.searchByPledge}`}
                                                 value={donorFilter.engagementQuery}
                                                 onChange={(e) => setDonorFilter((prev) => ({ ...prev, engagementQuery: e.target.value }))}
                                             />
@@ -1340,13 +1350,13 @@ export default function AdminDashboardPage() {
                                             <table className="admin-table">
                                                 <thead>
                                                     <tr>
-                                                        <th>Full Name</th>
-                                                        <th>Email</th>
-                                                        <th>Engagement</th>
-                                                        <th>Paid</th>
-                                                        <th>Progress</th>
-                                                        <th>Edit Profile</th>
-                                                        <th>Payment History</th>
+                                                        <th>{adminText.fullNameColumn}</th>
+                                                        <th>{adminText.emailColumn}</th>
+                                                        <th>{adminText.engagementColumn}</th>
+                                                        <th>{adminText.paidColumn}</th>
+                                                        <th>{adminText.progressColumn}</th>
+                                                        <th>{adminText.editProfileColumn}</th>
+                                                        <th>{adminText.paymentHistoryColumn}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -1356,7 +1366,7 @@ export default function AdminDashboardPage() {
                                                         const progress = pledge > 0 ? Math.min(100, Math.round((paid / pledge) * 100)) : 0;
                                                         return (
                                                             <tr key={donor.id}>
-                                                                <td className="admin-item-title">👤 {donor.name || 'Unknown donor'}</td>
+                                                                <td className="admin-item-title">👤 {donor.name || adminText.unknownDonor}</td>
                                                                 <td className="admin-table-cell-muted">📧 {donor.email || '-'}</td>
                                                                 <td>${pledge.toLocaleString()}</td>
                                                                 <td>${paid.toLocaleString()}</td>
@@ -1375,7 +1385,7 @@ export default function AdminDashboardPage() {
                                                                             className="admin-button"
                                                                             onClick={() => openProfileModal(donor.id)}
                                                                         >
-                                                                            ✏️ Edit
+                                                                            ✏️ {adminText.editShort}
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -1386,7 +1396,7 @@ export default function AdminDashboardPage() {
                                                                             className="admin-button secondary"
                                                                             onClick={() => openPaymentsModal(donor.id)}
                                                                         >
-                                                                            🧾 Payment history
+                                                                            🧾 {adminText.paymentHistoryLabel}
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -1396,7 +1406,7 @@ export default function AdminDashboardPage() {
                                                     {paginatedTopDonors.length === 0 ? (
                                                         <tr>
                                                             <td colSpan={7} className="admin-table-cell-muted">
-                                                                No donors found.
+                                                                {adminText.noDonorsFound}
                                                             </td>
                                                         </tr>
                                                     ) : null}
@@ -1405,7 +1415,7 @@ export default function AdminDashboardPage() {
                                         </div>
                                         <div className="admin-pagination">
                                             <div className="admin-per-page">
-                                                <span>Rows per page:</span>
+                                                <span>{adminText.rowsPerPage}</span>
                                                 <select
                                                     className="admin-input admin-input--width-90"
                                                     value={topDonorsPerPage}
@@ -1418,9 +1428,9 @@ export default function AdminDashboardPage() {
                                                 </select>
                                             </div>
                                             <div className="admin-pagination-buttons">
-                                                <button type="button" className="admin-button secondary" disabled={topDonorsPage <= 1} onClick={() => setTopDonorsPage((page) => Math.max(1, page - 1))}>⬅️ Previous</button>
-                                                <span>Page {topDonorsPage} of {topDonorsTotalPages}</span>
-                                                <button type="button" className="admin-button secondary" disabled={topDonorsPage >= topDonorsTotalPages} onClick={() => setTopDonorsPage((page) => Math.min(topDonorsTotalPages, page + 1))}>Next ➡️</button>
+                                                <button type="button" className="admin-button secondary" disabled={topDonorsPage <= 1} onClick={() => setTopDonorsPage((page) => Math.max(1, page - 1))}>⬅️ {adminText.previous}</button>
+                                                <span>{adminText.pageLabel(topDonorsPage, topDonorsTotalPages)}</span>
+                                                <button type="button" className="admin-button secondary" disabled={topDonorsPage >= topDonorsTotalPages} onClick={() => setTopDonorsPage((page) => Math.min(topDonorsTotalPages, page + 1))}>{adminText.next} ➡️</button>
                                             </div>
                                         </div>
                                     </div>
@@ -1429,29 +1439,29 @@ export default function AdminDashboardPage() {
 
                             {activeTab === 'requests' ? (
                                 <div className="admin-card">
-                                    <div className="admin-section-title">📨 Requests</div>
+                                    <div className="admin-section-title">📨 {adminText.requestsTitle}</div>
                                     <div className="admin-grid admin-grid--4cols mb-md">
                                         <div className="admin-stat">
-                                            <div className="admin-muted">Open Requests</div>
+                                            <div className="admin-muted">{adminText.openRequests}</div>
                                             <div className="admin-value-lg">{requestStats.open}</div>
                                         </div>
                                         <div className="admin-stat">
-                                            <div className="admin-muted">Payment Requests</div>
+                                            <div className="admin-muted">{adminText.paymentRequests}</div>
                                             <div className="admin-value-lg">{requestStats.paymentRequests}</div>
                                         </div>
                                         <div className="admin-stat">
-                                            <div className="admin-muted">Account Requests</div>
+                                            <div className="admin-muted">{adminText.accountRequests}</div>
                                             <div className="admin-value-lg">{requestStats.accountRequests}</div>
                                         </div>
                                         <div className="admin-stat">
-                                            <div className="admin-muted">Reviewed</div>
+                                            <div className="admin-muted">{adminText.reviewed}</div>
                                             <div className="admin-value-lg">{requestStats.reviewed}</div>
                                         </div>
                                     </div>
                                     <div className="admin-search-row">
                                         <input
                                             className="admin-input admin-input--max-220"
-                                            placeholder="🔎 Search requests"
+                                            placeholder={`🔎 ${adminText.searchRequests}`}
                                             value={requestFilter.query}
                                             onChange={(e) => setRequestFilter((prev) => ({ ...prev, query: e.target.value }))}
                                         />
@@ -1460,35 +1470,35 @@ export default function AdminDashboardPage() {
                                             value={requestFilter.status}
                                             onChange={(e) => setRequestFilter((prev) => ({ ...prev, status: e.target.value }))}
                                         >
-                                            <option value="">All statuses</option>
-                                            <option value="pending">pending</option>
-                                            <option value="on_hold">on_hold</option>
-                                            <option value="approved">approved</option>
-                                            <option value="declined">declined</option>
+                                            <option value="">{adminText.allStatuses}</option>
+                                            <option value="pending">{adminText.pendingOption}</option>
+                                            <option value="on_hold">{adminText.onHoldOption}</option>
+                                            <option value="approved">{adminText.approvedOption}</option>
+                                            <option value="declined">{adminText.declinedOption}</option>
                                         </select>
                                         <select
                                             className="admin-input admin-input--max-180"
                                             value={requestFilter.type}
                                             onChange={(e) => setRequestFilter((prev) => ({ ...prev, type: e.target.value }))}
                                         >
-                                            <option value="">All types</option>
-                                            <option value="account_creation">account_creation</option>
-                                            <option value="payment_upload">payment_upload</option>
-                                            <option value="engagement_change">engagement_change</option>
-                                            <option value="other">other</option>
+                                            <option value="">{adminText.allTypes}</option>
+                                            <option value="account_creation">{adminText.accountCreationOption}</option>
+                                            <option value="payment_upload">{adminText.paymentUploadOption}</option>
+                                            <option value="engagement_change">{adminText.engagementChangeOption}</option>
+                                            <option value="other">{adminText.otherOption}</option>
                                         </select>
                                     </div>
                                     <div className="admin-table-wrap">
                                         <table className="admin-table">
                                             <thead>
                                                 <tr>
-                                                    <th>Requester</th>
-                                                    <th>Type</th>
-                                                    <th>Status</th>
-                                                    <th>Message</th>
-                                                    <th>Attachment</th>
-                                                    <th>Date</th>
-                                                    <th>Actions</th>
+                                                    <th>{adminText.requester}</th>
+                                                    <th>{adminText.typeLabel}</th>
+                                                    <th>{adminText.statusLabel}</th>
+                                                    <th>{adminText.messageLabel}</th>
+                                                    <th>{adminText.attachment}</th>
+                                                    <th>{adminText.dateLabel}</th>
+                                                    <th>{adminText.actionsLabel}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1498,21 +1508,21 @@ export default function AdminDashboardPage() {
                                                     return (
                                                         <tr key={request.id}>
                                                             <td>
-                                                                <div className="admin-item-title">👤 {request.name || 'Unknown'}</div>
+                                                                <div className="admin-item-title">👤 {request.name || adminText.unknown}</div>
                                                                 <div className="admin-table-cell-muted mt-sm">📧 {request.email}</div>
                                                             </td>
-                                                            <td style={{ textTransform: 'capitalize' }}>{(request.type || '').replace(/_/g, ' ')}</td>
+                                                            <td style={{ textTransform: 'capitalize' }}>{requestTypeLabel(request.type).replace(/_/g, ' ')}</td>
                                                             <td>
-                                                                <span className={`admin-chip status-${request.status}`} style={{ textTransform: 'capitalize' }}>{(request.status || '').replace(/_/g, ' ')}</span>
+                                                                <span className={`admin-chip status-${request.status}`} style={{ textTransform: 'capitalize' }}>{requestStatusLabel(request.status).replace(/_/g, ' ')}</span>
                                                             </td>
-                                                            <td className="admin-table-cell-muted">{truncateText(request.message || 'No note provided.', 90)}</td>
+                                                            <td className="admin-table-cell-muted">{truncateText(request.message || adminText.noNoteProvided, 90)}</td>
                                                             <td>
                                                                 {request.attachments?.length ? (
                                                                     <a href={getRequestAttachmentUrl(request)} target="_blank" rel="noreferrer" className="login-inline-link">
-                                                                        📎 View ({request.attachments.length})
+                                                                        📎 {adminText.attachmentViewCount(request.attachments.length)}
                                                                     </a>
                                                                 ) : (
-                                                                    <span className="admin-table-cell-muted">No file</span>
+                                                                    <span className="admin-table-cell-muted">{adminText.noFile}</span>
                                                                 )}
                                                             </td>
                                                             <td className="admin-table-cell-muted">{request.createdAt ? new Date(request.createdAt).toLocaleDateString() : '-'}</td>
@@ -1526,7 +1536,7 @@ export default function AdminDashboardPage() {
                                                                                 disabled={isProcessing}
                                                                                 onClick={() => handleRequestAction(request.id, 'approved')}
                                                                             >
-                                                                                {isProcessing ? '…' : '✓ Received'}
+                                                                                {isProcessing ? '…' : `✓ ${adminText.received}`}
                                                                             </button>
                                                                         ) : (
                                                                             <button
@@ -1539,22 +1549,22 @@ export default function AdminDashboardPage() {
                                                                                     handleRequestAction(request.id, 'approved', body);
                                                                                 }}
                                                                             >
-                                                                                {isProcessing ? '…' : (request.type === 'account_creation' ? '✅ Approve & Create' : '✅ Approve')}
+                                                                                {isProcessing ? '…' : (request.type === 'account_creation' ? `✅ ${adminText.approveCreateAccount}` : `✅ ${adminText.approve}`)}
                                                                             </button>
                                                                         )
                                                                     ) : null}
                                                                     {canHold ? (
                                                                         <button type="button" className="admin-button secondary" disabled={isProcessing} onClick={() => handleRequestAction(request.id, 'on_hold')}>
-                                                                            {isProcessing ? '…' : '⏸️ On Hold'}
+                                                                            {isProcessing ? '…' : `⏸️ ${adminText.onHold}`}
                                                                         </button>
                                                                     ) : null}
                                                                     {canDecline ? (
                                                                         <button type="button" className="admin-button danger" disabled={isProcessing} onClick={() => handleRequestAction(request.id, 'declined')}>
-                                                                            {isProcessing ? '…' : '❌ Decline'}
+                                                                            {isProcessing ? '…' : `❌ ${adminText.decline}`}
                                                                         </button>
                                                                     ) : null}
                                                                     <button type="button" className="admin-button secondary" disabled={isProcessing} onClick={() => openRequestDecision(request)}>
-                                                                        👁️ To Review
+                                                                        👁️ {adminText.toReview}
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -1563,18 +1573,18 @@ export default function AdminDashboardPage() {
                                                 })}
                                                 {paginatedRequests.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={7} className="admin-table-cell-muted">No requests match the current filters.</td>
+                                                        <td colSpan={7} className="admin-table-cell-muted">{adminText.noRequestsMatch}</td>
                                                     </tr>
                                                 ) : null}
                                             </tbody>
                                         </table>
                                     </div>
                                     <div className="admin-pagination">
-                                        <div className="admin-muted">Showing 12 items per page</div>
+                                        <div className="admin-muted">{adminText.showingItemsPerPage}</div>
                                         <div className="admin-pagination-buttons">
-                                            <button type="button" className="admin-button secondary" disabled={requestsPage <= 1} onClick={() => setRequestsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                            <span>Page {requestsPage} of {requestsTotalPages}</span>
-                                            <button type="button" className="admin-button secondary" disabled={requestsPage >= requestsTotalPages} onClick={() => setRequestsPage((page) => Math.min(requestsTotalPages, page + 1))}>Next</button>
+                                            <button type="button" className="admin-button secondary" disabled={requestsPage <= 1} onClick={() => setRequestsPage((page) => Math.max(1, page - 1))}>{adminText.previous}</button>
+                                            <span>{adminText.pageLabel(requestsPage, requestsTotalPages)}</span>
+                                            <button type="button" className="admin-button secondary" disabled={requestsPage >= requestsTotalPages} onClick={() => setRequestsPage((page) => Math.min(requestsTotalPages, page + 1))}>{adminText.next}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1582,11 +1592,9 @@ export default function AdminDashboardPage() {
 
                             {activeTab === 'imports' ? (
                                 <div className="admin-card">
-                                    <div className="admin-section-title">📥 Import Existing Donations (CSV)</div>
+                                    <div className="admin-section-title">📥 {adminText.importExistingDonations}</div>
                                     <div className="admin-muted mb-md">
-                                        Required columns: <strong>email</strong>, <strong>amount</strong>, <strong>method</strong>.
-                                        Optional columns: <strong>name</strong>, <strong>date</strong>, <strong>note</strong>, <strong>engagement</strong>.
-                                        Method values must be: <strong>cash</strong>, <strong>card</strong>, or <strong>zeffy</strong>.
+                                        {adminText.importRequiredColumns} {adminText.importMethodValues}
                                     </div>
                                     <form className="admin-form" onSubmit={handleImportCsv}>
                                         <input
@@ -1600,14 +1608,14 @@ export default function AdminDashboardPage() {
                                             disabled={csvImportLoading}
                                         />
                                         <button type="submit" className="admin-button" disabled={csvImportLoading || !csvFile}>
-                                            {csvImportLoading ? 'Importing...' : 'Import CSV Donations'}
+                                            {csvImportLoading ? adminText.importing : adminText.importCsvDonations}
                                         </button>
                                     </form>
 
                                     {csvImportLoading && csvUploadProgress !== null ? (
                                         <div className="admin-stack mt-md">
                                             <div className="admin-inline admin-inline--between admin-muted admin-muted--md">
-                                                <span>{csvUploadProgress < 100 ? 'Uploading CSV…' : 'Upload complete, processing rows…'}</span>
+                                                <span>{csvUploadProgress < 100 ? adminText.uploadingCsv : adminText.uploadCompleteProcessing}</span>
                                                 <span>{csvUploadProgress}%</span>
                                             </div>
                                             <div className="admin-chart-track" style={{ height: 10 }}>
@@ -1619,10 +1627,10 @@ export default function AdminDashboardPage() {
                                     {csvImportSummary ? (
                                         <div className="admin-stack mt-lg">
                                             <div className="admin-grid admin-grid--4cols">
-                                                <div className="admin-stat"><div className="admin-muted">Rows</div><div className="admin-value-lg">{csvImportSummary.totalRows}</div></div>
-                                                <div className="admin-stat"><div className="admin-muted">Imported Payments</div><div className="admin-value-lg">{csvImportSummary.importedPayments}</div></div>
-                                                <div className="admin-stat"><div className="admin-muted">Created Donors</div><div className="admin-value-lg">{csvImportSummary.createdDonors}</div></div>
-                                                <div className="admin-stat"><div className="admin-muted">Failed Rows</div><div className="admin-value-lg">{csvImportSummary.failedRows}</div></div>
+                                                <div className="admin-stat"><div className="admin-muted">{adminText.rows}</div><div className="admin-value-lg">{csvImportSummary.totalRows}</div></div>
+                                                <div className="admin-stat"><div className="admin-muted">{adminText.importedPayments}</div><div className="admin-value-lg">{csvImportSummary.importedPayments}</div></div>
+                                                <div className="admin-stat"><div className="admin-muted">{adminText.createdDonors}</div><div className="admin-value-lg">{csvImportSummary.createdDonors}</div></div>
+                                                <div className="admin-stat"><div className="admin-muted">{adminText.failedRows}</div><div className="admin-value-lg">{csvImportSummary.failedRows}</div></div>
                                             </div>
 
                                             {Array.isArray(csvImportSummary.errors) && csvImportSummary.errors.length > 0 ? (
@@ -1630,8 +1638,8 @@ export default function AdminDashboardPage() {
                                                     <table className="admin-table admin-table--compact">
                                                         <thead>
                                                             <tr>
-                                                                <th>Row</th>
-                                                                <th>Error</th>
+                                                                <th>{adminText.rows}</th>
+                                                                <th>{adminText.errorLabel}</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -1645,7 +1653,7 @@ export default function AdminDashboardPage() {
                                                     </table>
                                                 </div>
                                             ) : (
-                                                <div className="admin-alert success">No row-level errors detected.</div>
+                                                <div className="admin-alert success">{adminText.noRowErrors}</div>
                                             )}
                                         </div>
                                     ) : null}
@@ -1655,20 +1663,20 @@ export default function AdminDashboardPage() {
                             {activeTab === 'admins' ? (
                                 <>
                                     <div className="admin-card">
-                                        <div className="admin-section-title">Create admin</div>
+                                        <div className="admin-section-title">{adminText.createAdminTitle}</div>
                                         <form className="admin-form" onSubmit={handleCreateAdmin}>
-                                            <input className="admin-input" placeholder="Full name" value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
-                                            <input className="admin-input" type="email" placeholder="Email" value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
-                                            <input className="admin-input" type="password" placeholder="Password" value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} />
-                                            <button type="submit" className="admin-button">Create admin</button>
+                                            <input className="admin-input" placeholder={adminText.fullNamePlaceholder} value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
+                                            <input className="admin-input" type="email" placeholder={adminText.emailPlaceholder} value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
+                                            <input className="admin-input" type="password" placeholder={adminText.passwordPlaceholder} value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} />
+                                            <button type="submit" className="admin-button">{adminText.createAdminButton}</button>
                                         </form>
                                     </div>
                                     <div className="admin-card">
-                                        <div className="admin-section-title">Admins</div>
+                                        <div className="admin-section-title">{adminText.adminsTitle}</div>
                                         <div className="admin-actions mb-md">
                                             <input
                                                 className="admin-input admin-input--max-260"
-                                                placeholder="Search admins"
+                                                placeholder={adminText.searchAdmins}
                                                 value={adminFilter.query}
                                                 onChange={(e) => setAdminFilter({ query: e.target.value })}
                                             />
@@ -1678,17 +1686,17 @@ export default function AdminDashboardPage() {
                                                 <div key={admin.id} className="admin-item">
                                                     <div className="admin-item-title">{admin.name}</div>
                                                     <div className="admin-muted mt-sm">{admin.email}</div>
-                                                    {admin.addedBy?.name ? <div className="mt-sm">Added by {admin.addedBy.name}</div> : null}
+                                                    {admin.addedBy?.name ? <div className="mt-sm">{adminText.addedBy} {admin.addedBy.name}</div> : null}
                                                 </div>
                                             ))}
-                                            {paginatedAdmins.length === 0 ? <div className="admin-item">No admins match the current filter.</div> : null}
+                                            {paginatedAdmins.length === 0 ? <div className="admin-item">{adminText.noAdminsMatch}</div> : null}
                                         </div>
                                         <div className="admin-pagination">
-                                            <div className="admin-muted">Showing 12 items per page</div>
+                                            <div className="admin-muted">{adminText.showingItemsPerPage}</div>
                                             <div className="admin-pagination-buttons">
-                                                <button type="button" className="admin-button secondary" disabled={adminsPage <= 1} onClick={() => setAdminsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                <span>Page {adminsPage} of {adminsTotalPages}</span>
-                                                <button type="button" className="admin-button secondary" disabled={adminsPage >= adminsTotalPages} onClick={() => setAdminsPage((page) => Math.min(adminsTotalPages, page + 1))}>Next</button>
+                                                <button type="button" className="admin-button secondary" disabled={adminsPage <= 1} onClick={() => setAdminsPage((page) => Math.max(1, page - 1))}>{adminText.previous}</button>
+                                                <span>{adminText.pageLabel(adminsPage, adminsTotalPages)}</span>
+                                                <button type="button" className="admin-button secondary" disabled={adminsPage >= adminsTotalPages} onClick={() => setAdminsPage((page) => Math.min(adminsTotalPages, page + 1))}>{adminText.next}</button>
                                             </div>
                                         </div>
                                     </div>
@@ -1697,23 +1705,23 @@ export default function AdminDashboardPage() {
 
                             {activeTab === 'logs' ? (
                                 <div className="admin-card">
-                                    <div className="admin-section-title">Activity logs</div>
+                                    <div className="admin-section-title">{adminText.activityLogs}</div>
                                     <div className="admin-actions mb-md">
                                         <input
                                             className="admin-input admin-input--max-220"
-                                            placeholder="Search activity"
+                                            placeholder={adminText.searchActivity}
                                             value={logFilter.query}
                                             onChange={(e) => setLogFilter((prev) => ({ ...prev, query: e.target.value }))}
                                         />
                                         <input
                                             className="admin-input admin-input--max-220"
-                                            placeholder="Filter by action"
+                                            placeholder={adminText.filterByAction}
                                             value={logFilter.action}
                                             onChange={(e) => setLogFilter((prev) => ({ ...prev, action: e.target.value }))}
                                         />
                                         <input
                                             className="admin-input admin-input--max-220"
-                                            placeholder="Filter by actor"
+                                            placeholder={adminText.filterByActor}
                                             value={logFilter.actor}
                                             onChange={(e) => setLogFilter((prev) => ({ ...prev, actor: e.target.value }))}
                                         />
@@ -1726,14 +1734,14 @@ export default function AdminDashboardPage() {
                                                     <div className="admin-accent mt-sm">{log.actor}</div>
                                                 </div>
                                             ))}
-                                            {paginatedLogs.length === 0 ? <div className="admin-item">No logs match the current filters.</div> : null}
+                                            {paginatedLogs.length === 0 ? <div className="admin-item">{adminText.noLogsMatch}</div> : null}
                                         </div>
                                         <div className="admin-pagination">
-                                            <div className="admin-muted">Showing 12 items per page</div>
+                                            <div className="admin-muted">{adminText.showingItemsPerPage}</div>
                                             <div className="admin-pagination-buttons">
-                                                <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>Previous</button>
-                                                <span>Page {logsPage} of {logsTotalPages}</span>
-                                            <button type="button" className="admin-button secondary" disabled={logsPage >= logsTotalPages} onClick={() => setLogsPage((page) => Math.min(logsTotalPages, page + 1))}>Next</button>
+                                                <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>{adminText.previous}</button>
+                                                <span>{adminText.pageLabel(logsPage, logsTotalPages)}</span>
+                                            <button type="button" className="admin-button secondary" disabled={logsPage >= logsTotalPages} onClick={() => setLogsPage((page) => Math.min(logsTotalPages, page + 1))}>{adminText.next}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1742,40 +1750,40 @@ export default function AdminDashboardPage() {
                             {activeTab === 'accounts' ? (
                                 <div className="admin-stack admin-stack--xl">
                                     <div className="admin-card">
-                                        <div className="admin-section-title">👤 Your Account</div>
+                                        <div className="admin-section-title">👤 {adminText.yourAccountTitle}</div>
                                         <div className="admin-form">
                                             <div>
-                                                <label className="admin-label">Full Name</label>
+                                                <label className="admin-label">{adminText.fullNameLabel}</label>
                                                 <input className="admin-input" type="text" defaultValue={currentAdminAccount?.name || ''} />
                                             </div>
                                             <div>
-                                                <label className="admin-label">Email Address</label>
+                                                <label className="admin-label">{adminText.emailAddressLabel}</label>
                                                 <input className="admin-input" type="email" defaultValue={currentAdminAccount?.email || ''} />
                                             </div>
                                             <div>
-                                                <label className="admin-label">Phone Number</label>
+                                                <label className="admin-label">{adminText.phoneNumberLabel}</label>
                                                 <input className="admin-input" type="tel" defaultValue={currentAdminAccount?.phoneNumber || ''} />
                                             </div>
                                             <div>
-                                                <label className="admin-label">Role</label>
+                                                <label className="admin-label">{adminText.roleLabel}</label>
                                                 <input className="admin-input admin-input--disabled" type="text" defaultValue={currentAdminAccount?.role || 'admin'} disabled />
                                             </div>
                                             <div>
-                                                <label className="admin-label">Status</label>
+                                                <label className="admin-label">{adminText.statusLabel}</label>
                                                 <select
                                                     className="admin-input admin-input--disabled"
                                                     defaultValue={currentAdminAccount?.status || 'active'}
                                                     disabled
                                                 >
-                                                    <option value="active">Active</option>
-                                                    <option value="inactive">Inactive</option>
-                                                    <option value="suspended">Suspended</option>
+                                                    <option value="active">{adminText.activeStatus}</option>
+                                                    <option value="inactive">{adminText.inactiveStatus}</option>
+                                                    <option value="suspended">{adminText.suspendedStatus}</option>
                                                 </select>
                                                 <div className="admin-field-help">
                                                     Your own account status can only be changed by another administrator.
                                                 </div>
                                             </div>
-                                            <button type="button" className="admin-button">Update Profile</button>
+                                            <button type="button" className="admin-button">{adminText.updateProfileButton}</button>
                                         </div>
                                     </div>
                                 </div>

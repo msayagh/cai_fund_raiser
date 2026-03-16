@@ -104,7 +104,69 @@
     position: relative;
 }
 
-.login-button.header-mobile-login {
+.account-menu {
+    position: relative;
+}
+
+.account-menu-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    inset-inline-end: 0;
+    inset-inline-start: auto;
+    min-width: 200px;
+    max-width: min(260px, calc(100vw - 24px));
+    padding: 8px;
+    border-radius: 16px;
+    border: 1px solid var(--border-accent);
+    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+    z-index: 65;
+    backdrop-filter: blur(12px);
+}
+
+[dir="rtl"] .account-menu-panel,
+:dir(rtl) .account-menu-panel {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+}
+
+.account-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-primary);
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: start;
+    transition: background 0.2s ease, color 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--bg-card-alt);
+        color: var(--accent-gold);
+    }
+
+    &--danger:hover,
+    &--danger:focus-visible {
+        color: #ff9c9c;
+    }
+
+    &--static {
+        cursor: default;
+        opacity: 0.72;
+    }
+}
+
+.login-button.header-mobile-login,
+.account-menu.header-mobile-login {
     display: none;
 }
 

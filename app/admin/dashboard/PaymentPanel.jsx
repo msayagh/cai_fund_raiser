@@ -1,10 +1,12 @@
 import { downloadPaymentConfirmation } from '@/lib/adminApi.js';
 import { useState } from 'react';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 
 export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePayment, onDeletePayment, loading, t }) {
     const [paymentDateError, setPaymentDateError] = useState('');
     const [editingPaymentId, setEditingPaymentId] = useState(null);
     const [editForm, setEditForm] = useState({ amount: '', date: '', method: '', note: '' });
+    const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
 
     if (!donor) return null;
 
@@ -14,7 +16,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
         today.setHours(0, 0, 0, 0);
 
         if (selectedDate > today) {
-            setPaymentDateError(t('admin.dateCannotBeFuture') || 'Payment date cannot be in the future');
+            setPaymentDateError(adminText.dateCannotBeFuture);
             e.target.value = '';
         } else {
             setPaymentDateError('');
@@ -38,7 +40,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
 
     const saveEdit = async (paymentId) => {
         if (!editForm.amount || !editForm.date || !editForm.method) {
-            alert('Amount, method, and date are required.');
+            alert(adminText.amountMethodDateRequired);
             return;
         }
 
@@ -51,7 +53,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
             });
             cancelEdit();
         } catch (err) {
-            alert(err?.message || 'Unable to update payment.');
+            alert(err?.message || adminText.unableUpdatePayment);
         }
     };
 
@@ -59,14 +61,14 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
         try {
             await onDeletePayment(paymentId);
         } catch (err) {
-            alert(err?.message || 'Unable to remove payment.');
+            alert(err?.message || adminText.unableRemovePayment);
         }
     };
 
     const pledge = Number(donor.engagement?.totalPledge || 0);
     const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     const remaining = Math.max(0, pledge - totalPaid);
-    const status = totalPaid === 0 ? 'Pending' : totalPaid >= pledge ? 'Completed' : 'In Progress';
+    const status = totalPaid === 0 ? adminText.pendingStatus : totalPaid >= pledge ? adminText.completedStatus : adminText.inProgressStatus;
 
     const handleDownloadConfirmation = async (payment) => {
         try {
@@ -80,32 +82,32 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         } catch (err) {
-            const errorMsg = err?.message || 'Unknown error occurred while downloading payment confirmation';
-            alert(`Failed to download payment confirmation: ${errorMsg}`);
+            const errorMsg = err?.message || adminText.unknownErrorOccurred;
+            alert(adminText.downloadPaymentConfirmationFailed(errorMsg));
         }
     };
 
     return (
         <div className="admin-card">
             <div className="admin-section-title">
-                Payment History
+                {adminText.paymentHistorySection}
             </div>
 
             <div className="admin-grid admin-grid--4cols mb-lg">
                 <div className="admin-surface">
-                    <div className="admin-muted admin-muted--sm">Pledged</div>
+                    <div className="admin-muted admin-muted--sm">{adminText.pledgedShort}</div>
                     <div className="admin-value-md">${pledge.toLocaleString()}</div>
                 </div>
                 <div className="admin-surface">
-                    <div className="admin-muted admin-muted--sm">Paid</div>
+                    <div className="admin-muted admin-muted--sm">{adminText.paidShort}</div>
                     <div className="admin-value-md">${totalPaid.toLocaleString()}</div>
                 </div>
                 <div className="admin-surface">
-                    <div className="admin-muted admin-muted--sm">Remaining</div>
+                    <div className="admin-muted admin-muted--sm">{adminText.remainingShort}</div>
                     <div className="admin-value-md">${remaining.toLocaleString()}</div>
                 </div>
                 <div className="admin-surface">
-                    <div className="admin-muted admin-muted--sm">Status</div>
+                    <div className="admin-muted admin-muted--sm">{adminText.statusShort}</div>
                     <div
                         className="admin-value-md"
                         style={{ color: status === 'Completed' ? '#7EB8A0' : status === 'In Progress' ? '#D4A96E' : '#7c8499' }}
@@ -117,7 +119,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
 
             <div className="admin-surface mb-lg">
                 <div className="admin-section-title admin-section-title--sm">
-                    Record Payment
+                    {adminText.recordPayment}
                 </div>
                 <form onSubmit={onAddPayment} className="admin-stack">
                     <div className="admin-grid admin-grid--2cols">
@@ -126,15 +128,15 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                             min="0"
                             step="0.01"
                             className="admin-input"
-                            placeholder="Amount"
+                            placeholder={adminText.amountPlaceholder}
                             required
                             id="payment-amount"
                         />
                         <select className="admin-input" id="payment-method" required>
-                            <option value="">— Select method —</option>
-                            <option value="cash">💵 Cash</option>
-                            <option value="card">💳 Card</option>
-                            <option value="zeffy">📱 Zeffy</option>
+                            <option value="">{adminText.selectMethodPlaceholder}</option>
+                            <option value="cash">{adminText.cashMethod}</option>
+                            <option value="card">{adminText.cardMethod}</option>
+                            <option value="zeffy">{adminText.zeffyMethod}</option>
                         </select>
                     </div>
                     <div>
@@ -155,7 +157,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                     </div>
                     <textarea
                         className="admin-input admin-input--textarea-lg"
-                        placeholder="Payment note (optional)"
+                        placeholder={adminText.paymentNoteOptional}
                         id="payment-note"
                     />
                     <div className="admin-stack">
@@ -166,14 +168,14 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                 className="admin-hidden-file"
                                 id="payment-receipt"
                             />
-                            Attach Receipt (optional)
+                            {adminText.attachReceiptOptional}
                         </label>
                         <button
                             type="submit"
                             disabled={loading}
                             className="admin-button"
                         >
-                            {loading ? 'Recording...' : 'Record Payment'}
+                            {loading ? adminText.recording : adminText.recordPaymentButton}
                         </button>
                     </div>
                 </form>
@@ -181,12 +183,12 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
 
             <div>
                 <div className="admin-section-title admin-section-title--sm">
-                    Payment Records ({payments.length})
+                    {adminText.paymentRecords(payments.length)}
                 </div>
                 <div className="admin-stack">
                     {payments.length === 0 ? (
                         <div className="admin-surface admin-text-center admin-muted">
-                            No payments recorded yet
+                            {adminText.noPaymentsRecordedYet}
                         </div>
                     ) : (
                         payments.map((payment) => (
@@ -220,10 +222,10 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                                 onChange={(e) => setEditForm((prev) => ({ ...prev, method: e.target.value }))}
                                                 disabled={loading}
                                             >
-                                                    <option value="">— Select method —</option>
-                                                    <option value="cash">💵 Cash</option>
-                                                    <option value="card">💳 Card</option>
-                                                    <option value="zeffy">📱 Zeffy</option>
+                                                    <option value="">{adminText.selectMethodPlaceholder}</option>
+                                                    <option value="cash">{adminText.cashMethod}</option>
+                                                    <option value="card">{adminText.cardMethod}</option>
+                                                    <option value="zeffy">{adminText.zeffyMethod}</option>
                                             </select>
                                         </div>
                                         <textarea
@@ -234,10 +236,10 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                         />
                                         <div className="admin-actions">
                                             <button type="button" className="admin-button" disabled={loading} onClick={() => saveEdit(payment.id)}>
-                                                ✅ Save
+                                                {adminText.saveButton}
                                             </button>
                                             <button type="button" className="admin-button secondary" disabled={loading} onClick={cancelEdit}>
-                                                ✕ Cancel
+                                                {adminText.cancelButton}
                                             </button>
                                         </div>
                                     </div>
@@ -256,7 +258,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                                 className="admin-button secondary"
                                                 disabled={loading}
                                             >
-                                                    📄 PDF
+                                                    {adminText.pdfButton}
                                             </button>
                                             <button
                                                 type="button"
@@ -264,7 +266,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                                 className="admin-button secondary"
                                                 disabled={loading}
                                             >
-                                                    ✏️ Edit
+                                                    {adminText.editButton}
                                             </button>
                                             <button
                                                 type="button"
@@ -272,7 +274,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                                     className="admin-button danger"
                                                 disabled={loading}
                                             >
-                                                    🗑️ Remove
+                                                    {adminText.removeButton}
                                             </button>
                                         </div>
                                     </>

@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import * as settingsApi from '@/lib/settingsApi.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 
 const getTranslation = (t, key, fallback) => {
-    if (typeof t === 'function') {
-        return t(key) || fallback;
-    }
-    return fallback;
+    const value = key.split('.').reduce((acc, part) => acc?.[part], t);
+    return value ?? fallback;
 };
 
 export default function GlobalGoalSection({ t, cardStyle, inputStyle, goal, onGoalUpdate }) {
+    const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
     const [globalGoal, setGlobalGoal] = useState(goal?.amount || 0);
     const [amountRaised, setAmountRaised] = useState(goal?.raised || 0);
     const [isSaving, setIsSaving] = useState(false);
@@ -57,13 +57,13 @@ export default function GlobalGoalSection({ t, cardStyle, inputStyle, goal, onGo
                 await settingsApi.updateGlobalGoal(newGoal);
                 // Cache in localStorage
                 localStorage.setItem('adminGlobalGoal', JSON.stringify(newGoal));
-                setSaveMessage('✓ Saved successfully');
+                setSaveMessage(adminText.savedSuccessfully || 'Saved successfully');
             } catch (apiErr) {
                 console.error('Error saving to API:', JSON.stringify(apiErr, null, 2));
                 console.error('Error details:', apiErr?.message || 'No message', 'Status:', apiErr?.status, 'Code:', apiErr?.code);
                 // Fallback to localStorage only
                 localStorage.setItem('adminGlobalGoal', JSON.stringify(newGoal));
-                setSaveMessage('✓ Saved locally (API unavailable)');
+                setSaveMessage(adminText.savedLocallyOnly || 'Saved locally (API unavailable)');
             }
 
             // Call callback if provided
@@ -75,7 +75,7 @@ export default function GlobalGoalSection({ t, cardStyle, inputStyle, goal, onGo
             setIsSaving(false);
         } catch (err) {
             console.error('Error saving goal:', err);
-            setSaveMessage('✗ Error saving');
+            setSaveMessage(adminText.errorSaving || 'Error saving');
             setTimeout(() => setSaveMessage(''), 3000);
             setIsSaving(false);
         }
@@ -159,7 +159,7 @@ export default function GlobalGoalSection({ t, cardStyle, inputStyle, goal, onGo
                         disabled={isSaving}
                         style={{ flex: 1, opacity: isSaving ? 0.6 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}
                     >
-                        {isSaving ? 'Saving...' : getTranslation(t, 'admin.saveChanges', 'Save Changes')}
+                        {isSaving ? (adminText.saving || 'Saving...') : getTranslation(t, 'admin.saveChanges', 'Save Changes')}
                     </button>
                     {saveMessage && (
                         <span style={{ fontSize: 12, color: saveMessage.includes('✓') ? '#4CAF50' : '#F44336', fontWeight: 600 }}>

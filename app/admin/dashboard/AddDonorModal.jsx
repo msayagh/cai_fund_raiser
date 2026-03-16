@@ -1,5 +1,8 @@
-export default function AddDonorModal({ isOpen, onClose, onSubmit, formData, setFormData, loading, inputStyle, cardStyle }) {
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
+
+export default function AddDonorModal({ isOpen, onClose, onSubmit, formData, setFormData, loading, inputStyle, cardStyle, t = {} }) {
     if (!isOpen) return null;
+    const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -34,7 +37,7 @@ export default function AddDonorModal({ isOpen, onClose, onSubmit, formData, set
                     justifyContent: 'space-between',
                     alignItems: 'center',
                 }}>
-                    Add New Donor
+                    {adminText.addNewDonorTitle || 'Add New Donor'}
                     <button
                         type="button"
                         onClick={onClose}
@@ -52,43 +55,43 @@ export default function AddDonorModal({ isOpen, onClose, onSubmit, formData, set
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
                     <label style={{ display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Full Name*</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{adminText.fullNameLabel || 'Full Name'}*</span>
                         <input
                             type="text"
                             style={inputStyle}
                             value={formData.name || ''}
                             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                            placeholder="John Doe"
+                            placeholder={adminText.donorFullNamePlaceholder || 'John Doe'}
                             required
                         />
                     </label>
 
                     <label style={{ display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Email*</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{adminText.emailAddressLabel || 'Email'}*</span>
                         <input
                             type="email"
                             style={inputStyle}
                             value={formData.email || ''}
                             onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                            placeholder="john@example.com"
+                            placeholder={adminText.donorEmailPlaceholder || 'john@example.com'}
                             required
                         />
                     </label>
 
                     <label style={{ display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Password*</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{adminText.passwordLabel || 'Password'}*</span>
                         <input
                             type="password"
                             style={inputStyle}
                             value={formData.password || ''}
                             onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                            placeholder="Temporary password"
+                            placeholder={adminText.donorPasswordPlaceholder || 'Temporary password'}
                             required
                         />
                     </label>
 
                     <label style={{ display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Pledge Amount (Optional)</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{adminText.pledgeAmountOptional || 'Pledge Amount (Optional)'}</span>
                         <input
                             type="number"
                             min="0"
@@ -96,7 +99,7 @@ export default function AddDonorModal({ isOpen, onClose, onSubmit, formData, set
                             style={inputStyle}
                             value={formData.pledge || ''}
                             onChange={(e) => setFormData((prev) => ({ ...prev, pledge: e.target.value }))}
-                            placeholder="0.00"
+                            placeholder={adminText.zeroPlaceholder || '0.00'}
                         />
                     </label>
 
@@ -113,7 +116,7 @@ export default function AddDonorModal({ isOpen, onClose, onSubmit, formData, set
                                 cursor: 'pointer',
                             }}
                         >
-                            Cancel
+                            {adminText.cancelButton || 'Cancel'}
                         </button>
                         <button
                             type="submit"
@@ -129,7 +132,7 @@ export default function AddDonorModal({ isOpen, onClose, onSubmit, formData, set
                                 opacity: loading ? 0.6 : 1,
                             }}
                         >
-                            {loading ? 'Creating...' : 'Add Donor'}
+                            {loading ? (adminText.creatingDonor || 'Creating...') : (adminText.addNewDonor || 'Add Donor')}
                         </button>
                     </div>
                 </form>

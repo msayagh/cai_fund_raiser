@@ -11,53 +11,10 @@ import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
-import { getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import { apiFetch, setAccessToken, setRefreshToken } from '@/lib/apiClient.js';
 import { setStoredSession } from '@/lib/session.js';
 import '../login/page.scss';
-
-// ── English fallbacks — merged with t.auth at render time ──────────────
-const DEFAULT_AUTH_TEXT = {
-    registerSeoDescription: 'Create a new donor account to support the Centre Zad Al-Imane.',
-    registerPageTitle: 'Register',
-    registerKicker: 'Create Account',
-    registerTitle: 'Register as a Donor',
-    registerDescription: 'Link your donations by email, verify your code, then set your password and an optional engagement.',
-    registerStep1: 'Identity',
-    registerStep2: 'Verify OTP',
-    registerStep3: 'Account',
-    fullName: 'Full Name',
-    sendVerificationCode: 'Send verification code',
-    sendingCode: 'Sending code\u2026',
-    verificationCodeSent: 'Verification code sent. Please check your email.',
-    invalidNameLength: 'Please enter a valid name (minimum 2 characters).',
-    unableToSendCode: 'Unable to send verification code right now.',
-    invalidOtpCode: 'Please enter the 6-digit code sent to your email.',
-    emailVerified: 'Email verified. You can now create your account.',
-    unableToVerifyCode: 'Unable to verify the code right now.',
-    resending: 'Resending\u2026',
-    resendCode: 'Resend code',
-    optionalEngagement: 'Optional engagement',
-    optionalEngagementHint: 'Leave these fields empty to create the account without an engagement.',
-    engagementAmount: 'Engagement amount ($)',
-    targetEndDate: 'Target end date (optional)',
-    creatingAccount: 'Creating account\u2026',
-    createAccount: 'Create account',
-    accountCreated: 'Account created successfully! Redirecting to dashboard\u2026',
-    invalidEngagementAmount: 'Engagement amount must be a positive number.',
-    unableToRegister: 'Unable to register right now.',
-    alreadyHaveAccount: 'Already have an account? Sign in',
-    back: 'Back',
-    emailLabel: 'Email',
-    passwordLabel: 'Password',
-    confirmPassword: 'Confirm password',
-    verificationCode: 'Verification code',
-    otpPlaceholder: '6-digit code',
-    verifying: 'Verifying\u2026',
-    verifyCode: 'Verify code',
-    passwordMinLength: 'Password must be at least 8 characters.',
-    passwordsDoNotMatch: 'Passwords do not match.',
-};
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -72,11 +29,11 @@ export default function RegisterPage() {
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/register?lang=${language}`, siteUrl);
     const socialImageUrl = getAbsoluteUrl('/logo-ccai.png', siteUrl);
-    const auth = { ...DEFAULT_AUTH_TEXT, ...(t.auth ?? {}) };
-    const pageTitle = `${auth.registerPageTitle} | ${t.centerName || 'Centre Zad Al-Imane'}`;
-    const pageDescription = truncateText(auth.registerSeoDescription);
+    const auth = { ...(DEFAULT_TRANSLATION.auth ?? {}), ...(t.auth ?? {}) };
+    const pageTitle = `${auth.registerPageTitle} | ${t.centerName || DEFAULT_TRANSLATION.centerName || 'Centre Zad Al-Imane'}`;
+    const pageDescription = truncateText(auth.registerSeoDescription || DEFAULT_TRANSLATION.auth?.registerSeoDescription);
     const locale = t.locale ?? language;
-    const logoAlt = `${t.centerName || 'Centre Zad Al-Imane'} logo`;
+    const logoAlt = `${t.centerName || DEFAULT_TRANSLATION.centerName || 'Centre Zad Al-Imane'} logo`;
 
     const [step, setStep] = useState('identity'); // identity -> otp -> account
     const [name, setName] = useState('');
@@ -153,7 +110,7 @@ export default function RegisterPage() {
                 data-theme="dark"
                 suppressHydrationWarning
             >
-                <SitePreloader title="Centre Zad Al-Imane" subtitle="Loading site" />
+                <SitePreloader title="Centre Zad Al-Imane" subtitle={DEFAULT_TRANSLATION.loadingSite} />
             </div>
         );
     }
@@ -334,7 +291,7 @@ export default function RegisterPage() {
                         <p className="login-eyebrow">{auth.registerKicker}</p>
                         <h2 className="login-title">{auth.registerTitle}</h2>
                         <p className="login-description">{auth.registerDescription}</p>
-                        <div className="register-steps" aria-label="Registration progress">
+                        <div className="register-steps" aria-label={auth.registrationProgress}>
                             <span className={`register-step${step === 'identity' ? ' active' : ''}`}>1. {auth.registerStep1}</span>
                             <span className={`register-step${step === 'otp' ? ' active' : ''}`}>2. {auth.registerStep2}</span>
                             <span className={`register-step${step === 'account' ? ' active' : ''}`}>3. {auth.registerStep3}</span>
@@ -461,7 +418,7 @@ export default function RegisterPage() {
                                         step="0.01"
                                         value={pledgeAmount}
                                         onChange={(event) => setPledgeAmount(event.target.value)}
-                                        placeholder="500"
+                                        placeholder={auth.engagementAmountPlaceholder}
                                     />
                                 </label>
 

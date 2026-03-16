@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 import { captureException } from '@/lib/monitoring.js';
 
 export default function GlobalError({ error, reset }) {
@@ -14,9 +15,9 @@ export default function GlobalError({ error, reset }) {
                 <div style={{ minHeight: '100vh', background: '#090c18', color: '#fff' }}>
                     <div style={{ width: '100%', maxWidth: 'var(--page-max-width)', margin: '0 auto', minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px' }}>
                         <div style={{ width: '100%', maxWidth: '480px', textAlign: 'center' }}>
-                        <h1 style={{ marginBottom: '12px' }}>Something went wrong</h1>
+                        <h1 style={{ marginBottom: '12px' }}>{DEFAULT_TRANSLATION.globalErrorTitle || 'Something went wrong'}</h1>
                         <p style={{ marginBottom: '18px', color: 'rgba(255,255,255,0.75)' }}>
-                            We logged the error and you can try reloading this screen.
+                            {DEFAULT_TRANSLATION.globalErrorDescription || 'We logged the error and you can try reloading this screen.'}
                         </p>
                         <button
                             type="button"
@@ -30,7 +31,7 @@ export default function GlobalError({ error, reset }) {
                                 cursor: 'pointer',
                             }}
                         >
-                            Retry
+                            {DEFAULT_TRANSLATION.retryLabel || 'Retry'}
                         </button>
                         </div>
                     </div>

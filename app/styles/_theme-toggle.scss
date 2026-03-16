@@ -55,6 +55,12 @@
         border-color: var(--accent-gold);
         color: var(--accent-gold);
     }
+
+    &--account.open {
+        background: var(--bg-card-alt);
+        color: var(--accent-gold);
+        border-color: var(--accent-gold);
+    }
 }
 
 .header-stats-button {
@@ -89,6 +95,11 @@
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
+}
+
+.account-menu-caret {
+    font-size: 11px;
+    opacity: 0.75;
 }
 
 .language-label {
