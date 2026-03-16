@@ -12,6 +12,7 @@ const {
   updateEngagementSchema,
 } = require('./donors.schema');
 const { z } = require('zod');
+const multer = require('multer');
 
 const router = Router();
 
@@ -71,8 +72,22 @@ const adminEngagementSchema = z.object({
 });
 
 const adminDonorRouter = Router();
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = ['text/csv', 'application/csv', 'application/vnd.ms-excel', 'text/plain'];
+    const isCsvName = String(file.originalname || '').toLowerCase().endsWith('.csv');
+    if (allowedMimes.includes(file.mimetype) || isCsvName) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error('Only CSV files are allowed'));
+  },
+});
 
 adminDonorRouter.get('/', requireAdmin, requireCapability('admin.donors.view'), ctrl.list);
+adminDonorRouter.post('/bulk/upload', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
 adminDonorRouter.post('/', requireAdmin, requireCapability('admin.donors.create'), validate(adminCreateDonorSchema), ctrl.adminCreate);
 adminDonorRouter.get('/:id', requireAdmin, requireCapability('admin.donors.view'), ctrl.getById);
 adminDonorRouter.get('/:id/payments', requireAdmin, requireCapability('admin.donors.view'), ctrl.adminGetPayments);

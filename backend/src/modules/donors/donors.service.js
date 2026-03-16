@@ -13,6 +13,95 @@ const BCRYPT_ROUNDS = 12;
 const stripPassword = ({ passwordHash, ...rest }) => rest;
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
+const parseCsvLine = (line) => {
+  const cells = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      const next = line[i + 1];
+      if (inQuotes && next === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+
+  cells.push(current.trim());
+  return cells;
+};
+
+const parseCsvContent = (csvContent) => {
+  const lines = String(csvContent || '')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) {
+    throw new AppError('CSV file must contain a header and at least one data row', 400, 'CSV_EMPTY');
+  }
+
+  const headers = parseCsvLine(lines[0]).map((header) => header.toLowerCase());
+  const rows = lines.slice(1).map((line) => {
+    const values = parseCsvLine(line);
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] ?? '';
+    });
+    return row;
+  });
+
+  return { headers, rows };
+};
+
+const parseAmount = (raw) => {
+  const normalized = String(raw || '').replace(/[^0-9.-]/g, '');
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new AppError('Amount must be a positive number', 400, 'INVALID_AMOUNT');
+  }
+  return amount;
+};
+
+const parseOptionalPositiveAmount = (raw, fieldLabel) => {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return null;
+
+  const normalized = String(raw).replace(/[^0-9.-]/g, '');
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new AppError(`${fieldLabel} must be a positive number`, 400, 'INVALID_AMOUNT');
+  }
+  return value;
+};
+
+const parseDateValue = (raw) => {
+  if (!raw) return new Date();
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new AppError('Date is invalid', 400, 'INVALID_DATE');
+  }
+  return parsed;
+};
+
+const normalizePaymentMethod = (raw) => {
+  const method = String(raw || '').trim().toLowerCase();
+  if (!method) {
+    throw new AppError('Method is required (cash, card, zeffy)', 400, 'METHOD_REQUIRED');
+  }
+  if (['cash', 'card', 'zeffy'].includes(method)) return method;
+  throw new AppError('Method must be one of: cash, card, zeffy', 400, 'INVALID_METHOD');
+};
+
 // ─── Self-service ─────────────────────────────────────────────────────────────
 
 const getMe = async (donorId) => {
@@ -540,6 +629,114 @@ const adminDeletePayment = async (adminId, adminName, donorId, paymentId) => {
   });
 };
 
+const adminImportPaymentsCsv = async (adminId, adminName, fileBuffer) => {
+  if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+    throw new AppError('CSV file is required', 400, 'CSV_FILE_REQUIRED');
+  }
+
+  const { rows } = parseCsvContent(fileBuffer.toString('utf8'));
+
+  let importedPayments = 0;
+  let createdDonors = 0;
+  const errors = [];
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const rowNumber = i + 2;
+    const row = rows[i];
+
+    try {
+      const email = normalizeEmail(row.email || row.donoremail || row['donor_email']);
+      if (!email) {
+        throw new AppError('Email is required', 400, 'EMAIL_REQUIRED');
+      }
+
+      const amount = parseAmount(row.amount);
+      const date = parseDateValue(row.date || row.paymentdate || row['payment_date']);
+      const method = normalizePaymentMethod(row.method || row.paymentmethod || row['payment_method']);
+      const note = (row.note || row.message || row.details || '').trim() || null;
+      const donorName = (row.name || row.donorname || row['donor_name'] || '').trim();
+      const engagementAmount = parseOptionalPositiveAmount(
+        row.engagement || row.pledge || row.totalpledge || row['total_pledge'],
+        'Engagement',
+      );
+      const defaultEngagementEndDate = new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999);
+
+      let donor = await prisma.donor.findUnique({ where: { email } });
+
+      if (!donor) {
+        const fallbackName = email.split('@')[0].replace(/[._-]+/g, ' ').trim() || 'Imported Donor';
+        const placeholderHash = await bcrypt.hash(`placeholder:${email}:${Date.now()}:${rowNumber}`, BCRYPT_ROUNDS);
+        donor = await prisma.donor.create({
+          data: {
+            name: donorName || fallbackName,
+            email,
+            passwordHash: placeholderHash,
+            accountCreated: false,
+          },
+        });
+        createdDonors += 1;
+      }
+
+      if (engagementAmount !== null) {
+        const existingEngagement = await prisma.engagement.findUnique({ where: { donorId: donor.id } });
+        if (existingEngagement) {
+          await prisma.engagement.update({
+            where: { donorId: donor.id },
+            data: {
+              totalPledge: engagementAmount,
+              endDate: defaultEngagementEndDate,
+            },
+          });
+        } else {
+          await prisma.engagement.create({
+            data: {
+              donorId: donor.id,
+              totalPledge: engagementAmount,
+              startDate: new Date(),
+              endDate: defaultEngagementEndDate,
+            },
+          });
+        }
+      }
+
+      await prisma.payment.create({
+        data: {
+          donorId: donor.id,
+          amount,
+          date,
+          method,
+          note,
+          recordedByAdminId: adminId,
+        },
+      });
+
+      importedPayments += 1;
+    } catch (error) {
+      errors.push({
+        row: rowNumber,
+        message: error?.message || 'Unknown row import error',
+      });
+    }
+  }
+
+  await createLog({
+    actor: `Admin: ${adminName}`,
+    actorType: 'admin',
+    actorId: adminId,
+    action: 'admin_payments_csv_imported',
+    details: `CSV import complete: ${importedPayments} payment(s), ${createdDonors} donor(s) created, ${errors.length} row error(s)`,
+    adminId,
+  });
+
+  return {
+    importedPayments,
+    createdDonors,
+    totalRows: rows.length,
+    failedRows: errors.length,
+    errors,
+  };
+};
+
 const adminCreateDonor = async (adminId, adminName, { name, email, accountCreated, password, pledgeAmount }) => {
   const normalizedEmail = normalizeEmail(email);
   const existing = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
@@ -770,6 +967,7 @@ module.exports = {
   adminAddPayment,
   adminUpdatePayment,
   adminDeletePayment,
+  adminImportPaymentsCsv,
   adminCreateDonor,
   generatePaymentConfirmation,
   uploadPaymentReceipt,

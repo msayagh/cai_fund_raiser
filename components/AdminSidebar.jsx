@@ -8,6 +8,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout 
     const mainTabs = [
         { key: 'overview', label: 'Overview', icon: '📊' },
         { key: 'requests', label: 'Requests', icon: '📋' },
+        { key: 'imports', label: 'Import Donations', icon: '📥' },
     ];
 
     const otherTabs = [

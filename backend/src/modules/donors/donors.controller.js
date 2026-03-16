@@ -175,6 +175,16 @@ const uploadPaymentReceipt = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const adminImportPaymentsCsv = async (req, res, next) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ success: false, message: 'No CSV file provided' });
+    }
+    const data = await service.adminImportPaymentsCsv(req.admin.id, req.admin.name, req.file.buffer);
+    sendSuccess(res, data, 'CSV payments import completed', 200);
+  } catch (err) { next(err); }
+};
+
 const downloadPaymentConfirmation = async (req, res, next) => {
   try {
     await service.downloadPaymentConfirmation(req.params.id, req.params.paymentId, res);
@@ -186,4 +196,5 @@ module.exports = {
   getMyEngagement, createEngagement, updateEngagement,
   getMyPayments, getMyRequests,
   list, getById, adminUpdate, adminDelete, adminUpdatePassword, adminGetPayments, adminAddPayment, adminUpdatePayment, adminDeletePayment, adminCreate, adminDeactivate, adminReactivate, adminSetEngagement, adminGetPaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
+  adminImportPaymentsCsv,
 };

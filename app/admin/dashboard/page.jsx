@@ -22,6 +22,7 @@ import {
     getLogs,
     getStats,
     holdRequest,
+    importDonationsCsv,
     listAdmins,
     listDonors,
     listRequests,
@@ -112,6 +113,10 @@ export default function AdminDashboardPage() {
     const [newDonorSaving, setNewDonorSaving] = useState(false);
     const [topDonorsPerPage, setTopDonorsPerPage] = useState(8);
     const [processingRequestId, setProcessingRequestId] = useState(null);
+    const [csvFile, setCsvFile] = useState(null);
+    const [csvImportLoading, setCsvImportLoading] = useState(false);
+    const [csvImportSummary, setCsvImportSummary] = useState(null);
+    const [csvUploadProgress, setCsvUploadProgress] = useState(null);
 
     const appReady = translationMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
@@ -222,7 +227,7 @@ export default function AdminDashboardPage() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const savedTab = localStorage.getItem('adminActiveTab');
-            if (savedTab && ['overview', 'requests', 'admins', 'logs', 'accounts'].includes(savedTab)) {
+            if (savedTab && ['overview', 'requests', 'imports', 'admins', 'logs', 'accounts'].includes(savedTab)) {
                 setActiveTabState(savedTab);
             }
         }
@@ -849,6 +854,35 @@ export default function AdminDashboardPage() {
             setError(err?.message || 'Unable to update engagement.');
         } finally {
             setSelectedDonorSaving(false);
+        }
+    }
+
+    async function handleImportCsv(event) {
+        event.preventDefault();
+        setError('');
+        setMessage('');
+
+        if (!csvFile) {
+            setError('Please choose a CSV file first.');
+            return;
+        }
+
+        setCsvImportLoading(true);
+        setCsvUploadProgress(0);
+        try {
+            const summary = await importDonationsCsv(csvFile, {
+                onProgress: (pct) => setCsvUploadProgress(pct),
+            });
+            setCsvImportSummary(summary);
+            setMessage(
+                `CSV import completed: ${summary.importedPayments} payment(s) imported, ${summary.createdDonors} donor(s) created, ${summary.failedRows} failed row(s).`
+            );
+            await loadAllData();
+        } catch (err) {
+            setError(err?.message || 'CSV import failed.');
+        } finally {
+            setCsvImportLoading(false);
+            setCsvUploadProgress(null);
         }
     }
 
@@ -1648,6 +1682,78 @@ export default function AdminDashboardPage() {
                                             <button type="button" className="admin-button secondary" disabled={requestsPage >= requestsTotalPages} onClick={() => setRequestsPage((page) => Math.min(requestsTotalPages, page + 1))}>Next</button>
                                         </div>
                                     </div>
+                                </div>
+                            ) : null}
+
+                            {activeTab === 'imports' ? (
+                                <div style={cardStyle}>
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>📥 Import Existing Donations (CSV)</div>
+                                    <div style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+                                        Required columns: <strong>email</strong>, <strong>amount</strong>, <strong>method</strong>.
+                                        Optional columns: <strong>name</strong>, <strong>date</strong>, <strong>note</strong>, <strong>engagement</strong>.
+                                        Method values must be: <strong>cash</strong>, <strong>card</strong>, or <strong>zeffy</strong>.
+                                    </div>
+                                    <form className="admin-form" onSubmit={handleImportCsv}>
+                                        <input
+                                            style={inputStyle}
+                                            type="file"
+                                            accept=".csv,text/csv"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0] || null;
+                                                setCsvFile(file);
+                                            }}
+                                            disabled={csvImportLoading}
+                                        />
+                                        <button type="submit" className="admin-button" disabled={csvImportLoading || !csvFile}>
+                                            {csvImportLoading ? 'Importing...' : 'Import CSV Donations'}
+                                        </button>
+                                    </form>
+
+                                    {csvImportLoading && csvUploadProgress !== null ? (
+                                        <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 13 }}>
+                                                <span>{csvUploadProgress < 100 ? 'Uploading CSV…' : 'Upload complete, processing rows…'}</span>
+                                                <span>{csvUploadProgress}%</span>
+                                            </div>
+                                            <div className="admin-chart-track" style={{ height: 10 }}>
+                                                <div className="admin-chart-fill" style={{ width: `${csvUploadProgress}%` }}></div>
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    {csvImportSummary ? (
+                                        <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
+                                            <div className="admin-grid">
+                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Rows</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.totalRows}</div></div>
+                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Imported Payments</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.importedPayments}</div></div>
+                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Created Donors</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.createdDonors}</div></div>
+                                                <div className="admin-stat"><div style={{ color: 'var(--text-muted)' }}>Failed Rows</div><div style={{ fontSize: 30, fontWeight: 700 }}>{csvImportSummary.failedRows}</div></div>
+                                            </div>
+
+                                            {Array.isArray(csvImportSummary.errors) && csvImportSummary.errors.length > 0 ? (
+                                                <div className="admin-table-wrap">
+                                                    <table className="admin-table" style={{ minWidth: 0 }}>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Row</th>
+                                                                <th>Error</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {csvImportSummary.errors.map((item, idx) => (
+                                                                <tr key={`${item.row}-${idx}`}>
+                                                                    <td>{item.row}</td>
+                                                                    <td className="admin-table-cell-muted">{item.message}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <div className="admin-alert success">No row-level errors detected.</div>
+                                            )}
+                                        </div>
+                                    ) : null}
                                 </div>
                             ) : null}
 
