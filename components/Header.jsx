@@ -15,7 +15,6 @@ export function Header({
     tierEngagementPct = 0,
     tierEngagementTarget = 0,
     receivedAmount = 0,
-    receivedTarget = 0,
     showLanguageMenu,
     setShowLanguageMenu,
     languageDropdownRef,
@@ -199,6 +198,7 @@ export function Header({
                             >
                                 <span className="language-flag">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.flag ?? '🌐'}</span>
                                 <span className="language-dropdown-text">{LANGUAGE_OPTIONS.find((option) => option.code === language)?.label ?? language.toUpperCase()}</span>
+                                <i className="fas fa-chevron-down" aria-hidden="true"></i>
                             </button>
                             {showLanguageMenu && (
                                 <div className="language-dropdown-menu" role="menu">

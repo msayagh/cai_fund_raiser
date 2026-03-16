@@ -10,24 +10,18 @@ const getTranslation = (t, key, fallback) => {
     return fallback;
 };
 
-export default function PillarsOverview({ t, pillars = {}, totalRaised = 0 }) {
+export default function PillarsOverview({ t, pillars = {} }) {
     const [pillarAmounts, setPillarAmounts] = useState(pillars);
     const [isEditing, setIsEditing] = useState(false);
     const [editValues, setEditValues] = useState(pillars);
     const [isSaving, setIsSaving] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [saveMessage, setSaveMessage] = useState('');
 
     // Load from API on mount (with localStorage fallback)
     useEffect(() => {
         const loadPillars = async () => {
             try {
-                setIsLoading(true);
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
                 const response = await settingsApi.getPillars();
-                clearTimeout(timeoutId);
 
                 if (response?.data && typeof response.data === 'object') {
                     // Convert API response to amounts object
@@ -58,13 +52,11 @@ export default function PillarsOverview({ t, pillars = {}, totalRaised = 0 }) {
                     setPillarAmounts(pillars);
                     setEditValues(pillars);
                 }
-            } finally {
-                setIsLoading(false);
             }
         };
 
         loadPillars();
-    }, []);
+    }, [pillars]);
 
     const handleSavePillars = async () => {
         try {

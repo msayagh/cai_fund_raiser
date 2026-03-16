@@ -53,13 +53,6 @@ const inputStyle = {
     color: 'var(--text-primary)',
 };
 
-const getTranslation = (t, key, fallback) => {
-    if (typeof t === 'function') {
-        return t(key) || fallback;
-    }
-    return fallback;
-};
-
 export default function AdminDashboardPage() {
     const router = useRouter();
     // hydratedRef removed — Next.js router cache keeps component instances alive across

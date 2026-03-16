@@ -14,19 +14,13 @@ export default function GlobalGoalSection({ t, cardStyle, inputStyle, goal, onGo
     const [globalGoal, setGlobalGoal] = useState(goal?.amount || 0);
     const [amountRaised, setAmountRaised] = useState(goal?.raised || 0);
     const [isSaving, setIsSaving] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [saveMessage, setSaveMessage] = useState('');
 
     // Load from API on mount (with localStorage fallback)
     useEffect(() => {
         const loadGoal = async () => {
             try {
-                setIsLoading(true);
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
                 const response = await settingsApi.getGlobalGoal();
-                clearTimeout(timeoutId);
 
                 if (response?.data) {
                     setGlobalGoal(response.data.amount || 0);
@@ -47,8 +41,6 @@ export default function GlobalGoalSection({ t, cardStyle, inputStyle, goal, onGo
                 } catch (e) {
                     console.error('Error loading from localStorage:', e);
                 }
-            } finally {
-                setIsLoading(false);
             }
         };
 

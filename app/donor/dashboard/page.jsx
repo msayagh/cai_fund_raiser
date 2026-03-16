@@ -189,7 +189,6 @@ export default function DonorDashboardPage() {
     // ── Remote data ──
     const [profile,  setProfile]  = useState(null);
     const [payments, setPayments] = useState([]);
-    const [requests, setRequests] = useState([]); // kept for future use / request count
     const [loading,  setLoading]  = useState(true);
 
     // ── UI feedback ──
@@ -266,13 +265,12 @@ export default function DonorDashboardPage() {
                     router.replace('/login');
                     return;
                 }
-                const [me, myPayments, myRequests] = await Promise.all([
+                const [me, myPayments] = await Promise.all([
                     getMe(), getMyPayments(), getMyRequests(),
                 ]);
                 if (!alive) return;
                 setProfile(me);
                 setPayments(myPayments);
-                setRequests(myRequests);
                 setProfileForm({ name: me.name || '', email: me.email || '' });
                 // ── Receipt cache ──────────────────────────────────────────
                 // Persists attachment links for cash payments after the admin
@@ -347,7 +345,7 @@ export default function DonorDashboardPage() {
 
         boot();
         return () => { alive = false; };
-    }, []); // run once per mount — intentional
+    }, [router]); // run once per mount for a stable router instance
 
     // ── Derived engagement metrics ──
     const totalPaid   = useMemo(() => payments.reduce((s, p) => s + Number(p.amount || 0), 0), [payments]);
@@ -476,7 +474,6 @@ export default function DonorDashboardPage() {
         try {
             await createRequest({ type: contactForm.type, name: profile?.name || '', email: profile?.email || '', message: contactForm.message.trim() });
             setContactForm({ type: 'other', message: '' });
-            setRequests(await getMyRequests());
             setSuccess(ui.reqSubmitted);
         } catch (err) { setError(err?.message || ui.errSubmitReq); }
     }
@@ -542,7 +539,6 @@ export default function DonorDashboardPage() {
                 const updated = [newPending, ...pendingPayments];
                 setPendingPayments(updated);
                 savePendingToStorage(updated);
-                setRequests(await getMyRequests());
                 setSuccess(ui.cashOk);
             }
             setCashForm({ amount: '', adminNote: '', personalNote: '' });

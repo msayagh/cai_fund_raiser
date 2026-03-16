@@ -188,8 +188,10 @@
     &-menu {
         position: absolute;
         top: calc(100% + 8px);
-        right: 0;
+        inset-inline-end: 0;
+        inset-inline-start: auto;
         min-width: 180px;
+        max-width: min(220px, calc(100vw - 24px));
         padding: 6px;
         border-radius: 12px;
         border: 1px solid var(--border);
@@ -227,4 +229,10 @@
             color: var(--accent-gold);
         }
     }
+}
+
+[dir="rtl"] .language-dropdown-menu,
+:dir(rtl) .language-dropdown-menu {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
 }
