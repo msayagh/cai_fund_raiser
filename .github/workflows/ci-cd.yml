@@ -45,3 +45,6 @@ jobs:
             docker compose down
             docker compose build --no-cache
             docker compose up -d
+            docker compose -f backend/docker-compose.yml down
+            docker compose -f backend/docker-compose.yml build --no-cache
+            docker compose -f backend/docker-compose.yml up -d
