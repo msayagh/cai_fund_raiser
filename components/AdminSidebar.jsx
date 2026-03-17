@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 
-export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout }) {
+export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout, onTabSelect }) {
     const [isExpanded, setIsExpanded] = useState(true);
 
     const mainTabs = [
         { key: 'overview', label: 'Overview', icon: '📊' },
         { key: 'requests', label: 'Requests', icon: '📋' },
         { key: 'imports', label: 'Import Donations', icon: '📥' },
+        { key: 'apiKeys', label: 'API Keys', icon: '🧩' },
     ];
 
     const otherTabs = [
@@ -16,6 +17,15 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout 
         { key: 'logs', label: 'Activity Logs', icon: '📝' },
         { key: 'accounts', label: 'Accounts', icon: '👤' },
     ];
+
+    const handleTabClick = (key) => {
+        if (typeof onTabSelect === 'function') {
+            onTabSelect(key);
+            return;
+        }
+
+        setActiveTab(key);
+    };
 
     return (
         <aside style={{
@@ -84,7 +94,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout 
                     <button
                         key={key}
                         type="button"
-                        onClick={() => setActiveTab(key)}
+                        onClick={() => handleTabClick(key)}
                         title={!isExpanded ? label : undefined}
                         style={{
                             padding: isExpanded ? '10px 12px' : '10px',
@@ -136,7 +146,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout 
                         <button
                             key={key}
                             type="button"
-                            onClick={() => setActiveTab(key)}
+                            onClick={() => handleTabClick(key)}
                             title={!isExpanded ? label : undefined}
                             style={{
                                 padding: isExpanded ? '10px 12px' : '10px',

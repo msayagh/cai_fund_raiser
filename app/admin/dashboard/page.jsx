@@ -37,7 +37,22 @@ import { clearTokens, logout, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession } from '@/lib/session.js';
 import { startTokenRefreshManager, stopTokenRefreshManager } from '@/lib/tokenRefreshManager.js';
 import PaymentPanel from './PaymentPanel.jsx';
+import ApiKeysSection from './ApiKeysSection.jsx';
+const cardStyle = {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border)',
+    borderRadius: '24px',
+    padding: '24px',
+};
 
+const inputStyle = {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    background: 'rgba(255,255,255,0.03)',
+    color: 'var(--text-primary)',
+};
 export default function AdminDashboardPage() {
     const router = useRouter();
     // hydratedRef removed — Next.js router cache keeps component instances alive across
@@ -73,6 +88,10 @@ export default function AdminDashboardPage() {
         setActiveTabState(tab);
         if (typeof window !== 'undefined') {
             localStorage.setItem('adminActiveTab', tab);
+        }
+
+        if (tab === 'apiKeys') {
+            router.push('/admin/dashboard/api-keys');
         }
     };
     const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '' });
@@ -219,7 +238,7 @@ export default function AdminDashboardPage() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const savedTab = localStorage.getItem('adminActiveTab');
-            if (savedTab && ['overview', 'requests', 'imports', 'admins', 'logs', 'accounts'].includes(savedTab)) {
+            if (savedTab && ['overview', 'requests', 'imports', 'apiKeys', 'admins', 'logs', 'accounts'].includes(savedTab)) {
                 setActiveTabState(savedTab);
             }
         }
@@ -1701,6 +1720,14 @@ export default function AdminDashboardPage() {
                                         </div>
                                     </div>
                                 </>
+                            ) : null}
+
+                            {activeTab === 'apiKeys' ? (
+                                <ApiKeysSection
+                                    cardStyle={cardStyle}
+                                    inputStyle={inputStyle}
+                                    isActive={activeTab === 'apiKeys'}
+                                />
                             ) : null}
 
                             {activeTab === 'logs' ? (
