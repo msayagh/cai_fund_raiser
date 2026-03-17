@@ -55,7 +55,7 @@ model Engagement {
 
 model Payment {
   id                String   @id @default(cuid())
-  externalEntryId   String?  @unique
+  externalEntryId   String?
   donorId           String
   donor             Donor    @relation(fields: [donorId], references: [id], onDelete: Cascade)
   amount            Float
@@ -65,6 +65,8 @@ model Payment {
   recordedByAdminId String?
   recordedByAdmin   Admin?   @relation(fields: [recordedByAdminId], references: [id])
   createdAt         DateTime @default(now())
+
+  @@index([externalEntryId])
 }
 
 model Request {
