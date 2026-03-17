@@ -54,6 +54,7 @@ const upsertDonorPaymentSchema = z.object({
     pledgeAmount: z.number().positive('Pledge amount must be greater than 0').optional(),
   }),
   payment: z.object({
+    entryId: z.string().trim().min(1, 'Payment entry ID is required'),
     amount: z.number().positive('Payment amount must be greater than 0'),
     date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format'),
     method: z.enum(['cash', 'card', 'zeffy']),

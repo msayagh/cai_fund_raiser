@@ -55,6 +55,7 @@ model Engagement {
 
 model Payment {
   id                String   @id @default(cuid())
+  externalEntryId   String?  @unique
   donorId           String
   donor             Donor    @relation(fields: [donorId], references: [id], onDelete: Cascade)
   amount            Float

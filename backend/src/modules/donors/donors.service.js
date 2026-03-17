@@ -519,12 +519,13 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pi
   return engagement;
 };
 
-const adminAddPayment = async (adminId, adminName, donorId, { amount, date, method, note }) => {
+const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, date, method, note }) => {
   const donor = await prisma.donor.findUnique({ where: { id: donorId } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
   const payment = await prisma.payment.create({
     data: {
+      ...(entryId ? { externalEntryId: entryId } : {}),
       donorId,
       amount,
       date: new Date(date),
@@ -801,6 +802,24 @@ const adminCreateDonor = async (adminId, adminName, { name, email, accountCreate
 };
 
 const adminUpsertDonorPayment = async (adminId, adminName, { donor: donorInput, payment: paymentInput }) => {
+  const existingPayment = await prisma.payment.findFirst({
+    where: { externalEntryId: paymentInput.entryId },
+    include: {
+      donor: true,
+      recordedByAdmin: { select: { id: true, name: true } },
+    },
+  });
+
+  if (existingPayment) {
+    return {
+      donorCreated: false,
+      paymentCreated: false,
+      duplicate: true,
+      donor: stripPassword(existingPayment.donor),
+      payment: existingPayment,
+    };
+  }
+
   const normalizedEmail = normalizeEmail(donorInput.email);
   let donor = await prisma.donor.findUnique({
     where: { email: normalizedEmail },
@@ -844,6 +863,8 @@ const adminUpsertDonorPayment = async (adminId, adminName, { donor: donorInput, 
 
   return {
     donorCreated,
+    paymentCreated: true,
+    duplicate: false,
     donor: stripPassword(donor),
     payment,
   };
