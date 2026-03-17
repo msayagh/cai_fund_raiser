@@ -338,34 +338,10 @@ export function useDonations() {
             }
 
             try {
-                const snapshot = await fetchCampaignSnapshot();
-                const apiRows = snapshot?.donations;
-                const apiSummary = snapshot?.summary;
-                const hasApiDonationData = Array.isArray(apiRows) && (
-                    apiRows.length > 0 ||
-                    Number(apiSummary?.ramadanRaised || 0) > 0 ||
-                    Number(apiSummary?.engagementAmount || 0) > 0
-                );
-
-                if (hasApiDonationData) {
-                    setDonations((prev) => {
-                        if (prev.length === apiRows.length && prev.every((d, i) => d.id === apiRows[i].id && d.donated === apiRows[i].donated)) {
-                            return prev;
-                        }
-                        return apiRows;
-                    });
-                    setCachedValue(DONATIONS_CACHE_KEY, apiRows);
-                    setTotalsByEmail(getTotalsByEmail(apiRows));
-                    setRamadanRaised(apiSummary?.ramadanRaised ?? getRamadanRaised(apiRows));
-                    setEngagementAmount(apiSummary?.engagementAmount ?? getEngagementAmount(apiRows));
-                    setError(null);
-                    return;
-                }
-
                 const rows = await fetchDonationsFromSheet();
                 if (!Array.isArray(rows)) {
                     setError('Unable to load donations right now.');
-                    captureMessage('Donations fetch returned a non-array payload from API or sheet', { level: 'error', source: 'useDonations' });
+                    captureMessage('Donations fetch returned a non-array payload', { level: 'error', source: 'useDonations' });
                     return;
                 }
 
