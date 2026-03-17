@@ -6,6 +6,10 @@
     flex: 1;
 }
 
+.donations-list--mobile {
+    width: 100%;
+}
+
 .donations-list-status {
     padding: 12px 14px;
     border-radius: 12px;
@@ -40,13 +44,141 @@
     padding-right: 6px;
 }
 
+.donations-list-scroll--sidebar-marquee {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    height: 460px;
+    overflow: hidden;
+    padding-right: 6px;
+    mask-image: linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+
+    &:hover .donations-list-marquee-track {
+        animation-play-state: paused;
+    }
+}
+
+.donations-list-scroll--mobile-marquee {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    height: 420px;
+    overflow: hidden;
+    padding-right: 0;
+    mask-image: linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+
+    &:hover .donations-list-marquee-track {
+        animation-play-state: paused;
+    }
+}
+
+.donations-list-marquee-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    touch-action: pan-y;
+    cursor: grab;
+}
+
+.donations-list-marquee-column::-webkit-scrollbar,
+.donations-list-marquee-row::-webkit-scrollbar {
+    display: none;
+}
+
+.donations-list-marquee-row {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    touch-action: pan-x;
+    cursor: grab;
+}
+
+.donations-list-marquee-column.is-dragging,
+.donations-list-marquee-row.is-dragging {
+    cursor: grabbing;
+}
+
+.donations-list-marquee-column.is-dragging .donations-list-marquee-track,
+.donations-list-marquee-row.is-dragging .donations-list-marquee-track {
+    animation-play-state: paused;
+}
+
+.donations-list-marquee-track {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: max-content;
+    animation: donations-list-marquee-down 32s linear infinite;
+}
+
+.donations-list-marquee-track--horizontal {
+    flex-direction: row;
+    min-width: max-content;
+    min-height: auto;
+    animation: donations-list-marquee-left 36s linear infinite;
+}
+
+.donations-list-marquee-track--horizontal.donations-list-marquee-track--right {
+    animation-name: donations-list-marquee-right;
+}
+
+.donations-list-marquee-track--horizontal.donations-list-marquee-track--left {
+    animation-name: donations-list-marquee-left;
+}
+
+.donations-list-marquee-column--up .donations-list-marquee-track {
+    animation-name: donations-list-marquee-up;
+}
+
+.donations-list--sidebar .donation-item {
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: none;
+}
+
 .donation-item {
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: var(--bg-card);
-    border: 2px solid var(--tier-color);
+    flex: 0 0 auto;
+    inline-size: fit-content;
+    min-inline-size: 160px;
+    max-inline-size: 240px;
+    padding: 10px;
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 96%, white 4%), var(--bg-card)) padding-box,
+        conic-gradient(
+            from -90deg,
+            var(--tier-color) 0deg,
+            var(--tier-color) var(--progress-angle),
+            color-mix(in srgb, var(--tier-color) 18%, var(--border)) var(--progress-angle),
+            color-mix(in srgb, var(--tier-color) 18%, var(--border)) 360deg
+    ) border-box;
+    border: 2px solid transparent;
     box-shadow: var(--shadow-light);
-    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    opacity: var(--item-opacity, 1);
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at top right, color-mix(in srgb, var(--tier-color) 12%, transparent), transparent 34%);
+        pointer-events: none;
+    }
 
     &--skeleton {
         border-color: var(--border);
@@ -54,78 +186,138 @@
 
     &-top {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
+        justify-content: flex-end;
+        align-items: flex-start;
+        position: relative;
+        z-index: 1;
     }
 
     &-copy {
         min-width: 0;
         flex: 1;
+        display: flex;
+        align-items: flex-start;
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
     }
 
     &-name {
-        font-size: 14px;
+        font-size: clamp(0.9rem, 0.86rem + 0.12vw, 1.04rem);
         font-weight: 700;
+        line-height: 1.1;
         color: var(--text-primary);
-        margin-bottom: 4px;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
+    }
+
+    &-meta {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: relative;
+        z-index: 1;
     }
 
     &-amount {
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--accent-gold);
-        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--amount-color, var(--tier-color));
+        line-height: 1.2;
+        letter-spacing: 0.01em;
     }
 
     &-tier {
-        font-size: 11px;
+        font-size: 9px;
         color: var(--text-muted);
-        margin-bottom: 6px;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-    }
-
-    &-progress-circle {
+        line-height: 1.3;
         position: relative;
-        width: 58px;
-        height: 58px;
-        flex: 0 0 58px;
+        z-index: 1;
     }
 
-    &-progress-svg {
-        width: 100%;
-        height: 100%;
-        transform: rotate(-90deg);
-    }
-
-    &-progress-track,
-    &-progress-value {
-        fill: none;
-        stroke-width: 4;
-    }
-
-    &-progress-track {
-        stroke: var(--viz-progress-track);
-    }
-
-    &-progress-value {
-        stroke: var(--tier-color);
-        stroke-linecap: round;
-        stroke-dasharray: 100.53;
-        stroke-dashoffset: calc(100.53 * (1 - var(--progress-pct)));
-        transition: stroke-dashoffset 0.3s ease;
-    }
-
-    &-progress-label {
-        position: absolute;
-        inset: 0;
-        display: flex;
+    &-progress-badge {
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 11px;
-        font-weight: 800;
+        min-width: 42px;
+        min-height: 22px;
+        padding: 4px 7px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--tier-color) 16%, var(--bg-card));
+        border: 1px solid color-mix(in srgb, var(--tier-color) 42%, var(--border));
         color: var(--text-primary);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        line-height: 1;
+    }
+}
+
+@keyframes donations-list-marquee-down {
+    0% {
+        transform: translateY(0);
+    }
+
+    100% {
+        transform: translateY(calc(-100% - 10px));
+    }
+}
+
+@keyframes donations-list-marquee-up {
+    0% {
+        transform: translateY(calc(-100% - 10px));
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes donations-list-marquee-left {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(calc(-100% - 10px));
+    }
+}
+
+@keyframes donations-list-marquee-right {
+    0% {
+        transform: translateX(calc(-100% - 10px));
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .donations-list-scroll--sidebar-marquee {
+        overflow-y: auto;
+        mask-image: none;
+        -webkit-mask-image: none;
+    }
+
+    .donations-list-scroll--mobile-marquee {
+        overflow-y: auto;
+        mask-image: none;
+        -webkit-mask-image: none;
+    }
+
+    .donations-list-marquee-track {
+        animation: none;
     }
 }
 
@@ -146,6 +338,53 @@
 
 @media (max-width: 640px) {
     .donations-list-scroll {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        max-height: 520px;
+        overflow-y: auto;
+        padding-right: 0;
+    }
+
+    .donations-list--mobile .donation-item {
+        inline-size: 100%;
+        min-inline-size: 0;
+        max-inline-size: none;
+    }
+
+    .donations-list-scroll--mobile-marquee {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        height: auto;
+        width: 100%;
+        overflow: hidden;
+        padding-right: 0;
+        mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%);
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%);
+    }
+
+    .donations-list-marquee-row {
+        gap: 8px;
+    }
+
+    .donations-list-marquee-track--horizontal {
+        gap: 8px;
+    }
+
+    .donations-list--mobile .donation-item {
+        inline-size: auto;
+        min-inline-size: 150px;
+        max-inline-size: 220px;
+    }
+}
+
+@media (min-width: 641px) and (max-width: 1200px) {
+    .donations-list--mobile .donations-list-scroll--mobile-marquee {
+        width: 100%;
+    }
+
+    .donations-list--mobile .donation-item {
+        min-inline-size: 220px;
+        max-inline-size: 260px;
     }
 }

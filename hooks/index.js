@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES } from '@/lib/translationUtils.js';
-import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
+import { fetchCampaignSnapshot, fetchFundedFromSheet, fetchDonationsFromSheet, hasFundedSheetConfig } from '@/lib/dataFetching.js';
 import { getCachedValue, setCachedValue } from '@/lib/clientCache.js';
 import { captureException, captureMessage } from '@/lib/monitoring.js';
 import { INITIAL_TIERS, MOBILE_BREAKPOINT, TIER_CONFIG } from '@/constants/config.js';
@@ -231,27 +231,39 @@ export function useDonations() {
 
         donations.forEach((donation) => {
             const email = donation["courriel"];
-            const tier = String(donation["tier"]);
+            let tier = String(donation["tier"]);
             const price = parseInt(donation["montant total"]);
             const donorLabel = String(donation["donorLabel"] || "").trim();
             const details = String(donation["détails"]);
+            if (!tier) {
+                tier = ["sabbaq", "mutasaddiq", "kareem", "jawaad"].find((t) => details.toLowerCase().includes(tier.toLowerCase())) || "unknown";
+                if (!tier) {
+                    tier = "unknown";
+                }
+            }
+            const quantity = parseInt(details.match(/(\d+)x/)?.[1]) || 1;
 
-            if (!summary[email]) {
-                summary[email] = {
+            const ID = email + "_" + tier;
+
+            if (!summary[ID]) {
+                summary[ID] = {
                     email: email,
                     details: details,
                     donorLabel: donorLabel,
                     tier: tier,
                     totalDonated: 0,
-                    ticketCount: 0,
+                    ticketCount: quantity || 0,
                 };
             }
 
-            summary[email].totalDonated += price;
-            summary[email].ticketCount += 1;
+            if (!summary[ID].tier && tier) {
+                summary[ID].tier = tier;
+            }
 
-            if (!summary[email].donorLabel && donorLabel) {
-                summary[email].donorLabel = donorLabel;
+            summary[ID].totalDonated += price;
+
+            if (!summary[ID].donorLabel && donorLabel) {
+                summary[ID].donorLabel = donorLabel;
             }
         });
 
