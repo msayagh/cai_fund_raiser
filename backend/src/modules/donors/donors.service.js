@@ -1,6 +1,7 @@
 'use strict';
 
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
 const prisma = require('../../db/client');
 const AppError = require('../../utils/AppError');
@@ -12,6 +13,8 @@ const BCRYPT_ROUNDS = 12;
 
 const stripPassword = ({ passwordHash, ...rest }) => rest;
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+const generateTemporaryPassword = () => crypto.randomBytes(9).toString('base64url');
+const isTruthyNumber = (value) => typeof value === 'number' && Number.isFinite(value) && value > 0;
 
 const parseCsvLine = (line) => {
   const cells = [];
@@ -742,16 +745,16 @@ const adminCreateDonor = async (adminId, adminName, { name, email, accountCreate
   const existing = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
   if (existing) throw new AppError('Email already in use', 409, 'EMAIL_TAKEN');
 
+  const normalizedPassword = typeof password === 'string' ? password.trim() : '';
   const shouldCreateAccount = accountCreated !== undefined
     ? accountCreated
-    : (typeof password === 'string' && password.length >= 8);
-
-  if (shouldCreateAccount && (!password || password.length < 8)) {
-    throw new AppError('Password is required when creating an active account', 400, 'PASSWORD_REQUIRED');
-  }
+    : normalizedPassword.length >= 8;
+  const resolvedPassword = shouldCreateAccount
+    ? (normalizedPassword.length >= 8 ? normalizedPassword : generateTemporaryPassword())
+    : null;
 
   const passwordHash = await bcrypt.hash(
-    shouldCreateAccount ? password : `placeholder:${normalizedEmail}:${Date.now()}`,
+    shouldCreateAccount ? resolvedPassword : `placeholder:${normalizedEmail}:${Date.now()}`,
     BCRYPT_ROUNDS,
   );
 
@@ -787,14 +790,63 @@ const adminCreateDonor = async (adminId, adminName, { name, email, accountCreate
 
   if (shouldCreateAccount) {
     try {
-      await mailService.sendRegistrationConfirmation(donor.email, donor.name);
+      await mailService.sendDonorAccountCreation(donor.email, donor.name, resolvedPassword);
     } catch (error) {
-      console.error('Failed to send registration confirmation email:', error);
+      console.error('Failed to send donor account creation email:', error);
       // Don't throw error - donor was created successfully
     }
   }
 
   return stripPassword(donor);
+};
+
+const adminUpsertDonorPayment = async (adminId, adminName, { donor: donorInput, payment: paymentInput }) => {
+  const normalizedEmail = normalizeEmail(donorInput.email);
+  let donor = await prisma.donor.findUnique({
+    where: { email: normalizedEmail },
+    include: { engagement: true },
+  });
+  let donorCreated = false;
+
+  if (!donor) {
+    donor = await adminCreateDonor(adminId, adminName, {
+      name: donorInput.name,
+      email: normalizedEmail,
+      accountCreated: donorInput.accountCreated,
+      password: donorInput.password,
+      pledgeAmount: donorInput.pledgeAmount,
+    });
+    donorCreated = true;
+  } else {
+    const donorUpdates = {};
+    if (donorInput.name && donorInput.name !== donor.name) donorUpdates.name = donorInput.name;
+
+    if (Object.keys(donorUpdates).length > 0) {
+      donor = await prisma.donor.update({
+        where: { id: donor.id },
+        data: donorUpdates,
+        include: { engagement: true },
+      });
+    }
+
+    if (isTruthyNumber(donorInput.pledgeAmount) && !donor.engagement) {
+      await prisma.engagement.create({
+        data: {
+          donorId: donor.id,
+          totalPledge: donorInput.pledgeAmount,
+          startDate: new Date(),
+        },
+      });
+    }
+  }
+
+  const payment = await adminAddPayment(adminId, adminName, donor.id, paymentInput);
+
+  return {
+    donorCreated,
+    donor: stripPassword(donor),
+    payment,
+  };
 };
 
 const generatePaymentConfirmation = async (donorId, paymentId, adminId) => {
@@ -969,6 +1021,7 @@ module.exports = {
   adminDeletePayment,
   adminImportPaymentsCsv,
   adminCreateDonor,
+  adminUpsertDonorPayment,
   generatePaymentConfirmation,
   uploadPaymentReceipt,
   downloadPaymentConfirmation,

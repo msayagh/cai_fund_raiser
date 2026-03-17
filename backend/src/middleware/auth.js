@@ -80,6 +80,12 @@ const requireApiKey = async (req, res, next) => {
     }
 
     req.apiKey = apiKey;
+    req.admin = {
+      id: apiKey.createdByAdminId ?? null,
+      name: apiKey.createdByAdmin?.name || `API Key: ${apiKey.title}`,
+      email: apiKey.createdByAdmin?.email || null,
+      isApiKey: true,
+    };
     next();
   } catch (err) {
     next(err);

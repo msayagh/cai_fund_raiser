@@ -2,6 +2,7 @@
 
 const service = require('./requests.service');
 const { sendSuccess } = require('../../utils/response');
+const { getRequestActor } = require('../../utils/requestActor');
 
 const list = async (req, res, next) => {
   try {
@@ -50,21 +51,24 @@ const addAttachments = async (req, res, next) => {
 
 const approve = async (req, res, next) => {
   try {
-    const data = await service.approveRequest(req.admin.id, req.admin.name, req.params.id, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.approveRequest(actor.id, actor.name, req.params.id, req.body);
     sendSuccess(res, data, 'Request approved');
   } catch (err) { next(err); }
 };
 
 const decline = async (req, res, next) => {
   try {
-    const data = await service.declineRequest(req.admin.id, req.admin.name, req.params.id);
+    const actor = getRequestActor(req);
+    const data = await service.declineRequest(actor.id, actor.name, req.params.id);
     sendSuccess(res, data, 'Request declined');
   } catch (err) { next(err); }
 };
 
 const hold = async (req, res, next) => {
   try {
-    const data = await service.holdRequest(req.admin.id, req.admin.name, req.params.id);
+    const actor = getRequestActor(req);
+    const data = await service.holdRequest(actor.id, actor.name, req.params.id);
     sendSuccess(res, data, 'Request placed on hold');
   } catch (err) { next(err); }
 };

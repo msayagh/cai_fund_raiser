@@ -5,7 +5,7 @@ const { z } = require('zod');
 const createAdminSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters').optional(),
 });
 
 const updateAdminSchema = z.object({

@@ -2,6 +2,7 @@
 
 const service = require('./donors.service');
 const { sendSuccess } = require('../../utils/response');
+const { getRequestActor } = require('../../utils/requestActor');
 
 // ─── Self-service ─────────────────────────────────────────────────────────────
 
@@ -80,14 +81,16 @@ const getById = async (req, res, next) => {
 
 const adminUpdate = async (req, res, next) => {
   try {
-    const data = await service.adminUpdateDonor(req.admin.id, req.admin.name, req.params.id, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.adminUpdateDonor(actor.id, actor.name, req.params.id, req.body);
     sendSuccess(res, data, 'Donor updated');
   } catch (err) { next(err); }
 };
 
 const adminDelete = async (req, res, next) => {
   try {
-    await service.adminDeleteDonor(req.admin.id, req.admin.name, req.params.id);
+    const actor = getRequestActor(req);
+    await service.adminDeleteDonor(actor.id, actor.name, req.params.id);
     sendSuccess(res, null, 'Donor deleted');
   } catch (err) { next(err); }
 };
@@ -95,28 +98,32 @@ const adminDelete = async (req, res, next) => {
 const adminUpdatePassword = async (req, res, next) => {
   try {
     const { newPassword } = req.body;
-    await service.adminUpdateDonorPassword(req.admin.id, req.admin.name, req.params.id, newPassword);
+    const actor = getRequestActor(req);
+    await service.adminUpdateDonorPassword(actor.id, actor.name, req.params.id, newPassword);
     sendSuccess(res, null, 'Password updated');
   } catch (err) { next(err); }
 };
 
 const adminAddPayment = async (req, res, next) => {
   try {
-    const data = await service.adminAddPayment(req.admin.id, req.admin.name, req.params.id, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.adminAddPayment(actor.id, actor.name, req.params.id, req.body);
     sendSuccess(res, data, 'Payment recorded', 201);
   } catch (err) { next(err); }
 };
 
 const adminUpdatePayment = async (req, res, next) => {
   try {
-    const data = await service.adminUpdatePayment(req.admin.id, req.admin.name, req.params.id, req.params.paymentId, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.adminUpdatePayment(actor.id, actor.name, req.params.id, req.params.paymentId, req.body);
     sendSuccess(res, data, 'Payment updated');
   } catch (err) { next(err); }
 };
 
 const adminDeletePayment = async (req, res, next) => {
   try {
-    await service.adminDeletePayment(req.admin.id, req.admin.name, req.params.id, req.params.paymentId);
+    const actor = getRequestActor(req);
+    await service.adminDeletePayment(actor.id, actor.name, req.params.id, req.params.paymentId);
     sendSuccess(res, null, 'Payment deleted');
   } catch (err) { next(err); }
 };
@@ -130,35 +137,40 @@ const adminGetPayments = async (req, res, next) => {
 
 const adminCreate = async (req, res, next) => {
   try {
-    const data = await service.adminCreateDonor(req.admin.id, req.admin.name, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.adminCreateDonor(actor.id, actor.name, req.body);
     sendSuccess(res, data, 'Donor created', 201);
   } catch (err) { next(err); }
 };
 
 const adminDeactivate = async (req, res, next) => {
   try {
-    const data = await service.adminUpdateDonor(req.admin.id, req.admin.name, req.params.id, { isActive: false });
+    const actor = getRequestActor(req);
+    const data = await service.adminUpdateDonor(actor.id, actor.name, req.params.id, { isActive: false });
     sendSuccess(res, data, 'Donor deactivated');
   } catch (err) { next(err); }
 };
 
 const adminReactivate = async (req, res, next) => {
   try {
-    const data = await service.adminUpdateDonor(req.admin.id, req.admin.name, req.params.id, { isActive: true });
+    const actor = getRequestActor(req);
+    const data = await service.adminUpdateDonor(actor.id, actor.name, req.params.id, { isActive: true });
     sendSuccess(res, data, 'Donor reactivated');
   } catch (err) { next(err); }
 };
 
 const adminSetEngagement = async (req, res, next) => {
   try {
-    const data = await service.adminSetEngagement(req.admin.id, req.admin.name, req.params.id, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.adminSetEngagement(actor.id, actor.name, req.params.id, req.body);
     sendSuccess(res, data, 'Engagement set', 201);
   } catch (err) { next(err); }
 };
 
 const adminGetPaymentConfirmation = async (req, res, next) => {
   try {
-    const stream = await service.generatePaymentConfirmation(req.params.id, req.params.paymentId, req.admin.id);
+    const actor = getRequestActor(req);
+    const stream = await service.generatePaymentConfirmation(req.params.id, req.params.paymentId, actor.id);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="payment-confirmation-${req.params.paymentId}.pdf"`);
     stream.pipe(res);
@@ -170,7 +182,8 @@ const uploadPaymentReceipt = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file provided' });
     }
-    const data = await service.uploadPaymentReceipt(req.admin.id, req.admin.name, req.params.id, req.params.paymentId, req.file);
+    const actor = getRequestActor(req);
+    const data = await service.uploadPaymentReceipt(actor.id, actor.name, req.params.id, req.params.paymentId, req.file);
     sendSuccess(res, data, 'Receipt uploaded', 200);
   } catch (err) { next(err); }
 };
@@ -180,8 +193,17 @@ const adminImportPaymentsCsv = async (req, res, next) => {
     if (!req.file?.buffer) {
       return res.status(400).json({ success: false, message: 'No CSV file provided' });
     }
-    const data = await service.adminImportPaymentsCsv(req.admin.id, req.admin.name, req.file.buffer);
+    const actor = getRequestActor(req);
+    const data = await service.adminImportPaymentsCsv(actor.id, actor.name, req.file.buffer);
     sendSuccess(res, data, 'CSV payments import completed', 200);
+  } catch (err) { next(err); }
+};
+
+const adminUpsertDonorPayment = async (req, res, next) => {
+  try {
+    const actor = getRequestActor(req);
+    const data = await service.adminUpsertDonorPayment(actor.id, actor.name, req.body);
+    sendSuccess(res, data, data.donorCreated ? 'Donor created and payment recorded' : 'Payment recorded for existing donor', data.donorCreated ? 201 : 200);
   } catch (err) { next(err); }
 };
 
@@ -196,5 +218,5 @@ module.exports = {
   getMyEngagement, createEngagement, updateEngagement,
   getMyPayments, getMyRequests,
   list, getById, adminUpdate, adminDelete, adminUpdatePassword, adminGetPayments, adminAddPayment, adminUpdatePayment, adminDeletePayment, adminCreate, adminDeactivate, adminReactivate, adminSetEngagement, adminGetPaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
-  adminImportPaymentsCsv,
+  adminImportPaymentsCsv, adminUpsertDonorPayment,
 };

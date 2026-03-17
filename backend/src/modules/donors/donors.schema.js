@@ -45,9 +45,26 @@ const updateEngagementSchema = z.object({
   message: 'At least one field (totalPledge, pillars, or endDate) must be provided'
 });
 
+const upsertDonorPaymentSchema = z.object({
+  donor: z.object({
+    name: z.string().trim().min(2, 'Donor name must be at least 2 characters').max(100, 'Donor name must be 100 characters or fewer'),
+    email: z.string().email('Valid donor email is required'),
+    accountCreated: z.boolean().optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+    pledgeAmount: z.number().positive('Pledge amount must be greater than 0').optional(),
+  }),
+  payment: z.object({
+    amount: z.number().positive('Payment amount must be greater than 0'),
+    date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format'),
+    method: z.enum(['cash', 'card', 'zeffy']),
+    note: z.string().trim().max(500, 'Note must be 500 characters or fewer').optional(),
+  }),
+});
+
 module.exports = {
   updateProfileSchema,
   updatePasswordSchema,
   createEngagementSchema,
   updateEngagementSchema,
+  upsertDonorPaymentSchema,
 };

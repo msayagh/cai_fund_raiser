@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { requireDonor, requireAdmin, requireAdminOrApiKey } = require('../../middleware/auth');
+const { requireDonor, requireAdminOrApiKey } = require('../../middleware/auth');
 const { requireCapability } = require('../../middleware/authorization');
 const validate = require('../../middleware/validate');
 const ctrl = require('./donors.controller');
@@ -10,6 +10,7 @@ const {
   updatePasswordSchema,
   createEngagementSchema,
   updateEngagementSchema,
+  upsertDonorPaymentSchema,
 } = require('./donors.schema');
 const { z } = require('zod');
 const multer = require('multer');
@@ -87,22 +88,23 @@ const csvUpload = multer({
 });
 
 adminDonorRouter.get('/', requireAdminOrApiKey, requireCapability('admin.donors.view'), ctrl.list);
-adminDonorRouter.post('/bulk/upload', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
-adminDonorRouter.post('/bulk/import', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
-adminDonorRouter.post('/import/csv', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
-adminDonorRouter.post('/', requireAdmin, requireCapability('admin.donors.create'), validate(adminCreateDonorSchema), ctrl.adminCreate);
+adminDonorRouter.post('/bulk/upload', requireAdminOrApiKey, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
+adminDonorRouter.post('/bulk/import', requireAdminOrApiKey, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
+adminDonorRouter.post('/import/csv', requireAdminOrApiKey, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
+adminDonorRouter.post('/upsert-payment', requireAdminOrApiKey, requireCapability('admin.donors.create'), validate(upsertDonorPaymentSchema), ctrl.adminUpsertDonorPayment);
+adminDonorRouter.post('/', requireAdminOrApiKey, requireCapability('admin.donors.create'), validate(adminCreateDonorSchema), ctrl.adminCreate);
 adminDonorRouter.get('/:id', requireAdminOrApiKey, requireCapability('admin.donors.view'), ctrl.getById);
 adminDonorRouter.get('/:id/payments', requireAdminOrApiKey, requireCapability('admin.donors.view'), ctrl.adminGetPayments);
-adminDonorRouter.get('/:id/payments/:paymentId/confirmation', requireAdmin, requireCapability('admin.donors.view'), ctrl.adminGetPaymentConfirmation);
-adminDonorRouter.put('/:id/engagement', requireAdmin, requireCapability('admin.donors.edit'), validate(adminEngagementSchema), ctrl.adminSetEngagement);
-adminDonorRouter.put('/:id/deactivate', requireAdmin, requireCapability('admin.donors.deactivate'), ctrl.adminDeactivate);
-adminDonorRouter.put('/:id/reactivate', requireAdmin, requireCapability('admin.donors.deactivate'), ctrl.adminReactivate);
-adminDonorRouter.put('/:id/password', requireAdmin, requireCapability('admin.donors.edit'), validate(adminDonorPasswordSchema), ctrl.adminUpdatePassword);
-adminDonorRouter.put('/:id', requireAdmin, requireCapability('admin.donors.edit'), validate(adminUpdateDonorSchema), ctrl.adminUpdate);
-adminDonorRouter.delete('/:id', requireAdmin, requireCapability('admin.donors.delete'), ctrl.adminDelete);
-adminDonorRouter.post('/:id/payments', requireAdmin, requireCapability('admin.donors.edit'), validate(adminPaymentSchema), ctrl.adminAddPayment);
-adminDonorRouter.put('/:id/payments/:paymentId', requireAdmin, requireCapability('admin.donors.edit'), validate(adminUpdatePaymentSchema), ctrl.adminUpdatePayment);
-adminDonorRouter.delete('/:id/payments/:paymentId', requireAdmin, requireCapability('admin.donors.edit'), ctrl.adminDeletePayment);
-adminDonorRouter.post('/:id/payments/:paymentId/receipt', requireAdmin, requireCapability('admin.donors.edit'), ctrl.uploadPaymentReceipt);
+adminDonorRouter.get('/:id/payments/:paymentId/confirmation', requireAdminOrApiKey, requireCapability('admin.donors.view'), ctrl.adminGetPaymentConfirmation);
+adminDonorRouter.put('/:id/engagement', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminEngagementSchema), ctrl.adminSetEngagement);
+adminDonorRouter.put('/:id/deactivate', requireAdminOrApiKey, requireCapability('admin.donors.deactivate'), ctrl.adminDeactivate);
+adminDonorRouter.put('/:id/reactivate', requireAdminOrApiKey, requireCapability('admin.donors.deactivate'), ctrl.adminReactivate);
+adminDonorRouter.put('/:id/password', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminDonorPasswordSchema), ctrl.adminUpdatePassword);
+adminDonorRouter.put('/:id', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminUpdateDonorSchema), ctrl.adminUpdate);
+adminDonorRouter.delete('/:id', requireAdminOrApiKey, requireCapability('admin.donors.delete'), ctrl.adminDelete);
+adminDonorRouter.post('/:id/payments', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminPaymentSchema), ctrl.adminAddPayment);
+adminDonorRouter.put('/:id/payments/:paymentId', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminUpdatePaymentSchema), ctrl.adminUpdatePayment);
+adminDonorRouter.delete('/:id/payments/:paymentId', requireAdminOrApiKey, requireCapability('admin.donors.edit'), ctrl.adminDeletePayment);
+adminDonorRouter.post('/:id/payments/:paymentId/receipt', requireAdminOrApiKey, requireCapability('admin.donors.edit'), ctrl.uploadPaymentReceipt);
 
 module.exports.adminDonorRouter = adminDonorRouter;

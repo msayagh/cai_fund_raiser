@@ -2,6 +2,7 @@
 
 const service = require('./apiKeys.service');
 const { sendSuccess } = require('../../utils/response');
+const { getRequestActor } = require('../../utils/requestActor');
 
 const list = async (req, res, next) => {
   try {
@@ -14,7 +15,8 @@ const list = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const data = await service.createApiKey(req.admin.id, req.admin.name, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.createApiKey(actor.id, actor.name, req.body);
     sendSuccess(res, data, 'API key created', 201);
   } catch (error) {
     next(error);
@@ -23,7 +25,8 @@ const create = async (req, res, next) => {
 
 const update = async (req, res, next) => {
   try {
-    const data = await service.updateApiKey(req.admin.id, req.admin.name, req.params.id, req.body);
+    const actor = getRequestActor(req);
+    const data = await service.updateApiKey(actor.id, actor.name, req.params.id, req.body);
     sendSuccess(res, data, 'API key updated');
   } catch (error) {
     next(error);
@@ -32,7 +35,8 @@ const update = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
   try {
-    await service.deleteApiKey(req.admin.id, req.admin.name, req.params.id);
+    const actor = getRequestActor(req);
+    await service.deleteApiKey(actor.id, actor.name, req.params.id);
     sendSuccess(res, null, 'API key deleted');
   } catch (error) {
     next(error);

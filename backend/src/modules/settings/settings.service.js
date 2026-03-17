@@ -17,27 +17,27 @@ const getGlobalGoal = async () => {
 };
 
 const updateGlobalGoal = async (adminId, adminName, { amount, raised }) => {
+    const safeAdminId = adminId ?? null;
     let goal = await prisma.globalGoal.findFirst();
     if (!goal) {
         goal = await prisma.globalGoal.create({
-            data: { amount, raised, updatedBy: adminId === 'anonymous' ? null : adminId }
+            data: { amount, raised, updatedBy: safeAdminId }
         });
     } else {
         goal = await prisma.globalGoal.update({
             where: { id: goal.id },
-            data: { amount, raised, updatedBy: adminId === 'anonymous' ? null : adminId }
+            data: { amount, raised, updatedBy: safeAdminId }
         });
     }
 
-    // Only log if admin is authenticated
-    if (adminId !== 'anonymous') {
+    if (safeAdminId) {
         await createLog({
             actor: `Admin: ${adminName}`,
             actorType: 'admin',
-            actorId: adminId,
+            actorId: safeAdminId,
             action: 'global_goal_updated',
             details: `Global goal updated to $${amount}, raised: $${raised}`,
-            adminId
+            adminId: safeAdminId
         });
     }
 
@@ -59,6 +59,7 @@ const getCampaign = async (id) => {
 };
 
 const createCampaign = async (adminId, adminName, { name, description, goal, startDate, endDate, status = 'active' }) => {
+    const safeAdminId = adminId ?? null;
     const existing = await prisma.campaign.findFirst({ where: { name } });
     if (existing) throw new AppError('Campaign name already exists', 409, 'NAME_TAKEN');
 
@@ -70,19 +71,18 @@ const createCampaign = async (adminId, adminName, { name, description, goal, sta
             startDate: startDate ? new Date(startDate) : null,
             endDate: endDate ? new Date(endDate) : null,
             status,
-            updatedBy: adminId === 'anonymous' ? null : adminId
+            updatedBy: safeAdminId
         }
     });
 
-    // Only log if admin is authenticated
-    if (adminId !== 'anonymous') {
+    if (safeAdminId) {
         await createLog({
             actor: `Admin: ${adminName}`,
             actorType: 'admin',
-            actorId: adminId,
+            actorId: safeAdminId,
             action: 'campaign_created',
             details: `Campaign created: ${name}`,
-            adminId
+            adminId: safeAdminId
         });
     }
 
@@ -90,6 +90,7 @@ const createCampaign = async (adminId, adminName, { name, description, goal, sta
 };
 
 const updateCampaign = async (adminId, adminName, id, updates) => {
+    const safeAdminId = adminId ?? null;
     const campaign = await prisma.campaign.findUnique({ where: { id } });
     if (!campaign) throw new AppError('Campaign not found', 404, 'NOT_FOUND');
 
@@ -98,7 +99,7 @@ const updateCampaign = async (adminId, adminName, id, updates) => {
         if (existing) throw new AppError('Campaign name already exists', 409, 'NAME_TAKEN');
     }
 
-    const updateData = { ...updates, updatedBy: adminId === 'anonymous' ? null : adminId };
+    const updateData = { ...updates, updatedBy: safeAdminId };
     if (updates.startDate) updateData.startDate = new Date(updates.startDate);
     if (updates.endDate) updateData.endDate = new Date(updates.endDate);
 
@@ -108,14 +109,14 @@ const updateCampaign = async (adminId, adminName, id, updates) => {
     });
 
     // Only log if admin is authenticated
-    if (adminId !== 'anonymous') {
+    if (safeAdminId) {
         await createLog({
             actor: `Admin: ${adminName}`,
             actorType: 'admin',
-            actorId: adminId,
+            actorId: safeAdminId,
             action: 'campaign_updated',
             details: `Campaign updated: ${updated.name}`,
-            adminId
+            adminId: safeAdminId
         });
     }
 
@@ -123,20 +124,21 @@ const updateCampaign = async (adminId, adminName, id, updates) => {
 };
 
 const deleteCampaign = async (adminId, adminName, id) => {
+    const safeAdminId = adminId ?? null;
     const campaign = await prisma.campaign.findUnique({ where: { id } });
     if (!campaign) throw new AppError('Campaign not found', 404, 'NOT_FOUND');
 
     await prisma.campaign.delete({ where: { id } });
 
     // Only log if admin is authenticated
-    if (adminId !== 'anonymous') {
+    if (safeAdminId) {
         await createLog({
             actor: `Admin: ${adminName}`,
             actorType: 'admin',
-            actorId: adminId,
+            actorId: safeAdminId,
             action: 'campaign_deleted',
             details: `Campaign deleted: ${campaign.name}`,
-            adminId
+            adminId: safeAdminId
         });
     }
 
@@ -174,27 +176,31 @@ const getPillar = async (name) => {
 };
 
 const updatePillar = async (adminId, adminName, name, { amount }) => {
+    const safeAdminId = adminId ?? null;
     let pillar = await prisma.pillar.findUnique({ where: { name } });
     if (!pillar) throw new AppError('Pillar not found', 404, 'NOT_FOUND');
 
     pillar = await prisma.pillar.update({
         where: { name },
-        data: { amount, updatedBy: adminId }
+        data: { amount, updatedBy: safeAdminId }
     });
 
-    await createLog({
-        actor: `Admin: ${adminName}`,
-        actorType: 'admin',
-        actorId: adminId,
-        action: 'pillar_updated',
-        details: `Pillar ${name} amount updated to $${amount}`,
-        adminId
-    });
+    if (safeAdminId) {
+        await createLog({
+            actor: `Admin: ${adminName}`,
+            actorType: 'admin',
+            actorId: safeAdminId,
+            action: 'pillar_updated',
+            details: `Pillar ${name} amount updated to $${amount}`,
+            adminId: safeAdminId
+        });
+    }
 
     return pillar;
 };
 
 const updateAllPillars = async (adminId, adminName, pillarsData) => {
+    const safeAdminId = adminId ?? null;
     const updated = [];
 
     for (const [name, amount] of Object.entries(pillarsData)) {
@@ -202,25 +208,27 @@ const updateAllPillars = async (adminId, adminName, pillarsData) => {
         if (!pillar) {
             // Create if doesn't exist
             pillar = await prisma.pillar.create({
-                data: { name, amount, updatedBy: adminId }
+                data: { name, amount, updatedBy: safeAdminId }
             });
         } else {
             pillar = await prisma.pillar.update({
                 where: { name },
-                data: { amount, updatedBy: adminId }
+                data: { amount, updatedBy: safeAdminId }
             });
         }
         updated.push(pillar);
     }
 
-    await createLog({
-        actor: `Admin: ${adminName}`,
-        actorType: 'admin',
-        actorId: adminId,
-        action: 'pillars_updated',
-        details: `All pillars updated`,
-        adminId
-    });
+    if (safeAdminId) {
+        await createLog({
+            actor: `Admin: ${adminName}`,
+            actorType: 'admin',
+            actorId: safeAdminId,
+            action: 'pillars_updated',
+            details: `All pillars updated`,
+            adminId: safeAdminId
+        });
+    }
 
     return updated;
 };

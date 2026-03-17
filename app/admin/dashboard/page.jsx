@@ -363,7 +363,7 @@ export default function AdminDashboardPage() {
             await createAdmin({
                 name: newAdmin.name.trim(),
                 email: newAdmin.email.trim().toLowerCase(),
-                password: newAdmin.password,
+                ...(newAdmin.password.trim() && { password: newAdmin.password }),
             });
             setNewAdmin({ name: '', email: '', password: '' });
 
@@ -787,20 +787,15 @@ export default function AdminDashboardPage() {
     async function handleAddNewDonor(event) {
         event.preventDefault();
         const creatingActiveAccount = Boolean(newDonorForm.accountCreated);
+        const hasManualPassword = Boolean(newDonorForm.password.trim() || newDonorForm.passwordConfirm.trim());
 
-        if (creatingActiveAccount && !newDonorForm.password.trim()) {
-            setError(adminText.activeDonorPasswordRequired);
-            setModalError(adminText.activeDonorPasswordRequired);
-            return;
-        }
-
-        if (creatingActiveAccount && newDonorForm.password.length < 8) {
+        if (hasManualPassword && newDonorForm.password.length < 8) {
             setError(adminText.passwordMinEight);
             setModalError(adminText.passwordMinEight);
             return;
         }
 
-        if (creatingActiveAccount && newDonorForm.password !== newDonorForm.passwordConfirm) {
+        if (hasManualPassword && newDonorForm.password !== newDonorForm.passwordConfirm) {
             setError(adminText.passwordsDoNotMatch);
             setModalError(adminText.passwordsDoNotMatch);
             return;
@@ -817,7 +812,7 @@ export default function AdminDashboardPage() {
                 name: newDonorForm.name.trim(),
                 email: newDonorForm.email.trim().toLowerCase(),
                 accountCreated: creatingActiveAccount,
-                ...(creatingActiveAccount && { password: newDonorForm.password }),
+                ...(newDonorForm.password.trim() && { password: newDonorForm.password }),
                 ...(newDonorForm.pledgeAmount && { pledgeAmount: Number(newDonorForm.pledgeAmount) }),
             });
             setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
@@ -987,27 +982,25 @@ export default function AdminDashboardPage() {
                                         </label>
                                     </div>
                                     <div>
-                                        <label className="admin-label">🔒 {adminText.passwordMinChars} *</label>
+                                        <label className="admin-label">🔒 {adminText.passwordMinChars}</label>
                                         <input
                                             className="admin-input"
                                             type="password"
                                             placeholder={newDonorForm.accountCreated ? adminText.donorPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
                                             value={newDonorForm.password}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, password: e.target.value }))}
-                                            required={Boolean(newDonorForm.accountCreated)}
                                             disabled={newDonorSaving}
                                             minLength={8}
                                         />
                                     </div>
                                     <div>
-                                        <label className="admin-label">🔒 {adminText.confirmPasswordLabel} *</label>
+                                        <label className="admin-label">🔒 {adminText.confirmPasswordLabel}</label>
                                         <input
                                             className="admin-input"
                                             type="password"
                                             placeholder={newDonorForm.accountCreated ? adminText.donorConfirmPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
                                             value={newDonorForm.passwordConfirm}
                                             onChange={(e) => setNewDonorForm((p) => ({ ...p, passwordConfirm: e.target.value }))}
-                                            required={Boolean(newDonorForm.accountCreated)}
                                             disabled={newDonorSaving}
                                             minLength={8}
                                         />

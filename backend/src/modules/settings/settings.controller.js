@@ -1,7 +1,8 @@
 'use strict';
 
-const { sendSuccess, sendError } = require('../../utils/response');
+const { sendSuccess } = require('../../utils/response');
 const service = require('./settings.service');
+const { getRequestActor } = require('../../utils/requestActor');
 
 // ─── Global Goal ──────────────────────────────────────────────────────────────
 
@@ -16,11 +17,9 @@ const getGlobalGoal = async (req, res, next) => {
 
 const updateGlobalGoal = async (req, res, next) => {
     try {
-        const { admin } = req;
-        const adminId = admin?.id ?? 'anonymous';
-        const adminName = admin?.name ?? 'Anonymous';
+        const actor = getRequestActor(req);
         const { amount, raised } = req.body;
-        const goal = await service.updateGlobalGoal(adminId, adminName, { amount, raised });
+        const goal = await service.updateGlobalGoal(actor.id, actor.name, { amount, raised });
         sendSuccess(res, goal, 'Global goal updated', 200);
     } catch (error) {
         next(error);
@@ -50,11 +49,9 @@ const getCampaign = async (req, res, next) => {
 
 const createCampaign = async (req, res, next) => {
     try {
-        const { admin } = req;
-        const adminId = admin?.id ?? 'anonymous';
-        const adminName = admin?.name ?? 'Anonymous';
+        const actor = getRequestActor(req);
         const { name, description, goal, startDate, endDate, status } = req.body;
-        const campaign = await service.createCampaign(adminId, adminName, {
+        const campaign = await service.createCampaign(actor.id, actor.name, {
             name,
             description,
             goal,
@@ -70,12 +67,10 @@ const createCampaign = async (req, res, next) => {
 
 const updateCampaign = async (req, res, next) => {
     try {
-        const { admin } = req;
-        const adminId = admin?.id ?? 'anonymous';
-        const adminName = admin?.name ?? 'Anonymous';
+        const actor = getRequestActor(req);
         const { id } = req.params;
         const updates = req.body;
-        const campaign = await service.updateCampaign(adminId, adminName, id, updates);
+        const campaign = await service.updateCampaign(actor.id, actor.name, id, updates);
         sendSuccess(res, campaign, 'Campaign updated', 200);
     } catch (error) {
         next(error);
@@ -84,11 +79,9 @@ const updateCampaign = async (req, res, next) => {
 
 const deleteCampaign = async (req, res, next) => {
     try {
-        const { admin } = req;
-        const adminId = admin?.id ?? 'anonymous';
-        const adminName = admin?.name ?? 'Anonymous';
+        const actor = getRequestActor(req);
         const { id } = req.params;
-        const campaign = await service.deleteCampaign(adminId, adminName, id);
+        const campaign = await service.deleteCampaign(actor.id, actor.name, id);
         sendSuccess(res, campaign, 'Campaign deleted', 200);
     } catch (error) {
         next(error);
@@ -129,12 +122,10 @@ const getPillar = async (req, res, next) => {
 
 const updatePillar = async (req, res, next) => {
     try {
-        const { admin } = req;
-        const adminId = admin?.id ?? 'anonymous';
-        const adminName = admin?.name ?? 'Anonymous';
+        const actor = getRequestActor(req);
         const { name } = req.params;
         const { amount } = req.body;
-        const pillar = await service.updatePillar(adminId, adminName, name, { amount });
+        const pillar = await service.updatePillar(actor.id, actor.name, name, { amount });
         sendSuccess(res, pillar, 'Pillar updated', 200);
     } catch (error) {
         next(error);
@@ -143,11 +134,9 @@ const updatePillar = async (req, res, next) => {
 
 const updateAllPillars = async (req, res, next) => {
     try {
-        const { admin } = req;
-        const adminId = admin?.id ?? 'anonymous';
-        const adminName = admin?.name ?? 'Anonymous';
+        const actor = getRequestActor(req);
         const pillarsData = req.body; // { foundation: 1000, walls: 2000, ... }
-        const pillars = await service.updateAllPillars(adminId, adminName, pillarsData);
+        const pillars = await service.updateAllPillars(actor.id, actor.name, pillarsData);
 
         // Convert to object format
         const pillarsObj = {};
