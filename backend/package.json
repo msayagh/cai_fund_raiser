@@ -13,6 +13,8 @@
     "db:migrate:dev": "npm run prisma:run -- migrate dev",
     "db:generate": "npm run prisma:run -- generate",
     "db:seed": "npm run db:generate && node prisma/seed.js",
+    "db:import:donors": "npm run db:generate && node scripts/import-donors-from-sheet.js",
+    "db:import:donors:dry": "npm run db:generate && node scripts/import-donors-from-sheet.js --dry-run",
     "db:studio": "npm run prisma:run -- studio",
     "db:reset": "npm run prisma:run -- db push --force-reset && node prisma/seed.js"
   },
