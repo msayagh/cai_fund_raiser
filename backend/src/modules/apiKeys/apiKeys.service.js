@@ -14,6 +14,29 @@ const generateApiKeyValue = () => {
 
 const hashApiKey = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
+const findActiveApiKeyByValue = async (value) => {
+  const keyHash = hashApiKey(value);
+  const apiKey = await prisma.apiKey.findUnique({
+    where: { keyHash },
+    include: {
+      createdByAdmin: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
+
+  if (!apiKey || !apiKey.isActive) {
+    return null;
+  }
+
+  await prisma.apiKey.update({
+    where: { id: apiKey.id },
+    data: { lastUsedAt: new Date() },
+  });
+
+  return apiKey;
+};
+
 const serializeApiKey = (apiKey) => ({
   id: apiKey.id,
   title: apiKey.title,
@@ -124,6 +147,7 @@ const deleteApiKey = async (adminId, adminName, id) => {
 };
 
 module.exports = {
+  findActiveApiKeyByValue,
   listApiKeys,
   createApiKey,
   updateApiKey,

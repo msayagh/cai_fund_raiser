@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { requireDonor, requireAdmin } = require('../../middleware/auth');
+const { requireDonor, requireAdmin, requireAdminOrApiKey } = require('../../middleware/auth');
 const { requireCapability } = require('../../middleware/authorization');
 const validate = require('../../middleware/validate');
 const ctrl = require('./donors.controller');
@@ -86,13 +86,13 @@ const csvUpload = multer({
   },
 });
 
-adminDonorRouter.get('/', requireAdmin, requireCapability('admin.donors.view'), ctrl.list);
+adminDonorRouter.get('/', requireAdminOrApiKey, requireCapability('admin.donors.view'), ctrl.list);
 adminDonorRouter.post('/bulk/upload', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
 adminDonorRouter.post('/bulk/import', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
 adminDonorRouter.post('/import/csv', requireAdmin, requireCapability('admin.donors.create'), csvUpload.single('file'), ctrl.adminImportPaymentsCsv);
 adminDonorRouter.post('/', requireAdmin, requireCapability('admin.donors.create'), validate(adminCreateDonorSchema), ctrl.adminCreate);
-adminDonorRouter.get('/:id', requireAdmin, requireCapability('admin.donors.view'), ctrl.getById);
-adminDonorRouter.get('/:id/payments', requireAdmin, requireCapability('admin.donors.view'), ctrl.adminGetPayments);
+adminDonorRouter.get('/:id', requireAdminOrApiKey, requireCapability('admin.donors.view'), ctrl.getById);
+adminDonorRouter.get('/:id/payments', requireAdminOrApiKey, requireCapability('admin.donors.view'), ctrl.adminGetPayments);
 adminDonorRouter.get('/:id/payments/:paymentId/confirmation', requireAdmin, requireCapability('admin.donors.view'), ctrl.adminGetPaymentConfirmation);
 adminDonorRouter.put('/:id/engagement', requireAdmin, requireCapability('admin.donors.edit'), validate(adminEngagementSchema), ctrl.adminSetEngagement);
 adminDonorRouter.put('/:id/deactivate', requireAdmin, requireCapability('admin.donors.deactivate'), ctrl.adminDeactivate);

@@ -3,6 +3,7 @@
 const prisma = require('../db/client');
 const { verifyAccessToken } = require('../utils/jwt');
 const AppError = require('../utils/AppError');
+const { findActiveApiKeyByValue } = require('../modules/apiKeys/apiKeys.service');
 
 const extractBearer = (req) => {
   const auth = req.headers.authorization;
@@ -10,6 +11,21 @@ const extractBearer = (req) => {
     throw new AppError('No token provided', 401, 'UNAUTHORIZED');
   }
   return auth.slice(7);
+};
+
+const extractApiKey = (req) => {
+  const headerKey = req.headers['x-api-key'];
+  if (headerKey) {
+    return String(headerKey).trim();
+  }
+
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = auth.slice(7).trim();
+  return token.startsWith('cza_') ? token : null;
 };
 
 const requireDonor = async (req, res, next) => {
@@ -51,4 +67,32 @@ const requireAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = { requireDonor, requireAdmin };
+const requireApiKey = async (req, res, next) => {
+  try {
+    const token = extractApiKey(req);
+    if (!token) {
+      throw new AppError('No API key provided', 401, 'UNAUTHORIZED');
+    }
+
+    const apiKey = await findActiveApiKeyByValue(token);
+    if (!apiKey) {
+      throw new AppError('Invalid API key', 401, 'UNAUTHORIZED');
+    }
+
+    req.apiKey = apiKey;
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+const requireAdminOrApiKey = async (req, res, next) => {
+  const apiKey = extractApiKey(req);
+  if (apiKey) {
+    return requireApiKey(req, res, next);
+  }
+
+  return requireAdmin(req, res, next);
+};
+
+module.exports = { requireDonor, requireAdmin, requireApiKey, requireAdminOrApiKey };

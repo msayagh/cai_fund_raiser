@@ -11,7 +11,7 @@ const AppError = require('../utils/AppError');
  */
 const requireCapability = (_capabilityName) => {
     return (req, res, next) => {
-        if (!req.admin && !req.donor) {
+        if (!req.admin && !req.donor && !req.apiKey) {
             return next(new AppError('User not authenticated', 401, 'UNAUTHORIZED'));
         }
         next();
