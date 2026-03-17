@@ -24,7 +24,7 @@ const logRoutes = require('./modules/logs/logs.routes');
 const publicRoutes = require('./modules/public/public.routes');
 const settingsRoutes = require('./modules/settings/settings.routes');
 const apiKeyRoutes = require('./modules/apiKeys/apiKeys.routes');
-const { requireAdmin } = require('./middleware/auth');
+const { requireAdminOrApiKey } = require('./middleware/auth');
 const { requireCapability } = require('./middleware/authorization');
 
 const app = express();
@@ -104,7 +104,7 @@ app.use('/api/admin/logs', logRoutes);
 app.use('/api/admin/api-keys', apiKeyRoutes);
 
 // Admin stats
-app.get('/api/admin/stats', requireAdmin, requireCapability('admin.statistics.view'), async (req, res, next) => {
+app.get('/api/admin/stats', requireAdminOrApiKey, requireCapability('admin.statistics.view'), async (req, res, next) => {
   try {
     const [totalDonors, totalPaymentsAgg, activeEngagements, pendingRequests] = await Promise.all([
       prisma.donor.count(),
