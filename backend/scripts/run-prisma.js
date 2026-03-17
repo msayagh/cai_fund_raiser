@@ -48,6 +48,7 @@ const runner = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const result = spawnSync(runner, ['prisma', ...prismaArgs], {
   stdio: 'inherit',
   env: process.env,
+  shell: true,
 });
 
 if (result.error) {
