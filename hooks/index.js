@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES } from '@/lib/translationUtils.js';
-import { fetchCampaignSnapshot, fetchFundedFromSheet, fetchDonationsFromSheet, hasFundedSheetConfig } from '@/lib/dataFetching.js';
+import { fetchFundedFromSheet, fetchDonationsFromSheet } from '@/lib/dataFetching.js';
 import { getCachedValue, setCachedValue } from '@/lib/clientCache.js';
 import { captureException, captureMessage } from '@/lib/monitoring.js';
 import { INITIAL_TIERS, MOBILE_BREAKPOINT, TIER_CONFIG } from '@/constants/config.js';
@@ -236,7 +236,7 @@ export function useDonations() {
             const donorLabel = String(donation["donorLabel"] || "").trim();
             const details = String(donation["détails"]);
             if (!tier) {
-                tier = ["sabbaq", "mutasaddiq", "kareem", "jawaad"].find((t) => details.toLowerCase().includes(tier.toLowerCase())) || "unknown";
+                tier = ["sabbaq", "mutasaddiq", "kareem", "jawaad"].find((t) => details.toLowerCase().includes(t.toLowerCase())) || "unknown";
                 if (!tier) {
                     tier = "unknown";
                 }
