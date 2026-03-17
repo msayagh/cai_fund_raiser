@@ -89,10 +89,6 @@ export default function AdminDashboardPage() {
         if (typeof window !== 'undefined') {
             localStorage.setItem('adminActiveTab', tab);
         }
-
-        if (tab === 'apiKeys') {
-            router.push('/admin/dashboard/api-keys');
-        }
     };
     const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '' });
     const [requestDecisionModal, setRequestDecisionModal] = useState({ open: false, request: null, approving: false, declining: false, holding: false });
