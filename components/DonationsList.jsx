@@ -87,10 +87,6 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
         return () => mediaQuery.removeEventListener('change', syncViewport);
     }, []);
 
-    console.log('[DonationsList] totalsByEmail:', totalsByEmail);
-    console.log('[DonationsList] tiers:', tiers);
-    console.log('[DonationsList] tierByName:', tierByName);
-
     if (isLoading) {
         return (
             <div className="donations-list">
@@ -146,8 +142,6 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
         const donated = d.totalDonated;
         const donatedLabel = dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`;
         const quantity = d.ticketCount || 1;
-
-        console.log(`[DonationsList] Donor ${idx}:`, { displayName, donated, amount, progressPct, tierName: d.tier, tier: tier?.key });
 
         return (
             <div

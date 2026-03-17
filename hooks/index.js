@@ -247,7 +247,7 @@ export function useDonations() {
             const donorLabel = String(donation["donorLabel"] || "").trim();
             const details = String(donation["détails"]);
             if (!tier) {
-                tier = ["sabbaq", "mutasaddiq", "kareem", "jawaad"].find((t) => details.toLowerCase().includes(tier.toLowerCase())) || "unknown";
+                tier = ["sabbaq", "mutasaddiq", "kareem", "jawaad"].find((t) => details.toLowerCase().includes(t.toLowerCase())) || "unknown";
                 if (!tier) {
                     tier = "unknown";
                 }
