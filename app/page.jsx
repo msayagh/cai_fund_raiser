@@ -386,7 +386,7 @@ export default function MosqueDonation() {
                 <MosqueViz
                   tiers={localizedTiers}
                   selectedTier={selectedTier}
-                  onSelectTier={handleTierSelect}
+                  onSelectTier={openDonationDialog}
                   theme={theme}
                   describedBy="mosque-viz-summary"
                 />
