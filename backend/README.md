@@ -216,6 +216,15 @@ Access tokens expire in **15 minutes**. Use `POST /api/auth/refresh` with your r
 | PUT | `/admin/admins/:id` | Update admin |
 | DELETE | `/admin/admins/:id` | Delete admin |
 
+### Admin — API Keys (requireAdmin)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/admin/api-keys` | List API keys |
+| POST | `/admin/api-keys` | Generate API key with title |
+| PUT | `/admin/api-keys/:id` | Update API key title or status |
+| DELETE | `/admin/api-keys/:id` | Delete API key |
+
 ### Admin — Requests (requireAdmin)
 
 | Method | Path | Description |

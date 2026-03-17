@@ -39,6 +39,7 @@ model Admin {
   paymentsRecorded Payment[]
   logs             ActivityLog[]
   refreshTokens    RefreshToken[]
+  createdApiKeys   ApiKey[]
 }
 
 model Engagement {
@@ -126,4 +127,17 @@ model RefreshToken {
   admin     Admin?   @relation(fields: [adminId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model ApiKey {
+  id               String   @id @default(cuid())
+  title            String
+  keyPrefix        String
+  keyHash          String   @unique
+  isActive         Boolean  @default(true)
+  createdByAdminId String?
+  createdByAdmin   Admin?   @relation(fields: [createdByAdminId], references: [id])
+  lastUsedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

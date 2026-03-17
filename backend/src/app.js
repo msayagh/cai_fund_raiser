@@ -23,6 +23,7 @@ const { adminRequestRouter } = require('./modules/requests/requests.routes');
 const logRoutes = require('./modules/logs/logs.routes');
 const publicRoutes = require('./modules/public/public.routes');
 const settingsRoutes = require('./modules/settings/settings.routes');
+const apiKeyRoutes = require('./modules/apiKeys/apiKeys.routes');
 const { requireAdmin } = require('./middleware/auth');
 const { requireCapability } = require('./middleware/authorization');
 
@@ -82,6 +83,7 @@ app.get('/api', (_req, res) => {
         requests: '/api/admin/requests',
         logs: '/api/admin/logs',
         stats: '/api/admin/stats',
+        apiKeys: '/api/admin/api-keys',
       },
     },
   });
@@ -99,6 +101,7 @@ app.use('/api/admin/donors', adminDonorRouter);
 app.use('/api/admin/admins', adminRoutes);
 app.use('/api/admin/requests', adminRequestRouter);
 app.use('/api/admin/logs', logRoutes);
+app.use('/api/admin/api-keys', apiKeyRoutes);
 
 // Admin stats
 app.get('/api/admin/stats', requireAdmin, requireCapability('admin.statistics.view'), async (req, res, next) => {
