@@ -389,7 +389,7 @@ export default function DonorDashboardPage() {
 
     // ── Derived engagement metrics ──
     const totalPaid   = useMemo(() => payments.reduce((s, p) => s + Number(p.amount || 0), 0), [payments]);
-    const engTarget   = useMemo(() => payments.reduce((s, p) => s + Number(p.engagement || 0), 0), [payments]);
+    const engTarget   = useMemo(() => payments.reduce((sum, item) => sum + (item.engagement || 0), 0), [payments]);
     const pct         = engTarget > 0 ? Math.min(100, Math.round((totalPaid / engTarget) * 100)) : 0;
     const remaining   = Math.max(0, engTarget - totalPaid);
     const endDate = profile?.engagement?.endDate
