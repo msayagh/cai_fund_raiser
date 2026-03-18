@@ -35,7 +35,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  EMAIL_FROM: z.string().default('Masjid Al-Noor <noreply@masjid.com>'),
+  EMAIL_FROM: z.string().default('Centre Zad Al-Imane <noreply@ccai.com>'),
   FRONTEND_URL: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
 });

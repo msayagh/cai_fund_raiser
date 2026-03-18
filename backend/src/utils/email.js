@@ -26,10 +26,10 @@ if (hasSmtp) {
  */
 const sendOtpEmail = async (email, otp, purpose = 'verification') => {
   const purposeLabel = purpose === 'reset' ? 'password reset' : 'email verification';
-  const subject = `Masjid Al-Noor — Your ${purposeLabel} code`;
+  const subject = `Centre Zad Al-Imane — Your ${purposeLabel} code`;
   const html = `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="color: #1a6b3a;">Masjid Al-Noor</h2>
+      <h2 style="color: #1a6b3a;">Centre Zad Al-Imane</h2>
       <p>Assalamu Alaikum,</p>
       <p>Your ${purposeLabel} code is:</p>
       <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px;
@@ -40,7 +40,7 @@ const sendOtpEmail = async (email, otp, purpose = 'verification') => {
       <p>This code expires in <strong>10 minutes</strong>.</p>
       <p>If you did not request this, please ignore this email.</p>
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;" />
-      <p style="font-size: 12px; color: #888;">Masjid Al-Noor Donation Portal</p>
+      <p style="font-size: 12px; color: #888;">Centre Zad Al-Imane Donation Portal</p>
     </div>
   `;
 
