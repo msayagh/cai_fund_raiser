@@ -110,6 +110,11 @@ export default function AdminDashboardPage() {
     const [csvImportLoading, setCsvImportLoading] = useState(false);
     const [csvImportSummary, setCsvImportSummary] = useState(null);
     const [csvUploadProgress, setCsvUploadProgress] = useState(null);
+    const [showNewDonorPassword, setShowNewDonorPassword] = useState(false);
+    const [showNewDonorConfirmPassword, setShowNewDonorConfirmPassword] = useState(false);
+    const [showSelectedDonorPassword, setShowSelectedDonorPassword] = useState(false);
+    const [showSelectedDonorConfirmPassword, setShowSelectedDonorConfirmPassword] = useState(false);
+    const [showNewAdminPassword, setShowNewAdminPassword] = useState(false);
     const hasOpenModal = isAddDonorModalOpen || isProfileModalOpen || isPaymentsModalOpen || requestDecisionModal.open;
 
     const appReady = translationMounted && themeMounted;
@@ -983,27 +988,47 @@ export default function AdminDashboardPage() {
                                     </div>
                                     <div>
                                         <label className="admin-label">🔒 {adminText.passwordMinChars}</label>
-                                        <input
-                                            className="admin-input"
-                                            type="password"
-                                            placeholder={newDonorForm.accountCreated ? adminText.donorPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
-                                            value={newDonorForm.password}
-                                            onChange={(e) => setNewDonorForm((p) => ({ ...p, password: e.target.value }))}
-                                            disabled={newDonorSaving}
-                                            minLength={8}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                className="admin-input"
+                                                type={showNewDonorPassword ? 'text' : 'password'}
+                                                placeholder={newDonorForm.accountCreated ? adminText.donorPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
+                                                value={newDonorForm.password}
+                                                onChange={(e) => setNewDonorForm((p) => ({ ...p, password: e.target.value }))}
+                                                disabled={newDonorSaving}
+                                                minLength={8}
+                                                style={{ paddingRight: '42px' }}
+                                            />
+                                            <button type="button" onClick={() => setShowNewDonorPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewDonorPassword ? 'Hide password' : 'Show password'}>
+                                                {showNewDonorPassword ? (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                ) : (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="admin-label">🔒 {adminText.confirmPasswordLabel}</label>
-                                        <input
-                                            className="admin-input"
-                                            type="password"
-                                            placeholder={newDonorForm.accountCreated ? adminText.donorConfirmPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
-                                            value={newDonorForm.passwordConfirm}
-                                            onChange={(e) => setNewDonorForm((p) => ({ ...p, passwordConfirm: e.target.value }))}
-                                            disabled={newDonorSaving}
-                                            minLength={8}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                className="admin-input"
+                                                type={showNewDonorConfirmPassword ? 'text' : 'password'}
+                                                placeholder={newDonorForm.accountCreated ? adminText.donorConfirmPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
+                                                value={newDonorForm.passwordConfirm}
+                                                onChange={(e) => setNewDonorForm((p) => ({ ...p, passwordConfirm: e.target.value }))}
+                                                disabled={newDonorSaving}
+                                                minLength={8}
+                                                style={{ paddingRight: '42px' }}
+                                            />
+                                            <button type="button" onClick={() => setShowNewDonorConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewDonorConfirmPassword ? 'Hide password' : 'Show password'}>
+                                                {showNewDonorConfirmPassword ? (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                ) : (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="admin-label">🤝 {adminText.pledgeAmountOptional}</label>
@@ -1094,23 +1119,43 @@ export default function AdminDashboardPage() {
                                                 <div className="admin-divider-top">
                                                     <div className="admin-section-title admin-section-title--sm">🔒 {adminText.changePasswordOptional}</div>
                                                     <div className="admin-stack">
-                                                        <input
-                                                            className="admin-input"
-                                                            type="password"
-                                                            placeholder={`${adminText.newPassword} (min 8 chars)`}
-                                                            value={selectedDonorPassword}
-                                                            onChange={(e) => setSelectedDonorPassword(e.target.value)}
-                                                            disabled={selectedDonorSaving}
-                                                            minLength={8}
-                                                        />
-                                                        <input
-                                                            className="admin-input"
-                                                            type="password"
-                                                            placeholder={adminText.confirmNewPassword}
-                                                            value={selectedDonorPasswordConfirm}
-                                                            onChange={(e) => setSelectedDonorPasswordConfirm(e.target.value)}
-                                                            disabled={selectedDonorSaving}
-                                                        />
+                                                        <div style={{ position: 'relative' }}>
+                                                            <input
+                                                                className="admin-input"
+                                                                type={showSelectedDonorPassword ? 'text' : 'password'}
+                                                                placeholder={`${adminText.newPassword} (min 8 chars)`}
+                                                                value={selectedDonorPassword}
+                                                                onChange={(e) => setSelectedDonorPassword(e.target.value)}
+                                                                disabled={selectedDonorSaving}
+                                                                minLength={8}
+                                                                style={{ paddingRight: '42px' }}
+                                                            />
+                                                            <button type="button" onClick={() => setShowSelectedDonorPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showSelectedDonorPassword ? 'Hide password' : 'Show password'}>
+                                                                {showSelectedDonorPassword ? (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                                ) : (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                        <div style={{ position: 'relative' }}>
+                                                            <input
+                                                                className="admin-input"
+                                                                type={showSelectedDonorConfirmPassword ? 'text' : 'password'}
+                                                                placeholder={adminText.confirmNewPassword}
+                                                                value={selectedDonorPasswordConfirm}
+                                                                onChange={(e) => setSelectedDonorPasswordConfirm(e.target.value)}
+                                                                disabled={selectedDonorSaving}
+                                                                style={{ paddingRight: '42px' }}
+                                                            />
+                                                            <button type="button" onClick={() => setShowSelectedDonorConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showSelectedDonorConfirmPassword ? 'Hide password' : 'Show password'}>
+                                                                {showSelectedDonorConfirmPassword ? (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                                ) : (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <button type="submit" className="admin-button" disabled={selectedDonorSaving}>
@@ -1675,7 +1720,16 @@ export default function AdminDashboardPage() {
                                         <form className="admin-form" onSubmit={handleCreateAdmin}>
                                             <input className="admin-input" placeholder={adminText.fullNamePlaceholder} value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
                                             <input className="admin-input" type="email" placeholder={adminText.emailPlaceholder} value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
-                                            <input className="admin-input" type="password" placeholder={adminText.passwordPlaceholder} value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} />
+                                            <div style={{ position: 'relative' }}>
+                                                <input className="admin-input" type={showNewAdminPassword ? 'text' : 'password'} placeholder={adminText.passwordPlaceholder} value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} style={{ paddingRight: '42px' }} />
+                                                <button type="button" onClick={() => setShowNewAdminPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewAdminPassword ? 'Hide password' : 'Show password'}>
+                                                    {showNewAdminPassword ? (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                    ) : (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    )}
+                                                </button>
+                                            </div>
                                             <button type="submit" className="admin-button">{adminText.createAdminButton}</button>
                                         </form>
                                     </div>
