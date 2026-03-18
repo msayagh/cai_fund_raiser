@@ -80,11 +80,27 @@ export function MosqueSideChips({ localizedTiers, selectedTier, setSelectedTier,
     );
 }
 
+import { useState, useEffect } from 'react';
+
 export function TierLegend({ localizedTiers, selectedTier, handleTierSelect, theme, t }) {
+    const [hasMounted, setHasMounted] = useState(false);
+    
+    // This runs only after the component reaches the browser
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
     const th = theme ?? THEMES.dark;
-    const formatLegendLabel = typeof t?.legendLabel === 'function'
-        ? t.legendLabel
-        : (label, amount) => `${label} · ${languageCurrency(amount, true)}`;
+    
+    const formatLegendLabel = (label, amount) => {
+        // If we haven't mounted yet, return a simplified version or empty string
+        // to avoid mismatching the server's formatting
+        if (!hasMounted) return `${label} · $${amount}`; 
+        
+        return typeof t?.legendLabel === 'function'
+            ? t.legendLabel(label, amount)
+            : `${label} · ${languageCurrency(amount, true)}`;
+    };
 
     return (
         <div className="tier-legend-wrapper">
@@ -95,6 +111,7 @@ export function TierLegend({ localizedTiers, selectedTier, handleTierSelect, the
                     onClick={() => handleTierSelect(tier.id)}
                     className="tier-legend-item"
                     aria-pressed={selectedTier === tier.id}
+                    // Crucial: Use the protected formatter here
                     aria-label={formatLegendLabel(tier.label, tier.amount)}
                     style={{
                         border: `2px solid ${selectedTier === tier.id ? tier.color : th.border}`,

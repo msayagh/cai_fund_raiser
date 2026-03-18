@@ -254,7 +254,7 @@ export function useDonations() {
             }
             const quantity = parseInt(details.match(/(\d+)x/)?.[1]) || 1;
 
-            const ID = email + "_" + tier;
+            const ID = email + "_" + tier + "_" + donorLabel;
 
             if (!summary[ID]) {
                 summary[ID] = {
@@ -290,35 +290,27 @@ export function useDonations() {
         return total;
     }, []);
 
-    const getTierAmount = useCallback((donation) => {
-        const tierText = String(donation?.tier || donation?.["tier"] || donation?.["détails"] || "").toLowerCase();
+    const getEngagementAmount = useCallback((totalsByEmail) => {
+        if (Object.keys(totalsByEmail).length === 0) return 0;
 
-        const matchedTier = Object.values(TIER_CONFIG).find((tier) => {
-            return (
-                tierText.includes(tier.key.toLowerCase()) ||
-                tierText.includes(tier.name.toLowerCase())
-            );
-        });
+        // 1. Define the value mapping (case-insensitive keys for safety)
+        const TIER_VALUES = {
+            sabbaq: 2000,
+            jawaad: 1500,
+            kareem: 1000,
+            mutasaddiq: 500
+        };
 
-        return matchedTier?.amount ?? 0;
-    }, []);
-
-    const getEngagementAmount = useCallback((donations) => {
-        const seenObjectives = new Set();
-
-        return donations.reduce((sum, donation, index) => {
-            const email = String(donation?.["courriel"] || "").trim().toLowerCase();
-            const details = String(donation?.["détails"] || donation?.tier || "").trim().toLowerCase();
-            const objectiveKey = `${email}::${details || index}`;
-
-            if (seenObjectives.has(objectiveKey)) {
-                return sum;
-            }
-
-            seenObjectives.add(objectiveKey);
-            return sum + getTierAmount(donation);
+        // 2. Reduce the object values into a single sum
+        return Object.values(totalsByEmail).reduce((acc, donor) => {
+            // Normalize tier name to lowercase to match our map
+            const tierKey = donor.tier.toLowerCase();
+            const unitValue = TIER_VALUES[tierKey] || 0;
+            
+            // Engagement = Unit Value * Number of Tickets
+            return acc + (unitValue * donor.ticketCount);
         }, 0);
-    }, [getTierAmount]);
+    }, [totalsByEmail]);
 
     useEffect(() => {
         const pollDonations = async ({ background = false } = {}) => {
@@ -331,7 +323,7 @@ export function useDonations() {
                 setDonations(cachedRows);
                 setTotalsByEmail(getTotalsByEmail(cachedRows));
                 setRamadanRaised(getRamadanRaised(cachedRows));
-                setEngagementAmount(getEngagementAmount(cachedRows));
+                setEngagementAmount(getEngagementAmount(getTotalsByEmail(cachedRows)));
                 if (!background) {
                     setIsLoading(false);
                 }
@@ -355,7 +347,7 @@ export function useDonations() {
                 setCachedValue(DONATIONS_CACHE_KEY, rows);
                 setTotalsByEmail(getTotalsByEmail(rows));
                 setRamadanRaised(getRamadanRaised(rows));
-                setEngagementAmount(getEngagementAmount(rows));
+                setEngagementAmount(getEngagementAmount(getTotalsByEmail(rows)));
                 setError(null);
             } catch (error) {
                 setError('Unable to load donations right now.');
@@ -371,7 +363,7 @@ export function useDonations() {
         return () => {
             clearInterval(donationsIntervalId);
         };
-    }, [getEngagementAmount, getTotalsByEmail, getRamadanRaised]);
+    }, [getRamadanRaised]);
 
     return {
         donations,

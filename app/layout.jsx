@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
                     }}
                 />
             </head>
-            <body>
+            <body suppressHydrationWarning>
                 <SentryInit />
                 {children}
             </body>
