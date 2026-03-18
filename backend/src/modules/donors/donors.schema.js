@@ -59,6 +59,13 @@ const upsertDonorPaymentSchema = z.object({
     date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format'),
     method: z.enum(['cash', 'card', 'zeffy']),
     note: z.string().trim().max(500, 'Note must be 500 characters or fewer').optional(),
+    displayName: z.string().trim(),
+    engagement: z.number().positive('Engagement must be greater than 0').optional(),
+    tier: z.enum(['kareem', 'jawaad', 'sabbaq', 'mutasaddiq'], 'Tier must be one of kareem, jawaad, sabbaq, mutasaddiq').optional(),
+  }).refine((data) => {
+    return data.engagement !== undefined || data.tier !== undefined;
+  }, {
+    message: 'Either engagement or tier must be provided'
   }),
 });
 

@@ -523,8 +523,6 @@ const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, d
   const donor = await prisma.donor.findUnique({ where: { id: donorId } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
-  console.log(`Debug payment data: ${JSON.stringify({ entryId, amount, date, method, note, displayName, engagement, tier })}`);
-
   const payment = await prisma.payment.create({
     data: {
       ...(entryId ? { externalEntryId: entryId } : {}),
