@@ -62,6 +62,7 @@ model Payment {
   date              DateTime
   method            String
   note              String?
+  displayName       String?
   recordedByAdminId String?
   recordedByAdmin   Admin?   @relation(fields: [recordedByAdminId], references: [id])
   createdAt         DateTime @default(now())
