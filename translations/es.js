@@ -281,6 +281,7 @@ const es = {
     cashOk: "Solicitud de pago en efectivo enviada.",
     pwdMismatch: "Las contraseñas no coinciden.",
     colDate: "Fecha",
+    colDisplayName: "Nombre para mostrar",
     colAmount: "Monto",
     colMethod: "Método",
     colNote: "Nota",

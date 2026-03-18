@@ -281,6 +281,7 @@ const fr = {
     cashOk: "Demande de paiement en espèces envoyée.",
     pwdMismatch: "Les mots de passe ne correspondent pas.",
     colDate: "Date",
+    colDisplayName: "Nom affiché",
     colAmount: "Montant",
     colMethod: "Méthode",
     colNote: "Note",

@@ -421,34 +421,6 @@ export default function RegisterPage() {
                                 </div>
                             </label>
 
-                            <div className="register-optional-block">
-                                <p className="register-optional-title">{auth.optionalEngagement}</p>
-                                <p className="register-optional-copy">{auth.optionalEngagementHint}</p>
-
-                                <label className="login-label">
-                                    <span>{auth.engagementAmount}</span>
-                                    <input
-                                        className="login-input"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={pledgeAmount}
-                                        onChange={(event) => setPledgeAmount(event.target.value)}
-                                        placeholder={auth.engagementAmountPlaceholder}
-                                    />
-                                </label>
-
-                                <label className="login-label">
-                                    <span>{auth.targetEndDate}</span>
-                                    <input
-                                        className="login-input"
-                                        type="date"
-                                        value={pledgeEndDate}
-                                        onChange={(event) => setPledgeEndDate(event.target.value)}
-                                    />
-                                </label>
-                            </div>
-
                             <div className="register-actions-row">
                                 <button type="submit" className="login-primary-button" disabled={submitting || status.loading}>
                                     {submitting ? auth.creatingAccount : auth.createAccount}

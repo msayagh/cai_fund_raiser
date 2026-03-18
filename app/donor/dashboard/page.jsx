@@ -97,6 +97,7 @@ const EN_DONOR = {
     cashOk:          'Cash payment request submitted.',
     pwdMismatch:     'Passwords do not match.',
     colDate:         'Date',
+    colDisplayName:  'Display name',
     colAmount:       'Amount',
     colMethod:       'Method',
     colNote:         'Note',
@@ -388,7 +389,7 @@ export default function DonorDashboardPage() {
 
     // ── Derived engagement metrics ──
     const totalPaid   = useMemo(() => payments.reduce((s, p) => s + Number(p.amount || 0), 0), [payments]);
-    const engTarget   = Number(profile?.engagement?.totalPledge || 0);
+    const engTarget   = useMemo(() => payments.reduce((s, p) => s + Number(p.engagement || 0), 0), [payments]);
     const pct         = engTarget > 0 ? Math.min(100, Math.round((totalPaid / engTarget) * 100)) : 0;
     const remaining   = Math.max(0, engTarget - totalPaid);
     const endDate = profile?.engagement?.endDate
@@ -913,6 +914,7 @@ export default function DonorDashboardPage() {
                                     <div className="table-wrap">
                                         <div className="table-head">
                                             <span>{ui.colDate}</span>
+                                            <span>{ui.colDisplayName}</span>
                                             <span>{ui.colAmount}</span>
                                             <span>{ui.colMethod}</span>
                                             <span>{ui.colNote}</span>
@@ -923,6 +925,7 @@ export default function DonorDashboardPage() {
                                         {pendingPayments.map(p => (
                                             <div key={p.id} className="table-row table-row--pending">
                                                 <span className="cell-muted">{fmtDate(p.date)}</span>
+                                                <span className="cell-muted">{p.displayName || profile?.name || '—'}</span>
                                                 <span className="cell-amount">${Number(p.amount || 0).toLocaleString()}</span>
                                                 <span>
                                                     <span className="pill pill--pending">
@@ -993,6 +996,7 @@ export default function DonorDashboardPage() {
                                             return (
                                                 <div key={p.id} className="table-row">
                                                     <span className="cell-muted">{fmtDate(p.date)}</span>
+                                                    <span className="cell-muted">{p.displayName || '—'}</span>
                                                     <span className="cell-amount">${Number(p.amount || 0).toLocaleString()}</span>
                                                     <span>
                                                         <span className={`pill pill--${m.key}`}>

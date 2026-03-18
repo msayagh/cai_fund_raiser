@@ -281,6 +281,7 @@ const tr = {
         cashOk: "Nakit ödeme talebi gönderildi.",
         pwdMismatch: "Şifreler eşleşmiyor.",
         colDate: "Tarih",
+        colDisplayName: "Görünen ad",
         colAmount: "Tutar",
         colMethod: "Yöntem",
         colNote: "Not",

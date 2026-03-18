@@ -269,6 +269,7 @@ const it = {
         cashOk: "Richiesta di pagamento in contanti inviata.",
         pwdMismatch: "Le password non corrispondono.",
         colDate: "Data",
+        colDisplayName: "Nome visualizzato",
         colAmount: "Importo",
         colMethod: "Metodo",
         colNote: "Nota",

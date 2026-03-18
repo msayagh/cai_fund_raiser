@@ -283,6 +283,7 @@ const ar = {
     cashOk: "تم إرسال طلب الدفع النقدي.",
     pwdMismatch: "كلمتا المرور غير متطابقتين.",
     colDate: "التاريخ",
+    colDisplayName: "الاسم المعروض",
     colAmount: "المبلغ",
     colMethod: "الطريقة",
     colNote: "ملاحظة",

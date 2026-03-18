@@ -794,6 +794,7 @@ const en = {
     cashOk: "Cash payment request submitted.",
     pwdMismatch: "Passwords do not match.",
     colDate: "Date",
+    colDisplayName: "Display name",
     colAmount: "Amount",
     colMethod: "Method",
     colNote: "Note",

@@ -281,6 +281,7 @@ const zh = {
         cashOk: "现金付款请求已提交。",
         pwdMismatch: "密码不匹配。",
         colDate: "日期",
+        colDisplayName: "显示名称",
         colAmount: "金额",
         colMethod: "方式",
         colNote: "备注",

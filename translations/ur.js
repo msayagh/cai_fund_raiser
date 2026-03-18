@@ -283,6 +283,7 @@ const ur = {
     cashOk: "نقد ادائیگی کی درخواست جمع ہو گئی۔",
     pwdMismatch: "پاس ورڈ میل نہیں کھاتے۔",
     colDate: "تاریخ",
+    colDisplayName: "ڈسپلے نام",
     colAmount: "رقم",
     colMethod: "طریقہ",
     colNote: "نوٹ",
