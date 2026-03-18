@@ -130,7 +130,7 @@ const approveRequest = async (adminId, adminName, id, body) => {
       console.error('Failed to send donor account creation email:', error);
     }
   } else if (request.type === 'payment_upload') {
-    const { amount, date, method, note } = body;
+    const { amount, date, method, note, displayName, engagement, tier } = body;
     if (!amount || !date || !method) {
       throw new AppError('amount, date, and method are required to approve payment_upload', 400, 'VALIDATION_ERROR');
     }
@@ -149,7 +149,10 @@ const approveRequest = async (adminId, adminName, id, body) => {
         date: new Date(date),
         method,
         note: note ?? null,
+        displayName: displayName ?? null,
+        tier: tier ?? null,
         recordedByAdminId: adminId,
+        engagement: engagement ?? null,
       },
     });
     extraData = { paymentId: payment.id };

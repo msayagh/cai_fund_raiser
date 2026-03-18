@@ -519,7 +519,7 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pi
   return engagement;
 };
 
-const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, date, method, note }) => {
+const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, date, method, note, displayName, engagement, tier }) => {
   const donor = await prisma.donor.findUnique({ where: { id: donorId } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
@@ -531,6 +531,9 @@ const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, d
       date: new Date(date),
       method,
       note: note ?? null,
+      displayName: displayName ?? null,
+      engagement: engagement ?? null,
+      tier: tier ?? null,
       recordedByAdminId: adminId,
     },
     include: { recordedByAdmin: { select: { id: true, name: true } } },
@@ -655,6 +658,12 @@ const adminImportPaymentsCsv = async (adminId, adminName, fileBuffer) => {
       }
 
       const amount = parseAmount(row.amount);
+      const displayName = (row.displayName || row.donorname || row['donor_name'] || '').trim();
+      const engagement = parseOptionalPositiveAmount(
+        row.engagement || row.pledge || row.totalpledge || row['total_pledge'],
+        'Engagement',
+      );
+      const tier = (row.tier || row.donortier || row['donor_tier'] || '').trim();
       const date = parseDateValue(row.date || row.paymentdate || row['payment_date']);
       const method = normalizePaymentMethod(row.method || row.paymentmethod || row['payment_method']);
       const note = (row.note || row.message || row.details || '').trim() || null;
@@ -710,6 +719,9 @@ const adminImportPaymentsCsv = async (adminId, adminName, fileBuffer) => {
           date,
           method,
           note,
+          displayName,
+          engagement,
+          tier,
           recordedByAdminId: adminId,
         },
       });
