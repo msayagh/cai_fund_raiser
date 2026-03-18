@@ -63,6 +63,8 @@ model Payment {
   method            String
   note              String?
   displayName       String?
+  engagement        Float
+  tier              String
   recordedByAdminId String?
   recordedByAdmin   Admin?   @relation(fields: [recordedByAdminId], references: [id])
   createdAt         DateTime @default(now())
