@@ -317,7 +317,7 @@ const es = {
     paymentUpdated: "Pago pendiente actualizado.",
     chooseMethod: "¿Cómo desea pagar?",
     payByCash: "Efectivo / Interac",
-    cashGuidance: "Para ayudarnos a validar su pago, incluya: su nombre en el sobre (efectivo), el número de transacción Interac o una captura de pantalla de la transferencia.",
+    cashGuidance: "Para ayudarnos a validar su pago, siempre incluya: su correo electrónico en el sobre (efectivo), o el número de transacción Interac o una captura de pantalla de la transferencia.",
     backToMethod: "← Atrás",
     myProfile: "Mi perfil",
     loadingProfile: "Cargando perfil...",

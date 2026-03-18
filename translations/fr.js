@@ -318,7 +318,7 @@ const fr = {
     paymentUpdated: "Paiement en attente mis à jour.",
     chooseMethod: "Comment souhaitez-vous payer ?",
     payByCash: "Espèces / Interac",
-    cashGuidance: "Pour nous aider à valider votre paiement, veuillez inclure : votre nom sur l'enveloppe (espèces), ou le numéro de transaction Interac / une capture d'écran du virement.",
+    cashGuidance: "Pour nous aider à valider votre paiement, toujours inclure : votre e-mail sur l'enveloppe (espèces), ou le numéro de transaction Interac / une capture d'écran du virement.",
     backToMethod: "← Retour",
     myProfile: "Mon profil",
     loadingProfile: "Chargement du profil...",

@@ -805,7 +805,7 @@ const en = {
     reqAccount: "Account help",
     chooseMethod: "How would you like to pay?",
     payByCash: "Cash / Interac",
-    cashGuidance: "To help us validate your payment, please include: your name on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.",
+    cashGuidance: "To help us validate your payment, always include: your email on the envelope (cash), or the Interac transaction number or a screenshot of the transfer.",
     backToMethod: "← Back",
     myProfile: "My Profile",
     loadingProfile: "Loading profile...",
