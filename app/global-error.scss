@@ -1,0 +1,39 @@
+.global-error-page {
+    min-height: 100vh;
+    background: #090c18;
+    color: #fff;
+}
+
+.global-error-shell {
+    width: 100%;
+    max-width: var(--page-max-width);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+}
+
+.global-error-card {
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+}
+
+.global-error-title {
+    margin: 0 0 12px;
+}
+
+.global-error-description {
+    margin: 0 0 18px;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.global-error-button {
+    padding: 12px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(212, 169, 110, 0.45);
+    background: rgba(212, 169, 110, 0.16);
+    color: #fff;
+    cursor: pointer;
+}

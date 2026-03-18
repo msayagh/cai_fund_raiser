@@ -50,6 +50,8 @@ export default function RegisterPage() {
     const [submitting, setSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const passwordToggleLabel = showPassword ? auth.hidePassword : auth.showPassword;
+    const confirmPasswordToggleLabel = showConfirmPassword ? auth.hidePassword : auth.showPassword;
 
     const normalizeOtpInput = (value) => {
         const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
@@ -267,12 +269,6 @@ export default function RegisterPage() {
             dir={isRTL ? 'rtl' : 'ltr'}
             suppressHydrationWarning
         >
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
-                *{box-sizing:border-box;margin:0;padding:0}
-                ::-webkit-scrollbar{width:4px}
-                ::-webkit-scrollbar-thumb{background:${theme.scrollbarThumb};border-radius:4px}
-            `}</style>
             <Header
                 language={language}
                 setLanguage={setLanguage}
@@ -383,18 +379,17 @@ export default function RegisterPage() {
                         <form className="login-form" onSubmit={handleCompleteRegistration} noValidate>
                             <label className="login-label">
                                 <span>{auth.passwordLabel}</span>
-                                <div style={{ position: 'relative' }}>
+                                <div className="login-password-field">
                                     <input
-                                        className="login-input"
+                                        className="login-input login-input--with-toggle"
                                         type={showPassword ? 'text' : 'password'}
                                         autoComplete="new-password"
                                         value={password}
                                         onChange={(event) => setPassword(event.target.value)}
                                         minLength={8}
                                         required
-                                        style={{ paddingRight: '42px' }}
                                     />
-                                    <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowPassword(v => !v)} className="login-password-toggle" aria-label={passwordToggleLabel}>
                                         {showPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                                         ) : (
@@ -406,18 +401,17 @@ export default function RegisterPage() {
 
                             <label className="login-label">
                                 <span>{auth.confirmPassword}</span>
-                                <div style={{ position: 'relative' }}>
+                                <div className="login-password-field">
                                     <input
-                                        className="login-input"
+                                        className="login-input login-input--with-toggle"
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         autoComplete="new-password"
                                         value={confirmPassword}
                                         onChange={(event) => setConfirmPassword(event.target.value)}
                                         minLength={8}
                                         required
-                                        style={{ paddingRight: '42px' }}
                                     />
-                                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)} className="login-password-toggle" aria-label={confirmPasswordToggleLabel}>
                                         {showConfirmPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                                         ) : (
@@ -479,62 +473,6 @@ export default function RegisterPage() {
                 </div>
             </div>
             <Footer t={isMounted ? t : {}} />
-
-            <style jsx>{`
-                .register-steps {
-                    margin-top: 12px;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 8px;
-                }
-                .register-step {
-                    border: 1px solid var(--border);
-                    background: var(--bg-card);
-                    color: var(--text-primary);
-                    border-radius: 999px;
-                    padding: 4px 10px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    opacity: 0.75;
-                }
-                .register-step.active {
-                    border-color: var(--accent-gold);
-                    color: var(--accent-gold);
-                    opacity: 1;
-                }
-                .register-actions-row {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 10px;
-                }
-                .register-optional-block {
-                    border: 1px solid var(--border);
-                    border-radius: 14px;
-                    padding: 14px;
-                    background: var(--bg-card);
-                }
-                .register-optional-title {
-                    font-size: 13px;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                    margin-bottom: 6px;
-                }
-                .register-optional-copy {
-                    margin: 0 0 10px;
-                    font-size: 12px;
-                    opacity: 0.8;
-                }
-                [data-theme="light"] .login-alert--success {
-                    background: rgba(42, 122, 70, 0.10);
-                    border: 1px solid rgba(42, 122, 70, 0.36);
-                    color: #1f6a3a;
-                }
-                [data-theme="light"] .login-alert--error {
-                    background: rgba(176, 52, 52, 0.10);
-                    border: 1px solid rgba(176, 52, 52, 0.32);
-                    color: #8b2626;
-                }
-            `}</style>
         </div>
     );
 }

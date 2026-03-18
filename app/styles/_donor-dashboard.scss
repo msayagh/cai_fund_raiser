@@ -152,6 +152,29 @@
     min-height: 48px;
 }
 
+.dashboard-password-field {
+    position: relative;
+}
+
+.dashboard-input--with-toggle {
+    padding-inline-end: 42px;
+}
+
+.dashboard-password-toggle {
+    position: absolute;
+    inset-inline-end: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    padding: 4px;
+    border: 0;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 0;
+}
+
 .dashboard-actions {
     display: flex;
     gap: 12px;

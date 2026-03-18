@@ -58,6 +58,10 @@
     gap: 14px;
 }
 
+.admin-setup-password-field {
+    position: relative;
+}
+
 .admin-setup-input {
     width: 100%;
     padding: 12px 14px;
@@ -65,6 +69,25 @@
     border: 1px solid #2e3250;
     background: #0e1020;
     color: #f0e8d8;
+}
+
+.admin-setup-input--with-toggle {
+    padding-inline-end: 42px;
+}
+
+.admin-setup-password-toggle {
+    position: absolute;
+    inset-inline-end: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    padding: 4px;
+    border: 0;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 0;
 }
 
 .admin-setup-button {

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Amiri:wght@400;700&display=swap');
+
 // ═══════════════════════════════════════════════════════════
 // AUTH PAGES — shared styles for login + forgot-password
 // Backup of previous version: page.scss.backup2
@@ -15,6 +17,22 @@
     flex-direction: column;
     color: var(--text-primary);
     font-family: var(--font-family);
+}
+
+.login-page-wrapper,
+.login-page-wrapper *,
+.login-page-wrapper *::before,
+.login-page-wrapper *::after {
+    box-sizing: border-box;
+}
+
+.login-page-wrapper::-webkit-scrollbar {
+    width: 4px;
+}
+
+.login-page-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(200, 169, 110, 0.22);
+    border-radius: 4px;
 }
 
 // ── Main area — centres the two-column shell ────────────────
@@ -353,6 +371,29 @@
     }
 }
 
+.login-password-field {
+    position: relative;
+}
+
+.login-input--with-toggle {
+    padding-inline-end: 42px;
+}
+
+.login-password-toggle {
+    position: absolute;
+    inset-inline-end: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    padding: 4px;
+    border: 0;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 0;
+}
+
 [data-theme='light'] .login-input {
     background: #f9f8f5;
 }
@@ -479,6 +520,68 @@
     font-size: 12px;
     line-height: 1.65;
     color: var(--text-muted);
+}
+
+.register-steps {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.register-step {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.75;
+}
+
+.register-step.active {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    opacity: 1;
+}
+
+.register-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.register-optional-block {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    background: var(--bg-card);
+}
+
+.register-optional-title {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.register-optional-copy {
+    margin: 0 0 10px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+[data-theme='light'] .login-alert--success {
+    background: rgba(42, 122, 70, 0.10);
+    border: 1px solid rgba(42, 122, 70, 0.36);
+    color: #1f6a3a;
+}
+
+[data-theme='light'] .login-alert--error {
+    background: rgba(176, 52, 52, 0.10);
+    border: 1px solid rgba(176, 52, 52, 0.32);
+    color: #8b2626;
 }
 
 // ══════════════════════════════════════════════════════════════

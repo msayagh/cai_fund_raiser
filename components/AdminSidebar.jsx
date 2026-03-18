@@ -1,21 +1,102 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout, onTabSelect }) {
-    const [isExpanded, setIsExpanded] = useState(true);
+const TOOL_TAB_KEYS = ['imports', 'exports', 'apiKeys', 'logs'];
+
+function NavIcon({ kind }) {
+    const common = {
+        width: 17,
+        height: 17,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.8,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': 'true',
+    };
+
+    switch (kind) {
+        case 'overview':
+            return <svg {...common}><path d="M3 13h8V3H3z"/><path d="M13 21h8V11h-8z"/><path d="M13 3h8v4h-8z"/><path d="M3 17h8v4H3z"/></svg>;
+        case 'requests':
+            return <svg {...common}><path d="M4 5h16v14H4z"/><path d="M8 9h8"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>;
+        case 'imports':
+            return <svg {...common}><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>;
+        case 'apiKeys':
+            return <svg {...common}><circle cx="8.5" cy="15.5" r="2.5"/><path d="M14 15.5h7"/><path d="M18 12.5v6"/><path d="M11 15.5h3"/><path d="M8.5 13V5.5A2.5 2.5 0 0 1 11 3h2"/></svg>;
+        case 'exports':
+            return <svg {...common}><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 3h14"/><path d="M5 21h14"/></svg>;
+        case 'admins':
+            return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M17 11l2 2 4-4"/></svg>;
+        case 'logs':
+            return <svg {...common}><path d="M8 7h12"/><path d="M8 12h12"/><path d="M8 17h12"/><path d="M4 7h.01"/><path d="M4 12h.01"/><path d="M4 17h.01"/></svg>;
+        case 'accounts':
+            return <svg {...common}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>;
+        case 'tools':
+            return <svg {...common}><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.2 2.2-3-3z"/></svg>;
+        case 'logout':
+            return <svg {...common}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+        default:
+            return null;
+    }
+}
+
+function SidebarChevron({ isCollapsed, isRTL }) {
+    const points = isRTL
+        ? (isCollapsed ? '15 18 9 12 15 6' : '9 18 15 12 9 6')
+        : (isCollapsed ? '9 18 15 12 9 6' : '15 18 9 12 15 6');
+
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points={points} />
+        </svg>
+    );
+}
+
+function MobileChevron({ isOpen }) {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points={isOpen ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
+        </svg>
+    );
+}
+
+export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout, onTabSelect, adminText }) {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(true);
+    const [isToolsOpen, setIsToolsOpen] = useState(TOOL_TAB_KEYS.includes(activeTab));
+    const ui = {
+        menu: adminText?.menu || 'Menu',
+        other: adminText?.other || 'Other',
+        tools: adminText?.tools || 'Tools',
+        logout: adminText?.logout || 'Logout',
+        collapseSidebar: adminText?.collapseSidebar || 'Collapse sidebar',
+        expandSidebar: adminText?.expandSidebar || 'Expand sidebar',
+        navigation: adminText?.adminNavigation || 'Admin navigation',
+    };
+
+    useEffect(() => {
+        if (TOOL_TAB_KEYS.includes(activeTab)) {
+            setIsToolsOpen(true);
+        }
+    }, [activeTab]);
 
     const mainTabs = [
-        { key: 'overview', label: 'Overview', icon: '📊' },
-        { key: 'requests', label: 'Requests', icon: '📋' },
-        { key: 'imports', label: 'Import Donations', icon: '📥' },
-        { key: 'apiKeys', label: 'API Keys', icon: '🧩' },
+        { key: 'overview', label: adminText?.overview || 'Overview', icon: 'overview' },
+        { key: 'accounts', label: adminText?.donors || 'Donors', icon: 'accounts' },
+        { key: 'requests', label: adminText?.requests || 'Requests', icon: 'requests' },
     ];
 
+    const toolTabs = [
+        { key: 'imports', label: adminText?.importExistingDonations || 'Import Donations', icon: 'imports' },
+        { key: 'exports', label: adminText?.exportDataTitle || 'Export Data', icon: 'exports' },
+        { key: 'apiKeys', label: adminText?.apiKeys || 'API Keys', icon: 'apiKeys' },
+        { key: 'logs', label: adminText?.activityLogs || 'Activity Logs', icon: 'logs' },
+    ];
     const otherTabs = [
-        { key: 'admins', label: 'Admins', icon: '🔐' },
-        { key: 'logs', label: 'Activity Logs', icon: '📝' },
-        { key: 'accounts', label: 'Accounts', icon: '👤' },
+        { key: 'admins', label: adminText?.admins || 'Admins', icon: 'admins' },
     ];
 
     const handleTabClick = (key) => {
@@ -28,171 +109,109 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout,
     };
 
     return (
-        <aside style={{
-            background: 'transparent',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 24,
-            minHeight: 'auto',
-            transition: 'width 0.3s ease',
-            width: isExpanded ? '200px' : '70px',
-        }}>
-            {/* Header with Expand/Collapse Button */}
-            <div style={{
-                display: 'flex',
-                justifyContent: isExpanded ? 'space-between' : 'center',
-                alignItems: 'center',
-                paddingBottom: 16,
-                borderBottom: '1px solid var(--border)',
-            }}>
-                {isExpanded && (
-                    <div style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                    }}>
-                        MENU
-                    </div>
-                )}
+        <nav
+            className={`sidenav admin-sidenav${isCollapsed ? ' sidenav--collapsed' : ''}${!isMobileNavOpen ? ' sidenav--mobile-closed' : ''}`}
+            aria-label={ui.navigation}
+        >
+            <div className="sidenav-head">
+                {!isCollapsed ? <p className="sidenav-label">{ui.menu}</p> : <span className="sidenav-spacer" aria-hidden="true"></span>}
                 <button
                     type="button"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    title={isExpanded ? 'Collapse' : 'Expand'}
-                    style={{
-                        padding: '6px 8px',
-                        background: 'transparent',
-                        border: '1px solid var(--border)',
-                        borderRadius: '6px',
-                        color: 'var(--text-primary)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 14,
-                    }}
-                    aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+                    className="sidenav-toggle sidenav-toggle--desktop"
+                    onClick={() => setIsCollapsed((value) => !value)}
+                    title={isCollapsed ? ui.expandSidebar : ui.collapseSidebar}
+                    aria-label={isCollapsed ? ui.expandSidebar : ui.collapseSidebar}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        {isExpanded ? (
-                            <polyline points={isRTL ? "9 18 15 12 9 6" : "15 18 9 12 15 6"} />
-                        ) : (
-                            <polyline points={isRTL ? "15 18 9 12 15 6" : "9 18 15 12 9 6"} />
-                        )}
-                    </svg>
+                    <SidebarChevron isCollapsed={isCollapsed} isRTL={isRTL} />
+                </button>
+                <button
+                    type="button"
+                    className="sidenav-toggle sidenav-toggle--mobile"
+                    onClick={() => setIsMobileNavOpen((value) => !value)}
+                    title={isMobileNavOpen ? ui.collapseSidebar : ui.expandSidebar}
+                    aria-label={isMobileNavOpen ? ui.collapseSidebar : ui.expandSidebar}
+                >
+                    <MobileChevron isOpen={isMobileNavOpen} />
                 </button>
             </div>
 
-            {/* Main Navigation */}
-            <nav style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-            }}>
+            <div className="admin-sidenav-group">
                 {mainTabs.map(({ key, label, icon }) => (
                     <button
                         key={key}
                         type="button"
                         onClick={() => handleTabClick(key)}
-                        title={!isExpanded ? label : undefined}
-                        style={{
-                            padding: isExpanded ? '10px 12px' : '10px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            background: activeTab === key ? 'rgba(186, 158, 58, 0.2)' : 'transparent',
-                            color: activeTab === key ? 'var(--accent-gold)' : 'var(--text-primary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            fontWeight: activeTab === key ? 600 : 500,
-                            fontSize: 14,
-                            transition: 'all 0.2s ease',
-                        }}>
-                        <span style={{ fontSize: 16, minWidth: '20px', display: 'flex', justifyContent: 'center' }}>
-                            {icon}
-                        </span>
-                        {isExpanded && <span>{label}</span>}
+                        title={isCollapsed ? label : undefined}
+                        className={`sidenav-btn admin-sidenav-btn${activeTab === key ? ' is-active' : ''}`}
+                    >
+                        <span className="sidenav-icon admin-sidenav-icon"><NavIcon kind={icon} /></span>
+                        {!isCollapsed ? <span>{label}</span> : null}
                     </button>
                 ))}
-            </nav>
+            </div>
 
-            {/* Others Section */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-                borderTop: '1px solid var(--border)',
-                paddingTop: 16,
-            }}>
-                {isExpanded && (
-                    <div style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                    }}>
-                        OTHERS
+            <div className="admin-sidenav-section">
+                {!isCollapsed ? <p className="sidenav-label admin-sidenav-label">{ui.other}</p> : null}
+                <div className="admin-sidenav-group">
+                    <div className={`admin-sidenav-submenu${isToolsOpen ? ' is-open' : ''}`}>
+                        <button
+                            type="button"
+                            onClick={() => setIsToolsOpen((value) => !value)}
+                            title={isCollapsed ? ui.tools : undefined}
+                            className={`sidenav-btn admin-sidenav-btn${TOOL_TAB_KEYS.includes(activeTab) ? ' is-active' : ''}`}
+                        >
+                            <span className="sidenav-icon admin-sidenav-icon"><NavIcon kind="tools" /></span>
+                            {!isCollapsed ? (
+                                <>
+                                    <span>{ui.tools}</span>
+                                    <span className={`admin-sidenav-submenu__chevron${isToolsOpen ? ' is-open' : ''}`} aria-hidden="true">
+                                        <MobileChevron isOpen={isToolsOpen} />
+                                    </span>
+                                </>
+                            ) : null}
+                        </button>
+
+                        {(!isCollapsed && isToolsOpen) || isCollapsed ? (
+                            <div className="admin-sidenav-submenu__items">
+                                {toolTabs.map(({ key, label, icon }) => (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => handleTabClick(key)}
+                                        title={isCollapsed ? label : undefined}
+                                        className={`sidenav-btn admin-sidenav-btn admin-sidenav-btn--nested${activeTab === key ? ' is-active' : ''}`}
+                                    >
+                                        <span className="sidenav-icon admin-sidenav-icon"><NavIcon kind={icon} /></span>
+                                        {!isCollapsed ? <span>{label}</span> : null}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
                     </div>
-                )}
-                <nav style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                }}>
+
                     {otherTabs.map(({ key, label, icon }) => (
                         <button
                             key={key}
                             type="button"
                             onClick={() => handleTabClick(key)}
-                            title={!isExpanded ? label : undefined}
-                            style={{
-                                padding: isExpanded ? '10px 12px' : '10px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: activeTab === key ? 'rgba(186, 158, 58, 0.2)' : 'transparent',
-                                color: activeTab === key ? 'var(--accent-gold)' : 'var(--text-primary)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 12,
-                                fontWeight: activeTab === key ? 600 : 500,
-                                fontSize: 14,
-                                transition: 'all 0.2s ease',
-                            }}>
-                            <span style={{ fontSize: 16, minWidth: '20px', display: 'flex', justifyContent: 'center' }}>
-                                {icon}
-                            </span>
-                            {isExpanded && <span>{label}</span>}
+                            title={isCollapsed ? label : undefined}
+                            className={`sidenav-btn admin-sidenav-btn${activeTab === key ? ' is-active' : ''}`}
+                        >
+                            <span className="sidenav-icon admin-sidenav-icon"><NavIcon kind={icon} /></span>
+                            {!isCollapsed ? <span>{label}</span> : null}
                         </button>
                     ))}
                     <button
                         type="button"
                         onClick={onLogout}
-                        title={!isExpanded ? 'Logout' : undefined}
-                        style={{
-                            padding: isExpanded ? '10px 12px' : '10px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            background: 'transparent',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            fontWeight: 500,
-                            fontSize: 14,
-                            transition: 'all 0.2s ease',
-                        }}>
-                        <span style={{ fontSize: 16, minWidth: '20px', display: 'flex', justifyContent: 'center' }}>
-                            🚪
-                        </span>
-                        {isExpanded && <span>Logout</span>}
+                        title={isCollapsed ? ui.logout : undefined}
+                        className="sidenav-btn sidenav-btn--danger admin-sidenav-btn"
+                    >
+                        <span className="sidenav-icon admin-sidenav-icon"><NavIcon kind="logout" /></span>
+                        {!isCollapsed ? <span>{ui.logout}</span> : null}
                     </button>
-                </nav>
+                </div>
             </div>
-        </aside>
+        </nav>
     );
 }
