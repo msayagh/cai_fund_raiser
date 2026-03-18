@@ -574,7 +574,7 @@ const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, d
   return payment;
 };
 
-const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amount, date, method, note }) => {
+const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amount, date, method, note, displayName, engagement, tier }) => {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     include: {
@@ -593,6 +593,9 @@ const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amou
       ...(date !== undefined ? { date: new Date(date) } : {}),
       ...(method !== undefined ? { method } : {}),
       ...(note !== undefined ? { note: note || null } : {}),
+      ...(displayName !== undefined ? { displayName: displayName || null } : {}),
+      ...(engagement !== undefined ? { engagement: engagement || null } : {}),
+      ...(tier !== undefined ? { tier: tier || null } : {}),
       recordedByAdminId: adminId,
     },
     include: { recordedByAdmin: { select: { id: true, name: true } } },
@@ -871,7 +874,12 @@ const adminUpsertDonorPayment = async (adminId, adminName, { donor: donorInput, 
     }
   }
 
-  const payment = await adminAddPayment(adminId, adminName, donor.id, paymentInput);
+  const payment = await adminAddPayment(adminId, adminName, donor.id, {
+    ...paymentInput,
+    displayName: paymentInput.displayName ?? null,
+    engagement: paymentInput.engagement ?? null,
+    tier: paymentInput.tier ?? null,
+  });
 
   return {
     donorCreated,

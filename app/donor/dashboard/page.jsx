@@ -136,7 +136,7 @@ const EN_DONOR = {
     paymentUpdated:  'Pending payment updated.',
     chooseMethod:    'How would you like to pay?',
     payByCash:       'Cash / Interac',
-    cashGuidance:    'To help us validate your payment, please include: your name on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
+    cashGuidance:    'To help us validate your payment, always include: your email on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
     backToMethod:    '← Back',
     close:           'Close',
     loadingDashboard:'Loading dashboard',
@@ -391,7 +391,9 @@ export default function DonorDashboardPage() {
     const engTarget   = Number(profile?.engagement?.totalPledge || 0);
     const pct         = engTarget > 0 ? Math.min(100, Math.round((totalPaid / engTarget) * 100)) : 0;
     const remaining   = Math.max(0, engTarget - totalPaid);
-    const endDate     = profile?.engagement?.endDate ? new Date(profile.engagement.endDate) : null;
+    const endDate = profile?.engagement?.endDate
+        ? new Date(profile.engagement.endDate)
+        : new Date('2026-12-31');
     const daysLeft    = endDate ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / 86400000)) : 0;
     const startDate   = profile?.engagement?.createdAt ? new Date(profile.engagement.createdAt) : null;
     const totalDays   = (startDate && endDate) ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000)) : 0;
