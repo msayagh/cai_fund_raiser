@@ -107,12 +107,7 @@ const adminUpdatePassword = async (req, res, next) => {
 const adminAddPayment = async (req, res, next) => {
   try {
     const actor = getRequestActor(req);
-    const data = await service.adminAddPayment(actor.id, actor.name, req.params.id, {
-      ...req.body,
-      displayName: req.body.displayName ?? null,
-      engagement: req.body.engagement ?? null,
-      tier: req.body.tier ?? null,
-    });
+    const data = await service.adminAddPayment(actor.id, actor.name, req.params.id, req.body);
     sendSuccess(res, data, 'Payment recorded', 201);
   } catch (err) { next(err); }
 };
