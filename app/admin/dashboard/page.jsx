@@ -16,6 +16,7 @@ import {
     approveRequest,
     createDonor,
     createAdmin,
+    updateAdmin,
     deleteDonorPayment,
     declineRequest,
     getDonor,
@@ -33,7 +34,7 @@ import {
     updateDonorPayment,
 } from '@/lib/adminApi.js';
 import { clearTokens, logout, tryAutoLogin } from '@/lib/auth.js';
-import { clearStoredSession, getStoredSession } from '@/lib/session.js';
+import { clearStoredSession, getStoredSession, setStoredSession } from '@/lib/session.js';
 import { startTokenRefreshManager, stopTokenRefreshManager } from '@/lib/tokenRefreshManager.js';
 import PaymentPanel from './PaymentPanel.jsx';
 import ApiKeysSection from './ApiKeysSection.jsx';
@@ -130,29 +131,29 @@ function AdminPageIcon({ kind }) {
 
     switch (kind) {
         case 'accounts':
-            return <svg {...common}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>;
+            return <svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;
         case 'requests':
-            return <svg {...common}><path d="M4 5h16v14H4z"/><path d="M8 9h8"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>;
+            return <svg {...common}><path d="M4 5h16v14H4z" /><path d="M8 9h8" /><path d="M8 13h8" /><path d="M8 17h5" /></svg>;
         case 'imports':
-            return <svg {...common}><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>;
+            return <svg {...common}><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M4 21h16" /></svg>;
         case 'payments':
-            return <svg {...common}><path d="M3 7h18"/><path d="M6 3h12v18H6z"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>;
+            return <svg {...common}><path d="M3 7h18" /><path d="M6 3h12v18H6z" /><path d="M9 12h6" /><path d="M9 16h4" /></svg>;
         case 'engagement':
-            return <svg {...common}><path d="M8 12h8"/><path d="M12 8v8"/><circle cx="12" cy="12" r="9"/></svg>;
+            return <svg {...common}><path d="M8 12h8" /><path d="M12 8v8" /><circle cx="12" cy="12" r="9" /></svg>;
         case 'edit':
-            return <svg {...common}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>;
+            return <svg {...common}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>;
         case 'add':
-            return <svg {...common}><path d="M12 5v14"/><path d="M5 12h14"/></svg>;
+            return <svg {...common}><path d="M12 5v14" /><path d="M5 12h14" /></svg>;
         case 'review':
-            return <svg {...common}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+            return <svg {...common}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>;
         case 'approve':
-            return <svg {...common}><path d="M20 6 9 17l-5-5"/></svg>;
+            return <svg {...common}><path d="M20 6 9 17l-5-5" /></svg>;
         case 'hold':
-            return <svg {...common}><path d="M10 5H6v14h4z"/><path d="M18 5h-4v14h4z"/></svg>;
+            return <svg {...common}><path d="M10 5H6v14h4z" /><path d="M18 5h-4v14h4z" /></svg>;
         case 'decline':
-            return <svg {...common}><path d="m18 6-12 12"/><path d="m6 6 12 12"/></svg>;
+            return <svg {...common}><path d="m18 6-12 12" /><path d="m6 6 12 12" /></svg>;
         case 'attachment':
-            return <svg {...common}><path d="M21.44 11.05 12.25 20.2a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 1 1-2.83-2.83l8.49-8.48"/></svg>;
+            return <svg {...common}><path d="M21.44 11.05 12.25 20.2a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 1 1-2.83-2.83l8.49-8.48" /></svg>;
         default:
             return null;
     }
@@ -297,8 +298,8 @@ export default function AdminDashboardPage() {
     const [selectedDonor, setSelectedDonor] = useState(null);
     const [selectedDonorForm, setSelectedDonorForm] = useState({ name: '', email: '', accountCreated: true });
     const [selectedDonorPassword, setSelectedDonorPassword] = useState('');
-        const [selectedDonorPasswordConfirm, setSelectedDonorPasswordConfirm] = useState('');
-        const [selectedDonorEngagementForm, setSelectedDonorEngagementForm] = useState({ totalPledge: '' });
+    const [selectedDonorPasswordConfirm, setSelectedDonorPasswordConfirm] = useState('');
+    const [selectedDonorEngagementForm, setSelectedDonorEngagementForm] = useState({ totalPledge: '' });
     const [selectedDonorLoading, setSelectedDonorLoading] = useState(false);
     const [selectedDonorSaving, setSelectedDonorSaving] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -368,7 +369,21 @@ export default function AdminDashboardPage() {
     const [showSelectedDonorPassword, setShowSelectedDonorPassword] = useState(false);
     const [showSelectedDonorConfirmPassword, setShowSelectedDonorConfirmPassword] = useState(false);
     const [showNewAdminPassword, setShowNewAdminPassword] = useState(false);
-    const hasOpenModal = isAddDonorModalOpen || isProfileModalOpen || isEngagementModalOpen || isPaymentsModalOpen || requestDecisionModal.open;
+    const [isCreateAdminModalOpen, setIsCreateAdminModalOpen] = useState(false);
+    const [isCurrentAdminProfileModalOpen, setIsCurrentAdminProfileModalOpen] = useState(false);
+    const [currentAdminTarget, setCurrentAdminTarget] = useState(null);
+    const [currentAdminForm, setCurrentAdminForm] = useState({ name: '', email: '', password: '' });
+    const [currentAdminSaving, setCurrentAdminSaving] = useState(false);
+    const [showCurrentAdminPassword, setShowCurrentAdminPassword] = useState(false);
+    const [creatingAdmin, setCreatingAdmin] = useState(false);
+    const hasOpenModal =
+        isAddDonorModalOpen
+        || isProfileModalOpen
+        || isEngagementModalOpen
+        || isPaymentsModalOpen
+        || requestDecisionModal.open
+        || isCreateAdminModalOpen
+        || isCurrentAdminProfileModalOpen;
 
     const appReady = translationMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
@@ -376,7 +391,7 @@ export default function AdminDashboardPage() {
 
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/admin/dashboard?lang=${language}`, siteUrl);
-    const pageTitle = `Admin Dashboard | ${t.centerName || 'Centre Zad Al-Imane'}`;
+    const pageTitle = `Admin Dashboard | ${t.centerName || DEFAULT_TRANSLATION.centerName}`;
     const pageDescription = truncateText('Manage donors, admins, requests, and activity logs.');
     const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
     const requestStatusLabel = (status) => ({
@@ -401,7 +416,7 @@ export default function AdminDashboardPage() {
             pageDescription,
             pageUrl,
             socialImageUrl: getAbsoluteUrl('/logo-ccai.png', siteUrl),
-            logoAlt: `${t.centerName || 'Centre Zad Al-Imane'} logo`,
+            logoAlt: `${t.centerName || DEFAULT_TRANSLATION.centerName} logo`,
             locale: t.locale ?? language,
             siteUrl,
             t,
@@ -745,11 +760,26 @@ export default function AdminDashboardPage() {
         event.preventDefault();
         setError('');
         setMessage('');
+        setModalError('');
+        setModalMessage('');
+
+        const name = newAdmin.name.trim();
+        const email = newAdmin.email.trim().toLowerCase();
+        const password = newAdmin.password.trim();
+
+        if (!name || !email) {
+            const errMsg = adminText.errorSaving || 'Error saving';
+            setError(errMsg);
+            setModalError(errMsg);
+            return;
+        }
+
+        setCreatingAdmin(true);
         try {
             await createAdmin({
-                name: newAdmin.name.trim(),
-                email: newAdmin.email.trim().toLowerCase(),
-                ...(newAdmin.password.trim() && { password: newAdmin.password }),
+                name,
+                email,
+                ...(password && { password }),
             });
             setNewAdmin({ name: '', email: '', password: '' });
 
@@ -759,8 +789,151 @@ export default function AdminDashboardPage() {
                 console.error('Error reloading dashboard data:', err);
             }
             setMessage(adminText.adminCreated);
+            setModalMessage(adminText.adminCreated);
+            setIsCreateAdminModalOpen(false);
         } catch (err) {
             setError(err?.message || adminText.unableCreateAdmin);
+            setModalError(err?.message || adminText.unableCreateAdmin);
+        } finally {
+            setCreatingAdmin(false);
+        }
+    }
+
+    function openCurrentAdminProfileModal() {
+        const currentAdmin = getStoredSession();
+        setCurrentAdminTarget(currentAdmin);
+        setCurrentAdminForm({
+            name: currentAdmin?.name || '',
+            email: currentAdmin?.email || '',
+            password: '',
+        });
+        setShowCurrentAdminPassword(false);
+        setModalError('');
+        setModalMessage('');
+        setIsCurrentAdminProfileModalOpen(true);
+    }
+
+    function openAdminProfileModal(admin) {
+        setCurrentAdminTarget(admin);
+        setCurrentAdminForm({
+            name: admin?.name || '',
+            email: admin?.email || '',
+            password: '',
+        });
+        setShowCurrentAdminPassword(false);
+        setModalError('');
+        setModalMessage('');
+        setIsCurrentAdminProfileModalOpen(true);
+    }
+
+    async function handleUpdateCurrentAdmin(event) {
+        event.preventDefault();
+
+        const targetAdmin = currentAdminTarget || getStoredSession();
+        if (!targetAdmin?.id) {
+            const errMsg = adminText.errorSaving || 'Error saving';
+            setError(errMsg);
+            setModalError(errMsg);
+            return;
+        }
+
+        const nextName = currentAdminForm.name.trim();
+        const nextEmail = currentAdminForm.email.trim().toLowerCase();
+        const nextPassword = currentAdminForm.password.trim();
+        const payload = {};
+
+        if (nextName && nextName !== targetAdmin.name) payload.name = nextName;
+        if (nextEmail && nextEmail !== targetAdmin.email) payload.email = nextEmail;
+        if (nextPassword) payload.password = nextPassword;
+
+        if (Object.keys(payload).length === 0) {
+            const msg = adminText.savedSuccessfully || 'Saved successfully';
+            setModalMessage(msg);
+            setMessage(msg);
+            setIsCurrentAdminProfileModalOpen(false);
+            return;
+        }
+
+        setCurrentAdminSaving(true);
+        setModalError('');
+        setModalMessage('');
+        setError('');
+        setMessage('');
+
+        try {
+            const updated = await updateAdmin(targetAdmin.id, payload);
+            const normalizedUpdated = updated?.data || updated;
+            const activeSession = getStoredSession();
+            if (activeSession?.id && activeSession.id === targetAdmin.id) {
+                const nextSession = {
+                    ...activeSession,
+                    ...(normalizedUpdated || {}),
+                };
+                setStoredSession(nextSession);
+            }
+
+            try {
+                await loadAllData();
+            } catch (err) {
+                console.error('Error reloading dashboard data:', err);
+            }
+
+            const successMessage = adminText.savedSuccessfully || 'Saved successfully';
+            setModalMessage(successMessage);
+            setMessage(successMessage);
+            setIsCurrentAdminProfileModalOpen(false);
+            setCurrentAdminTarget(null);
+        } catch (err) {
+            const errMsg = err?.message || adminText.errorSaving || 'Error saving';
+            setModalError(errMsg);
+            setError(errMsg);
+        } finally {
+            setCurrentAdminSaving(false);
+        }
+    }
+
+    async function handleRemoveAdmin(admin) {
+        if (!admin?.id) return;
+
+        const activeSession = getStoredSession();
+        if (activeSession?.id && activeSession.id === admin.id) {
+            const errMsg = adminText.yourOwnStatusManagedByAnotherAdmin || 'Your own account can only be managed by another administrator.';
+            setError(errMsg);
+            setModalError(errMsg);
+            return;
+        }
+
+        const confirmed = typeof window === 'undefined'
+            ? true
+            : window.confirm(`Remove admin ${admin.name || admin.email}? This cannot be undone.`);
+
+        if (!confirmed) return;
+
+        setError('');
+        setMessage('');
+        setModalError('');
+        setModalMessage('');
+
+        try {
+            await deleteAdmin(admin.id);
+            if (currentAdminTarget?.id === admin.id) {
+                setIsCurrentAdminProfileModalOpen(false);
+                setCurrentAdminTarget(null);
+            }
+
+            try {
+                await loadAllData();
+            } catch (err) {
+                console.error('Error reloading dashboard data:', err);
+            }
+
+            const successMessage = 'Admin removed successfully.';
+            setMessage(successMessage);
+            setModalMessage(successMessage);
+        } catch (err) {
+            const errMsg = err?.message || 'Unable to remove admin.';
+            setError(errMsg);
+            setModalError(errMsg);
         }
     }
 
@@ -930,9 +1103,9 @@ export default function AdminDashboardPage() {
             if (hasPasswordChange && nextPassword.length < 8) {
                 throw new Error(adminText.passwordMinEight);
             }
-                if (hasPasswordChange && nextPassword !== selectedDonorPasswordConfirm.trim()) {
-                    throw new Error(adminText.passwordsDoNotMatch);
-                }
+            if (hasPasswordChange && nextPassword !== selectedDonorPasswordConfirm.trim()) {
+                throw new Error(adminText.passwordsDoNotMatch);
+            }
             if (isActivatingAccount && !hasPasswordChange) {
                 throw new Error(adminText.setPasswordWhenActivating);
             }
@@ -1016,8 +1189,8 @@ export default function AdminDashboardPage() {
                 accountCreated: donor.accountCreated !== false,
             });
             setSelectedDonorPassword('');
-                setSelectedDonorPasswordConfirm('');
-                setSelectedDonorEngagementForm({ totalPledge: String(donor.engagement?.totalPledge || '') });
+            setSelectedDonorPasswordConfirm('');
+            setSelectedDonorEngagementForm({ totalPledge: String(donor.engagement?.totalPledge || '') });
             return { donor, payments };
         } catch (err) {
             setSelectedDonor(null);
@@ -1548,7 +1721,7 @@ export default function AdminDashboardPage() {
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div className="mosque-donation admin-preloader-shell" data-theme="dark">
-                <SitePreloader title="Centre Zad Al-Imane" subtitle={adminText.loadingAdminDashboard} />
+                <SitePreloader title={t.centerName || DEFAULT_TRANSLATION.centerName} subtitle={adminText.loadingAdminDashboard} />
             </div>
         );
     }
@@ -1654,9 +1827,9 @@ export default function AdminDashboardPage() {
                                             />
                                             <button type="button" onClick={() => setShowNewDonorPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewDonorPassword ? 'Hide password' : 'Show password'}>
                                                 {showNewDonorPassword ? (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                                 ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                                 )}
                                             </button>
                                         </div>
@@ -1676,9 +1849,9 @@ export default function AdminDashboardPage() {
                                             />
                                             <button type="button" onClick={() => setShowNewDonorConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewDonorConfirmPassword ? 'Hide password' : 'Show password'}>
                                                 {showNewDonorConfirmPassword ? (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                                 ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                                 )}
                                             </button>
                                         </div>
@@ -1700,6 +1873,150 @@ export default function AdminDashboardPage() {
                                         {newDonorSaving
                                             ? adminText.creatingDonor
                                             : (newDonorForm.accountCreated ? adminText.createDonorWelcome : adminText.createPlaceholderDonor)}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {isCreateAdminModalOpen ? (
+                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label={adminText.createAdminTitle}>
+                            <div className="admin-modal admin-modal--sm">
+                                <div className="admin-modal-header">
+                                    <div>
+                                        <div className="admin-section-title admin-title-with-icon"><AdminPageIcon kind="add" /> {adminText.createAdminTitle}</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="admin-button secondary"
+                                        onClick={() => {
+                                            setIsCreateAdminModalOpen(false);
+                                            setModalError('');
+                                            setModalMessage('');
+                                        }}
+                                    >
+                                        ✕ {adminText.close}
+                                    </button>
+                                </div>
+
+                                {modalError ? <div className="admin-alert error">{modalError}</div> : null}
+                                {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
+
+                                <form className="admin-form" onSubmit={handleCreateAdmin}>
+                                    <input
+                                        className="admin-input"
+                                        placeholder={adminText.fullNamePlaceholder}
+                                        value={newAdmin.name}
+                                        onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))}
+                                    />
+                                    <input
+                                        className="admin-input"
+                                        type="email"
+                                        placeholder={adminText.emailPlaceholder}
+                                        value={newAdmin.email}
+                                        onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))}
+                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            className="admin-input"
+                                            type={showNewAdminPassword ? 'text' : 'password'}
+                                            placeholder={adminText.passwordPlaceholder}
+                                            value={newAdmin.password}
+                                            onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))}
+                                            style={{ paddingRight: '42px' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewAdminPassword((v) => !v)}
+                                            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }}
+                                            aria-label={showNewAdminPassword ? 'Hide password' : 'Show password'}
+                                        >
+                                            {showNewAdminPassword ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                            )}
+                                        </button>
+                                    </div>
+                                    <button type="submit" className="admin-button" disabled={creatingAdmin}>
+                                        {creatingAdmin ? (adminText.creating || 'Creating...') : adminText.createAdminButton}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {isCurrentAdminProfileModalOpen ? (
+                        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label={adminText.adminProfileTitle}>
+                            <div className="admin-modal admin-modal--sm">
+                                <div className="admin-modal-header">
+                                    <div>
+                                        <div className="admin-section-title admin-title-with-icon"><AdminPageIcon kind="accounts" /> {adminText.adminProfileTitle}</div>
+                                        <div className="admin-muted">
+                                            {currentAdminTarget?.name || currentAdminTarget?.email || ''}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="admin-button secondary"
+                                        onClick={() => {
+                                            setIsCurrentAdminProfileModalOpen(false);
+                                            setCurrentAdminTarget(null);
+                                            setModalError('');
+                                            setModalMessage('');
+                                        }}
+                                    >
+                                        ✕ {adminText.close}
+                                    </button>
+                                </div>
+
+                                {modalError ? <div className="admin-alert error">{modalError}</div> : null}
+                                {modalMessage ? <div className="admin-alert success">{modalMessage}</div> : null}
+
+                                <form className="admin-form" onSubmit={handleUpdateCurrentAdmin}>
+                                    <div>
+                                        <label className="admin-label">{adminText.fullNameLabel}</label>
+                                        <input
+                                            className="admin-input"
+                                            type="text"
+                                            value={currentAdminForm.name}
+                                            onChange={(e) => setCurrentAdminForm((prev) => ({ ...prev, name: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="admin-label">{adminText.emailAddressLabel}</label>
+                                        <input
+                                            className="admin-input"
+                                            type="email"
+                                            value={currentAdminForm.email}
+                                            onChange={(e) => setCurrentAdminForm((prev) => ({ ...prev, email: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <label className="admin-label">{adminText.passwordPlaceholder}</label>
+                                        <input
+                                            className="admin-input"
+                                            type={showCurrentAdminPassword ? 'text' : 'password'}
+                                            value={currentAdminForm.password}
+                                            onChange={(e) => setCurrentAdminForm((prev) => ({ ...prev, password: e.target.value }))}
+                                            placeholder={adminText.passwordPlaceholder}
+                                            style={{ paddingRight: '42px' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCurrentAdminPassword((v) => !v)}
+                                            style={{ position: 'absolute', right: '12px', top: '70%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }}
+                                            aria-label={showCurrentAdminPassword ? 'Hide password' : 'Show password'}
+                                        >
+                                            {showCurrentAdminPassword ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                            )}
+                                        </button>
+                                    </div>
+                                    <button type="submit" className="admin-button" disabled={currentAdminSaving}>
+                                        {currentAdminSaving ? (adminText.saving || 'Saving...') : (adminText.saveChanges || 'Save Changes')}
                                     </button>
                                 </form>
                             </div>
@@ -1785,9 +2102,9 @@ export default function AdminDashboardPage() {
                                                             />
                                                             <button type="button" onClick={() => setShowSelectedDonorPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showSelectedDonorPassword ? 'Hide password' : 'Show password'}>
                                                                 {showSelectedDonorPassword ? (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                                                 ) : (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                                                 )}
                                                             </button>
                                                         </div>
@@ -1803,9 +2120,9 @@ export default function AdminDashboardPage() {
                                                             />
                                                             <button type="button" onClick={() => setShowSelectedDonorConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showSelectedDonorConfirmPassword ? 'Hide password' : 'Show password'}>
                                                                 {showSelectedDonorConfirmPassword ? (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                                                 ) : (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                                                 )}
                                                             </button>
                                                         </div>
@@ -1972,14 +2289,14 @@ export default function AdminDashboardPage() {
                                     return (
                                         <div className="admin-actions">
                                             {request?.type === 'engagement_change' && canApprove ? (
-                                        <button
-                                            type="button"
-                                            className="admin-button"
-                                            disabled={requestDecisionModal.approving || requestDecisionModal.declining || requestDecisionModal.holding}
-                                            onClick={handleApproveFromModal}
-                                        >
-                                            {requestDecisionModal.approving ? 'Processing…' : adminText.receivedNotification}
-                                        </button>
+                                                <button
+                                                    type="button"
+                                                    className="admin-button"
+                                                    disabled={requestDecisionModal.approving || requestDecisionModal.declining || requestDecisionModal.holding}
+                                                    onClick={handleApproveFromModal}
+                                                >
+                                                    {requestDecisionModal.approving ? 'Processing…' : adminText.receivedNotification}
+                                                </button>
                                             ) : null}
                                             {request?.type !== 'engagement_change' && canApprove ? (
                                                 <button
@@ -2182,7 +2499,7 @@ export default function AdminDashboardPage() {
                                         </select>
                                     </div>
                                     <div className="admin-table-wrap">
-                                            <table className="admin-table admin-table--stackable">
+                                        <table className="admin-table admin-table--stackable">
                                             <thead>
                                                 <tr>
                                                     <th>{adminText.requester}</th>
@@ -2601,9 +2918,9 @@ export default function AdminDashboardPage() {
                                                         onChange={(e) => setExportFilters((prev) => ({ ...prev, method: e.target.value }))}
                                                     >
                                                         <option value="">{adminText.allMethodsOption || 'All methods'}</option>
-                                                        <option value="cash">Cash</option>
-                                                        <option value="card">Card</option>
-                                                        <option value="zeffy">Zeffy</option>
+                                                        <option value="cash">{adminText.cashMethod}</option>
+                                                        <option value="card">{adminText.cardMethod}</option>
+                                                        <option value="zeffy">{adminText.zeffyMethod}</option>
                                                     </select>
                                                     <select
                                                         className="admin-input"
@@ -2649,22 +2966,32 @@ export default function AdminDashboardPage() {
                             {activeTab === 'admins' ? (
                                 <div className="admin-stack admin-stack--xl">
                                     <div className="admin-card">
-                                        <div className="admin-section-title">{adminText.createAdminTitle}</div>
-                                        <form className="admin-form" onSubmit={handleCreateAdmin}>
-                                            <input className="admin-input" placeholder={adminText.fullNamePlaceholder} value={newAdmin.name} onChange={(e) => setNewAdmin((prev) => ({ ...prev, name: e.target.value }))} />
-                                            <input className="admin-input" type="email" placeholder={adminText.emailPlaceholder} value={newAdmin.email} onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))} />
-                                            <div style={{ position: 'relative' }}>
-                                                <input className="admin-input" type={showNewAdminPassword ? 'text' : 'password'} placeholder={adminText.passwordPlaceholder} value={newAdmin.password} onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                                <button type="button" onClick={() => setShowNewAdminPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewAdminPassword ? 'Hide password' : 'Show password'}>
-                                                    {showNewAdminPassword ? (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                                                    ) : (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                                    )}
+                                        <div className="admin-inline admin-inline--between admin-inline--wrap">
+                                            <div>
+                                                <div className="admin-section-title">{adminText.adminsTitle}</div>
+                                                <div className="admin-muted admin-muted--md">{adminText.adminProfileTitle}</div>
+                                            </div>
+                                            <div className="admin-actions">
+                                                <button
+                                                    type="button"
+                                                    className="admin-button"
+                                                    onClick={() => {
+                                                        setModalError('');
+                                                        setModalMessage('');
+                                                        setIsCreateAdminModalOpen(true);
+                                                    }}
+                                                >
+                                                    {adminText.createAdminButton}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="admin-button secondary"
+                                                    onClick={openCurrentAdminProfileModal}
+                                                >
+                                                    {adminText.updateProfileButton}
                                                 </button>
                                             </div>
-                                            <button type="submit" className="admin-button">{adminText.createAdminButton}</button>
-                                        </form>
+                                        </div>
                                     </div>
                                     <div className="admin-card">
                                         <div className="admin-section-title">{adminText.adminsTitle}</div>
@@ -2682,6 +3009,22 @@ export default function AdminDashboardPage() {
                                                     <div className="admin-item-title">{admin.name}</div>
                                                     <div className="admin-muted mt-sm">{admin.email}</div>
                                                     {admin.addedBy?.name ? <div className="mt-sm">{adminText.addedBy} {admin.addedBy.name}</div> : null}
+                                                    <div className="admin-actions mt-sm">
+                                                        <button
+                                                            type="button"
+                                                            className="admin-button secondary"
+                                                            onClick={() => openAdminProfileModal(admin)}
+                                                        >
+                                                            {adminText.editButton || 'Edit'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="admin-button danger"
+                                                            onClick={() => handleRemoveAdmin(admin)}
+                                                        >
+                                                            {adminText.removeButton || 'Remove'}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                             {paginatedAdmins.length === 0 ? <div className="admin-item">{adminText.noAdminsMatch}</div> : null}
@@ -2696,7 +3039,16 @@ export default function AdminDashboardPage() {
                                         </div>
                                     </div>
                                     <div className="admin-card">
-                                        <div className="admin-section-title admin-title-with-icon"><AdminPageIcon kind="accounts" /> {adminText.adminProfileTitle}</div>
+                                        <div className="admin-inline admin-inline--between admin-inline--wrap mb-md">
+                                            <div className="admin-section-title admin-title-with-icon"><AdminPageIcon kind="accounts" /> {adminText.adminProfileTitle}</div>
+                                            <button
+                                                type="button"
+                                                className="admin-button secondary"
+                                                onClick={openCurrentAdminProfileModal}
+                                            >
+                                                {adminText.updateProfileButton}
+                                            </button>
+                                        </div>
                                         <div className="admin-form">
                                             <div>
                                                 <label className="admin-label">{adminText.fullNameLabel}</label>
@@ -2725,11 +3077,9 @@ export default function AdminDashboardPage() {
                                                     <option value="inactive">{adminText.inactiveStatus}</option>
                                                     <option value="suspended">{adminText.suspendedStatus}</option>
                                                 </select>
-                                                <div className="admin-field-help">
-                                                    Your own account status can only be changed by another administrator.
-                                                </div>
+                                                <div className="admin-field-help">{adminText.yourOwnStatusManagedByAnotherAdmin}</div>
                                             </div>
-                                            <button type="button" className="admin-button">{adminText.updateProfileButton}</button>
+                                            <button type="button" className="admin-button" onClick={openCurrentAdminProfileModal}>{adminText.updateProfileButton}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -2766,21 +3116,21 @@ export default function AdminDashboardPage() {
                                             onChange={(e) => setLogFilter((prev) => ({ ...prev, actor: e.target.value }))}
                                         />
                                     </div>
-                                        <div className="admin-list">
-                                            {paginatedLogs.map((log) => (
-                                                <div key={log.id} className="admin-item">
-                                                    <div className="admin-item-title">{log.action}</div>
-                                                    <div className="admin-muted mt-sm">{log.details}</div>
-                                                    <div className="admin-accent mt-sm">{log.actor}</div>
-                                                </div>
-                                            ))}
-                                            {paginatedLogs.length === 0 ? <div className="admin-item">{adminText.noLogsMatch}</div> : null}
-                                        </div>
-                                        <div className="admin-pagination">
-                                            <div className="admin-muted">{adminText.showingItemsPerPage}</div>
-                                            <div className="admin-pagination-buttons">
-                                                <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>{adminText.previous}</button>
-                                                <span>{adminText.pageLabel(logsPage, logsTotalPages)}</span>
+                                    <div className="admin-list">
+                                        {paginatedLogs.map((log) => (
+                                            <div key={log.id} className="admin-item">
+                                                <div className="admin-item-title">{log.action}</div>
+                                                <div className="admin-muted mt-sm">{log.details}</div>
+                                                <div className="admin-accent mt-sm">{log.actor}</div>
+                                            </div>
+                                        ))}
+                                        {paginatedLogs.length === 0 ? <div className="admin-item">{adminText.noLogsMatch}</div> : null}
+                                    </div>
+                                    <div className="admin-pagination">
+                                        <div className="admin-muted">{adminText.showingItemsPerPage}</div>
+                                        <div className="admin-pagination-buttons">
+                                            <button type="button" className="admin-button secondary" disabled={logsPage <= 1} onClick={() => setLogsPage((page) => Math.max(1, page - 1))}>{adminText.previous}</button>
+                                            <span>{adminText.pageLabel(logsPage, logsTotalPages)}</span>
                                             <button type="button" className="admin-button secondary" disabled={logsPage >= logsTotalPages} onClick={() => setLogsPage((page) => Math.min(logsTotalPages, page + 1))}>{adminText.next}</button>
                                         </div>
                                     </div>

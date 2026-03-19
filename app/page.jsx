@@ -191,7 +191,7 @@ export default function MosqueDonation() {
         data-theme="dark"
         suppressHydrationWarning
       >
-        <SitePreloader title="Centre Zad Al-Imane" subtitle={t.loadingCampaign || DEFAULT_TRANSLATION.loadingCampaign} />
+        <SitePreloader title={t.centerName || DEFAULT_TRANSLATION.centerName} subtitle={t.loadingCampaign || DEFAULT_TRANSLATION.loadingCampaign} />
       </div>
     );
   }

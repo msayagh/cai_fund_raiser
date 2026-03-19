@@ -83,7 +83,7 @@ export default function SitemapPage() {
                 data-theme="dark"
                 suppressHydrationWarning
             >
-                <SitePreloader title="Centre Zad Al-Imane" subtitle={t.loadingSitemap || DEFAULT_TRANSLATION.loadingSitemap} />
+                <SitePreloader title={t.centerName || DEFAULT_TRANSLATION.centerName} subtitle={t.loadingSitemap || DEFAULT_TRANSLATION.loadingSitemap} />
             </div>
         );
     }

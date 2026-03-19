@@ -49,106 +49,106 @@ function Ico({ size = 16, children }) {
 // Donor i18n fallback (English) — module-level constant
 // ─────────────────────────────────────────────
 const EN_DONOR = {
-    welcome:         'Welcome',
-    settings:        'Settings',
-    contactAdmin:    'Contact admin',
-    logout:          'Log out',
-    engTitle:        'Your engagement',
-    editEng:         'Edit engagement',
-    historyTitle:    'Payment history',
-    makePayment:     'Make a payment',
-    paid:            'Paid so far',
-    pledged:         'Total pledged',
-    remaining:       'Remaining',
-    deadline:        'Deadline',
-    daysLeft:        'days remaining',
+    welcome: 'Welcome',
+    settings: 'Settings',
+    contactAdmin: 'Contact admin',
+    logout: 'Log out',
+    engTitle: 'Your engagement',
+    editEng: 'Edit engagement',
+    historyTitle: 'Payment history',
+    makePayment: 'Make a payment',
+    paid: 'Paid so far',
+    pledged: 'Total pledged',
+    remaining: 'Remaining',
+    deadline: 'Deadline',
+    daysLeft: 'days remaining',
     stateInProgress: 'Engagement in progress',
-    stateOverdue:    'Engagement overdue',
-    stateCompleted:  'Engagement completed',
-    chipInProgress:  'In progress',
-    chipOverdue:     'Overdue',
-    chipCompleted:   'Completed',
-    noPayments:      'No payments recorded yet.',
-    profile:         'Profile',
-    password:        'Password',
-    saveProfile:     'Save profile',
-    updatePwd:       'Update password',
-    curPwd:          'Current password',
-    newPwd:          'New password',
-    confPwd:         'Confirm password',
-    pledgeAmt:       'Pledge amount ($)',
-    updateEng:       'Update engagement',
-    createEng:       'Create engagement',
-    reqType:         'Request type',
-    message:         'Message',
-    yourName:        'Your name',
-    yourEmail:       'E-mail',
-    payViaZeffy:     'Pay via Zeffy',
-    submitCash:      'Submit cash receipt',
-    amount:          'Amount ($)',
-    note:            'Note',
-    sendReq:         'Send request',
-    attachFiles:     'Attach files (optional)',
-    zeffySoon:       'Once your Zeffy payment is completed, it will be reflected in your dashboard within a few minutes.',
-    payDesc:         'Pay online or submit a cash payment receipt.',
-    payZeffyNote:    'Your payment will appear here automatically within a few minutes after completion.',
-    zeffyBtnLabel:   'Pay via Zeffy (new tab)',
-    contactDesc:     'Send us a message for support or any question.',
-    cashOk:          'Cash payment request submitted.',
-    pwdMismatch:     'Passwords do not match.',
-    colDate:         'Date',
-    colDisplayName:  'Display name',
-    colAmount:       'Amount',
-    colMethod:       'Method',
-    colNote:         'Note',
-    colReceipt:      'Receipt',
-    adminNote:       'Note for admin',
-    personalNote:    'Personal note',
-    viewReceipt:     'View receipt',
-    personalNotePh:  'Note visible only to you in your payment history',
-    adminNotePh:     'Message for the admin team',
-    or:              'or',
-    name:            'Name',
-    reqGeneral:      'General request',
-    reqPayment:      'Payment upload',
-    reqEngagement:   'Engagement change',
-    reqAccount:      'Account help',
+    stateOverdue: 'Engagement overdue',
+    stateCompleted: 'Engagement completed',
+    chipInProgress: 'In progress',
+    chipOverdue: 'Overdue',
+    chipCompleted: 'Completed',
+    noPayments: 'No payments recorded yet.',
+    profile: 'Profile',
+    password: 'Password',
+    saveProfile: 'Save profile',
+    updatePwd: 'Update password',
+    curPwd: 'Current password',
+    newPwd: 'New password',
+    confPwd: 'Confirm password',
+    pledgeAmt: 'Pledge amount ($)',
+    updateEng: 'Update engagement',
+    createEng: 'Create engagement',
+    reqType: 'Request type',
+    message: 'Message',
+    yourName: 'Your name',
+    yourEmail: 'E-mail',
+    payViaZeffy: 'Pay via Zeffy',
+    submitCash: 'Submit cash receipt',
+    amount: 'Amount ($)',
+    note: 'Note',
+    sendReq: 'Send request',
+    attachFiles: 'Attach files (optional)',
+    zeffySoon: 'Once your Zeffy payment is completed, it will be reflected in your dashboard within a few minutes.',
+    payDesc: 'Pay online or submit a cash payment receipt.',
+    payZeffyNote: 'Your payment will appear here automatically within a few minutes after completion.',
+    zeffyBtnLabel: 'Pay via Zeffy (new tab)',
+    contactDesc: 'Send us a message for support or any question.',
+    cashOk: 'Cash payment request submitted.',
+    pwdMismatch: 'Passwords do not match.',
+    colDate: 'Date',
+    colDisplayName: 'Display name',
+    colAmount: 'Amount',
+    colMethod: 'Method',
+    colNote: 'Note',
+    colReceipt: 'Receipt',
+    adminNote: 'Note for admin',
+    personalNote: 'Personal note',
+    viewReceipt: 'View receipt',
+    personalNotePh: 'Note visible only to you in your payment history',
+    adminNotePh: 'Message for the admin team',
+    or: 'or',
+    name: 'Name',
+    reqGeneral: 'General request',
+    reqPayment: 'Payment upload',
+    reqEngagement: 'Engagement change',
+    reqAccount: 'Account help',
     // Success messages
-    profileUpdated:  'Profile updated successfully.',
+    profileUpdated: 'Profile updated successfully.',
     passwordUpdated: 'Password updated successfully.',
-    engUpdated:      'Engagement updated successfully.',
-    reqSubmitted:    'Request submitted successfully.',
+    engUpdated: 'Engagement updated successfully.',
+    reqSubmitted: 'Request submitted successfully.',
     // Error messages
-    invalidAmount:   'Please enter a valid amount.',
-    invalidPledge:   'Please enter a valid pledge amount.',
-    invalidDate:     'Please enter a valid date (YYYY-MM-DD).',
+    invalidAmount: 'Please enter a valid amount.',
+    invalidPledge: 'Please enter a valid pledge amount.',
+    invalidDate: 'Please enter a valid date (YYYY-MM-DD).',
     errUpdateProfile: 'Unable to update profile.',
-    errUpdatePassword:'Unable to update password.',
-    errUpdateEng:    'Unable to update engagement.',
-    errSubmitReq:    'Unable to submit request.',
-    errSubmitCash:   'Unable to submit cash payment.',
+    errUpdatePassword: 'Unable to update password.',
+    errUpdateEng: 'Unable to update engagement.',
+    errSubmitReq: 'Unable to submit request.',
+    errSubmitCash: 'Unable to submit cash payment.',
     // Pending payments
-    pendingBadge:    'Pending',
-    pendingInfo:     'Awaiting admin confirmation — you can edit or cancel this submission.',
-    editPayment:     'Edit',
-    cancelPayment:   'Cancel',
-    confirmCancel:   'Are you sure you want to cancel this pending payment?',
-    paymentCancelled:'Pending payment cancelled.',
-    paymentUpdated:  'Pending payment updated.',
-    chooseMethod:    'How would you like to pay?',
-    payByCash:       'Cash / Interac',
-    cashGuidance:    'To help us validate your payment, always include: your email on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
-    backToMethod:    '← Back',
-    close:           'Close',
-    loadingDashboard:'Loading dashboard',
-    loading:         'Loading',
+    pendingBadge: 'Pending',
+    pendingInfo: 'Awaiting admin confirmation — you can edit or cancel this submission.',
+    editPayment: 'Edit',
+    cancelPayment: 'Cancel',
+    confirmCancel: 'Are you sure you want to cancel this pending payment?',
+    paymentCancelled: 'Pending payment cancelled.',
+    paymentUpdated: 'Pending payment updated.',
+    chooseMethod: 'How would you like to pay?',
+    payByCash: 'Cash / Interac',
+    cashGuidance: 'To help us validate your payment, always include: your email on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
+    backToMethod: '← Back',
+    close: 'Close',
+    loadingDashboard: 'Loading dashboard',
+    loading: 'Loading',
     donorNavigation: 'Donor navigation',
-    menu:            'Menu',
-    sessionExpired:  'Session expired. Please log in again.',
+    menu: 'Menu',
+    sessionExpired: 'Session expired. Please log in again.',
     unableLoadDashboard: 'Unable to load dashboard.',
     fullNamePlaceholder: 'Full name',
     emailPlaceholder: 'Email',
-    pledgeExample:   'e.g. 2000',
+    pledgeExample: 'e.g. 2000',
     zeroPlaceholder: '0',
     paymentMethodCash: 'Cash',
     paymentMethodZeffy: 'Zeffy',
@@ -161,8 +161,8 @@ const EN_DONOR = {
 // ─────────────────────────────────────────────
 const STATE_COLORS = {
     'in-progress': { fg: '#e8a44a', bg: 'rgba(232,164,74,.13)', border: 'rgba(232,164,74,.32)' },
-    overdue:       { fg: '#e46767', bg: 'rgba(228,103,103,.13)', border: 'rgba(228,103,103,.32)' },
-    completed:     { fg: '#5cc8a0', bg: 'rgba(92,200,160,.13)', border: 'rgba(92,200,160,.32)' },
+    overdue: { fg: '#e46767', bg: 'rgba(228,103,103,.13)', border: 'rgba(228,103,103,.32)' },
+    completed: { fg: '#5cc8a0', bg: 'rgba(92,200,160,.13)', border: 'rgba(92,200,160,.32)' },
 };
 
 // ─────────────────────────────────────────────
@@ -209,12 +209,12 @@ export default function DonorDashboardPage() {
     const isRTL = ['ar', 'ur'].includes(language);
 
     // ── Remote data ──
-    const [profile,  setProfile]  = useState(null);
+    const [profile, setProfile] = useState(null);
     const [payments, setPayments] = useState([]);
-    const [loading,  setLoading]  = useState(true);
+    const [loading, setLoading] = useState(true);
 
     // ── UI feedback ──
-    const [error,   setError]   = useState('');
+    const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [profileError, setProfileError] = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
@@ -230,20 +230,20 @@ export default function DonorDashboardPage() {
     const [modal, setModal] = useState(null);
 
     // ── Form state ──
-    const [profileForm,    setProfileForm]    = useState({ name: '', email: '' });
-    const [passwordForm,   setPasswordForm]   = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    const [engForm,        setEngForm]        = useState({ totalPledge: '', endDate: '' });
-    const [contactForm,    setContactForm]    = useState({ type: 'other', message: '' });
-    const [cashForm,       setCashForm]       = useState({ amount: '', adminNote: '', personalNote: '' });
-    const [attachedFiles,  setAttachedFiles]  = useState([]);
-    const [payStep,        setPayStep]        = useState(null); // null | 'zeffy' | 'cash'
-    const [pendingPayments,setPendingPayments]= useState([]);
-    const [editingPendingId,setEditingPendingId]=useState(null);
+    const [profileForm, setProfileForm] = useState({ name: '', email: '' });
+    const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [engForm, setEngForm] = useState({ totalPledge: '', endDate: '' });
+    const [contactForm, setContactForm] = useState({ type: 'other', message: '' });
+    const [cashForm, setCashForm] = useState({ amount: '', adminNote: '', personalNote: '' });
+    const [attachedFiles, setAttachedFiles] = useState([]);
+    const [payStep, setPayStep] = useState(null); // null | 'zeffy' | 'cash'
+    const [pendingPayments, setPendingPayments] = useState([]);
+    const [editingPendingId, setEditingPendingId] = useState(null);
     const profileMessageRef = useRef(null);
     const passwordMessageRef = useRef(null);
     // receipt cache: { "100.00": [{id, requestId, filename, mimeType}] }
     // populated when a pending payment transitions to confirmed so the link survives
-    const [paymentReceipts,setPaymentReceipts]= useState({});
+    const [paymentReceipts, setPaymentReceipts] = useState({});
 
     const appReady = tMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
@@ -255,11 +255,11 @@ export default function DonorDashboardPage() {
     );
 
     // ── SEO ──
-    const siteUrl    = getSiteUrl();
-    const pageUrl    = getAbsoluteUrl(`/donor/dashboard?lang=${language}`, siteUrl);
-    const socialImg  = getAbsoluteUrl('/logo-ccai.png', siteUrl);
-    const pageTitle  = `Donor Dashboard | ${t.centerName || 'Centre Zad Al-Imane'}`;
-    const pageDesc   = truncateText('Manage your donor profile, engagement, payments, and support requests.');
+    const siteUrl = getSiteUrl();
+    const pageUrl = getAbsoluteUrl(`/donor/dashboard?lang=${language}`, siteUrl);
+    const socialImg = getAbsoluteUrl('/logo-ccai.png', siteUrl);
+    const pageTitle = `Donor Dashboard | ${t.centerName || DEFAULT_TRANSLATION.centerName}`;
+    const pageDesc = truncateText('Manage your donor profile, engagement, payments, and support requests.');
 
     // ── i18n labels ──
     // Read directly from the imported ES module (bypasses the 30-day localStorage
@@ -275,7 +275,7 @@ export default function DonorDashboardPage() {
         setupSEOMetaTags({
             language, isRTL, pageTitle, pageDescription: pageDesc, pageUrl,
             socialImageUrl: socialImg,
-            logoAlt: `${t.centerName || 'Centre Zad Al-Imane'} logo`,
+            logoAlt: `${t.centerName || DEFAULT_TRANSLATION.centerName} logo`,
             locale: t.locale ?? language, siteUrl, t,
             pagePath: '/donor/dashboard', pageType: 'profile',
         });
@@ -370,7 +370,7 @@ export default function DonorDashboardPage() {
                 setPaymentReceipts(receiptCache);
                 setEngForm({
                     totalPledge: me.engagement?.totalPledge ? String(me.engagement.totalPledge) : '',
-                    endDate:     me.engagement?.endDate ? String(me.engagement.endDate).slice(0, 10) : '',
+                    endDate: me.engagement?.endDate ? String(me.engagement.endDate).slice(0, 10) : '',
                 });
                 setStoredSession({ ...session, ...me, role: 'donor' });
             } catch (err) {
@@ -388,29 +388,29 @@ export default function DonorDashboardPage() {
     }, [router]); // run once per mount for a stable router instance
 
     // ── Derived engagement metrics ──
-    const totalPaid   = useMemo(() => payments.reduce((s, p) => s + Number(p.amount || 0), 0), [payments]);
-    const engTarget   = useMemo(() => payments.reduce((sum, item) => sum + (item.engagement || 0), 0), [payments]);
-    const pct         = engTarget > 0 ? Math.min(100, Math.round((totalPaid / engTarget) * 100)) : 0;
-    const remaining   = Math.max(0, engTarget - totalPaid);
+    const totalPaid = useMemo(() => payments.reduce((s, p) => s + Number(p.amount || 0), 0), [payments]);
+    const engTarget = useMemo(() => payments.reduce((sum, item) => sum + (item.engagement || 0), 0), [payments]);
+    const pct = engTarget > 0 ? Math.min(100, Math.round((totalPaid / engTarget) * 100)) : 0;
+    const remaining = Math.max(0, engTarget - totalPaid);
     const endDate = profile?.engagement?.endDate
         ? new Date(profile.engagement.endDate)
         : new Date('2026-12-31');
-    const daysLeft    = endDate ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / 86400000)) : 0;
-    const startDate   = profile?.engagement?.createdAt ? new Date(profile.engagement.createdAt) : null;
-    const totalDays   = (startDate && endDate) ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000)) : 0;
-    const elapsed     = totalDays > 0 ? Math.max(0, totalDays - daysLeft) : 0;
-    const timePct     = totalDays > 0 ? Math.min(100, Math.round((elapsed / totalDays) * 100)) : 0;
+    const daysLeft = endDate ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / 86400000)) : 0;
+    const startDate = profile?.engagement?.createdAt ? new Date(profile.engagement.createdAt) : null;
+    const totalDays = (startDate && endDate) ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000)) : 0;
+    const elapsed = totalDays > 0 ? Math.max(0, totalDays - daysLeft) : 0;
+    const timePct = totalDays > 0 ? Math.min(100, Math.round((elapsed / totalDays) * 100)) : 0;
 
-    const isDone    = engTarget > 0 && pct >= 100;
-    const isLate    = !isDone && endDate && endDate.getTime() < Date.now();
-    const stateKey  = isDone ? 'completed' : isLate ? 'overdue' : 'in-progress';
-    const sc        = STATE_COLORS[stateKey];
+    const isDone = engTarget > 0 && pct >= 100;
+    const isLate = !isDone && endDate && endDate.getTime() < Date.now();
+    const stateKey = isDone ? 'completed' : isLate ? 'overdue' : 'in-progress';
+    const sc = STATE_COLORS[stateKey];
     const chipLabel = { 'in-progress': ui.chipInProgress, overdue: ui.chipOverdue, completed: ui.chipCompleted }[stateKey];
     const stateLabel = { 'in-progress': ui.stateInProgress, overdue: ui.stateOverdue, completed: ui.stateCompleted }[stateKey];
 
     // SVG ring
-    const R   = 66;
-    const C   = 2 * Math.PI * R;
+    const R = 66;
+    const C = 2 * Math.PI * R;
     const dashOffset = C * (1 - pct / 100);
 
     // ── Helpers ──
@@ -477,7 +477,7 @@ export default function DonorDashboardPage() {
     function openEngagement() {
         setEngForm({
             totalPledge: profile?.engagement?.totalPledge ? String(profile.engagement.totalPledge) : '',
-            endDate:     profile?.engagement?.endDate     ? String(profile.engagement.endDate).slice(0, 10) : '',
+            endDate: profile?.engagement?.endDate ? String(profile.engagement.endDate).slice(0, 10) : '',
         });
         setModal('engagement');
     }
@@ -635,7 +635,7 @@ export default function DonorDashboardPage() {
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div className="mosque-donation dashboard-preloader-shell" data-theme="dark">
-                <SitePreloader title="Centre Zad Al-Imane" subtitle={ui.loadingDashboard} />
+                <SitePreloader title={t.centerName || DEFAULT_TRANSLATION.centerName} subtitle={ui.loadingDashboard} />
             </div>
         );
     }
@@ -666,7 +666,7 @@ export default function DonorDashboardPage() {
                         {/* ══════════════════════════════════════
                             LEFT NAV
                         ══════════════════════════════════════ */}
-                            <nav className={`sidenav${isSidenavCollapsed ? ' sidenav--collapsed' : ''}${!isMobileNavOpen ? ' sidenav--mobile-closed' : ''}`} aria-label={ui.donorNavigation}>
+                        <nav className={`sidenav${isSidenavCollapsed ? ' sidenav--collapsed' : ''}${!isMobileNavOpen ? ' sidenav--mobile-closed' : ''}`} aria-label={ui.donorNavigation}>
                             <div className="sidenav-head">
                                 {!isSidenavCollapsed ? <p className="sidenav-label">{ui.menu}</p> : <span className="sidenav-spacer" aria-hidden="true"></span>}
                                 {/* Desktop collapse toggle (icon-only sidebar) */}
@@ -709,8 +709,8 @@ export default function DonorDashboardPage() {
                             <button type="button" className="sidenav-btn" onClick={openSettings} title={isSidenavCollapsed ? ui.settings : undefined}>
                                 <span className="sidenav-icon">
                                     <Ico size={17}>
-                                        <circle cx="12" cy="12" r="3"/>
-                                        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
                                     </Ico>
                                 </span>
                                 {!isSidenavCollapsed ? ui.settings : null}
@@ -719,8 +719,8 @@ export default function DonorDashboardPage() {
                             <button type="button" className="sidenav-btn" onClick={() => openContact('other')} title={isSidenavCollapsed ? ui.contactAdmin : undefined}>
                                 <span className="sidenav-icon">
                                     <Ico size={17}>
-                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                                        <polyline points="22,6 12,13 2,6"/>
+                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                        <polyline points="22,6 12,13 2,6" />
                                     </Ico>
                                 </span>
                                 {!isSidenavCollapsed ? ui.contactAdmin : null}
@@ -729,9 +729,9 @@ export default function DonorDashboardPage() {
                             <button type="button" className="sidenav-btn sidenav-btn--danger" onClick={handleLogout} title={isSidenavCollapsed ? ui.logout : undefined}>
                                 <span className="sidenav-icon">
                                     <Ico size={17}>
-                                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-                                        <polyline points="16 17 21 12 16 7"/>
-                                        <line x1="21" y1="12" x2="9" y2="12"/>
+                                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                                        <polyline points="16 17 21 12 16 7" />
+                                        <line x1="21" y1="12" x2="9" y2="12" />
                                     </Ico>
                                 </span>
                                 {!isSidenavCollapsed ? ui.logout : null}
@@ -748,11 +748,11 @@ export default function DonorDashboardPage() {
                                 <h1 className="welcome-name">
                                     {ui.welcome}, <span className="welcome-highlight">{profile?.name || profile?.email || ''}</span>
                                 </h1>
-                                
+
                             </header>
 
                             {/* Global feedback banners */}
-                            {!hasOpenModal && error   ? <div className="banner banner--error"   role="alert">{error}</div> : null}
+                            {!hasOpenModal && error ? <div className="banner banner--error" role="alert">{error}</div> : null}
                             {!hasOpenModal && success ? <div className="banner banner--success" role="status">{success}</div> : null}
 
                             {/* ─────────────────────────────────
@@ -765,7 +765,7 @@ export default function DonorDashboardPage() {
                                     <div className="card-hd-left">
                                         <span className="card-icon">
                                             <Ico size={18}>
-                                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                                             </Ico>
                                         </span>
                                         <h2 className="card-title">{ui.engTitle}</h2>
@@ -780,8 +780,8 @@ export default function DonorDashboardPage() {
                                         </span>
                                         <button type="button" className="btn btn--ghost" onClick={openEngagement}>
                                             <Ico size={14}>
-                                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                                             </Ico>
                                             {ui.editEng}
                                         </button>
@@ -796,15 +796,15 @@ export default function DonorDashboardPage() {
                                         <svg width="190" height="190" viewBox="0 0 160 160" aria-hidden="true">
                                             <defs>
                                                 <filter id="ring-glow" x="-25%" y="-25%" width="150%" height="150%">
-                                                    <feGaussianBlur stdDeviation="3.5" result="blur"/>
+                                                    <feGaussianBlur stdDeviation="3.5" result="blur" />
                                                     <feMerge>
-                                                        <feMergeNode in="blur"/>
-                                                        <feMergeNode in="SourceGraphic"/>
+                                                        <feMergeNode in="blur" />
+                                                        <feMergeNode in="SourceGraphic" />
                                                     </feMerge>
                                                 </filter>
                                             </defs>
                                             {/* Track */}
-                                            <circle className="ring-track" cx="80" cy="80" r={R} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="13"/>
+                                            <circle className="ring-track" cx="80" cy="80" r={R} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="13" />
                                             {/* Progress */}
                                             <circle
                                                 cx="80" cy="80" r={R}
@@ -834,18 +834,18 @@ export default function DonorDashboardPage() {
                                                 {
                                                     label: ui.pledged,
                                                     value: `$${engTarget.toLocaleString()}`,
-                                                    icon: <Ico size={13}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></Ico>,
+                                                    icon: <Ico size={13}><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></Ico>,
                                                 },
                                                 {
                                                     label: ui.paid,
                                                     value: `$${totalPaid.toLocaleString()}`,
-                                                    icon: <Ico size={13}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></Ico>,
+                                                    icon: <Ico size={13}><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></Ico>,
                                                 },
                                                 {
                                                     label: ui.remaining,
                                                     value: `$${remaining.toLocaleString()}`,
                                                     accent: true,
-                                                    icon: <Ico size={13}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Ico>,
+                                                    icon: <Ico size={13}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></Ico>,
                                                 },
                                             ].map(({ label, value, icon, accent }) => (
                                                 <div key={label} className={`stat-tile${accent ? ' stat-tile--accent' : ''}`}>
@@ -860,10 +860,10 @@ export default function DonorDashboardPage() {
                                             <div className="deadline-row">
                                                 <span className="deadline-label">
                                                     <Ico size={13}>
-                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                                        <line x1="16" y1="2" x2="16" y2="6"/>
-                                                        <line x1="8" y1="2" x2="8" y2="6"/>
-                                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                                        <line x1="3" y1="10" x2="21" y2="10" />
                                                     </Ico>
                                                     {ui.deadline}
                                                 </span>
@@ -890,16 +890,16 @@ export default function DonorDashboardPage() {
                                     <div className="card-hd-left">
                                         <span className="card-icon">
                                             <Ico size={18}>
-                                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                                                <line x1="1" y1="10" x2="23" y2="10"/>
+                                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                                                <line x1="1" y1="10" x2="23" y2="10" />
                                             </Ico>
                                         </span>
                                         <h2 className="card-title">{ui.historyTitle}</h2>
                                     </div>
                                     <button type="button" className="btn btn--cta" onClick={openPayment}>
                                         <Ico size={15}>
-                                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                                            <line x1="1" y1="10" x2="23" y2="10"/>
+                                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                                            <line x1="1" y1="10" x2="23" y2="10" />
                                         </Ico>
                                         {ui.makePayment}
                                     </button>
@@ -907,7 +907,7 @@ export default function DonorDashboardPage() {
 
                                 {payments.length === 0 && pendingPayments.length === 0 ? (
                                     <div className="empty-state">
-                                        <Ico size={48} children={<><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>} />
+                                        <Ico size={48} children={<><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></>} />
                                         <p>{ui.noPayments}</p>
                                     </div>
                                 ) : (
@@ -929,7 +929,7 @@ export default function DonorDashboardPage() {
                                                 <span className="cell-amount">${Number(p.amount || 0).toLocaleString()}</span>
                                                 <span>
                                                     <span className="pill pill--pending">
-                                                        <Ico size={12}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Ico>
+                                                        <Ico size={12}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></Ico>
                                                         {ui.pendingBadge}
                                                     </span>
                                                 </span>
@@ -948,10 +948,10 @@ export default function DonorDashboardPage() {
                                                                     title={a.filename}
                                                                 >
                                                                     <Ico size={13}>
-                                                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                                                                        <polyline points="14 2 14 8 20 8"/>
-                                                                        <line x1="16" y1="13" x2="8" y2="13"/>
-                                                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                                                                        <polyline points="14 2 14 8 20 8" />
+                                                                        <line x1="16" y1="13" x2="8" y2="13" />
+                                                                        <line x1="16" y1="17" x2="8" y2="17" />
                                                                     </Ico>
                                                                     {a.filename.length > 18 ? a.filename.slice(0, 16) + '…' : a.filename}
                                                                 </a>
@@ -963,11 +963,11 @@ export default function DonorDashboardPage() {
                                                     {/* Edit / Cancel buttons */}
                                                     <span className="pending-actions">
                                                         <button type="button" className="pending-btn pending-btn--edit" onClick={() => openEditPending(p)}>
-                                                            <Ico size={12}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></Ico>
+                                                            <Ico size={12}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></Ico>
                                                             {ui.editPayment}
                                                         </button>
                                                         <button type="button" className="pending-btn pending-btn--cancel" onClick={() => deletePendingPayment(p.id)}>
-                                                            <Ico size={12}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Ico>
+                                                            <Ico size={12}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Ico>
                                                             {ui.cancelPayment}
                                                         </button>
                                                     </span>
@@ -978,7 +978,7 @@ export default function DonorDashboardPage() {
                                         {/* Pending info banner */}
                                         {pendingPayments.length > 0 && (
                                             <div className="pending-info-bar">
-                                                <Ico size={14}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Ico>
+                                                <Ico size={14}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></Ico>
                                                 {ui.pendingInfo}
                                             </div>
                                         )}
@@ -1001,9 +1001,9 @@ export default function DonorDashboardPage() {
                                                     <span>
                                                         <span className={`pill pill--${m.key}`}>
                                                             {m.key === 'card' ? (
-                                                                <Ico size={12}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></Ico>
+                                                                <Ico size={12}><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></Ico>
                                                             ) : (
-                                                                <Ico size={12}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><circle cx="12" cy="14" r="3"/></Ico>
+                                                                <Ico size={12}><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><circle cx="12" cy="14" r="3" /></Ico>
                                                             )}
                                                             {m.label}
                                                         </span>
@@ -1019,11 +1019,11 @@ export default function DonorDashboardPage() {
                                                                 title={ui.viewReceipt}
                                                             >
                                                                 <Ico size={13}>
-                                                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                                                                    <polyline points="14 2 14 8 20 8"/>
-                                                                    <line x1="16" y1="13" x2="8" y2="13"/>
-                                                                    <line x1="16" y1="17" x2="8" y2="17"/>
-                                                                    <polyline points="10 9 9 9 8 9"/>
+                                                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                                                                    <polyline points="14 2 14 8 20 8" />
+                                                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                                                    <polyline points="10 9 9 9 8 9" />
                                                                 </Ico>
                                                                 {ui.viewReceipt}
                                                             </a>
@@ -1089,9 +1089,9 @@ export default function DonorDashboardPage() {
                                         onChange={e => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
                                     <button type="button" onClick={() => setShowCurrentPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}>
                                         {showCurrentPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                         )}
                                     </button>
                                 </div>
@@ -1103,9 +1103,9 @@ export default function DonorDashboardPage() {
                                         onChange={e => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
                                     <button type="button" onClick={() => setShowNewPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewPassword ? 'Hide password' : 'Show password'}>
                                         {showNewPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                         )}
                                     </button>
                                 </div>
@@ -1117,9 +1117,9 @@ export default function DonorDashboardPage() {
                                         onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
                                     <button type="button" onClick={() => setShowConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
                                         {showConfirmPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                         )}
                                     </button>
                                 </div>
@@ -1133,7 +1133,7 @@ export default function DonorDashboardPage() {
             {/* Engagement */}
             {modal === 'engagement' && (
                 <Modal title={ui.editEng} onClose={closeModal}>
-                    {error   && <div className="banner banner--error"   role="alert">{error}</div>}
+                    {error && <div className="banner banner--error" role="alert">{error}</div>}
                     {success && <div className="banner banner--success" role="status">{success}</div>}
                     <form className="mform" onSubmit={onEngSave}>
                         <label className="flabel">
@@ -1158,9 +1158,9 @@ export default function DonorDashboardPage() {
             {/* Payment */}
             {modal === 'payment' && (
                 <Modal title={editingPendingId ? ui.editPayment + ' — ' + ui.pendingBadge : ui.makePayment}
-                       description={editingPendingId ? ui.pendingInfo : payStep === null ? ui.payDesc : ''}
-                       onClose={closeModal}>
-                    {error   && <div className="banner banner--error"   role="alert">{error}</div>}
+                    description={editingPendingId ? ui.pendingInfo : payStep === null ? ui.payDesc : ''}
+                    onClose={closeModal}>
+                    {error && <div className="banner banner--error" role="alert">{error}</div>}
                     {success && <div className="banner banner--success" role="status">{success}</div>}
 
                     {/* Remaining amount highlight */}
@@ -1173,14 +1173,14 @@ export default function DonorDashboardPage() {
                     {!editingPendingId && payStep === null && (
                         <div className="pay-method-grid">
                             <button type="button" className="pay-method-btn" onClick={() => setPayStep('zeffy')}>
-                                <Ico size={22}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></Ico>
+                                <Ico size={22}><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></Ico>
                                 <span className="pay-method-label">{ui.payViaZeffy}</span>
-                                <span className="pay-method-sub">Online</span>
+                                <span className="pay-method-sub">{ui.paymentMethodZeffy}</span>
                             </button>
                             <button type="button" className="pay-method-btn" onClick={() => setPayStep('cash')}>
-                                <Ico size={22}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Ico>
+                                <Ico size={22}><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></Ico>
                                 <span className="pay-method-label">{ui.payByCash}</span>
-                                <span className="pay-method-sub">Cash / Interac</span>
+                                <span className="pay-method-sub">{ui.paymentMethodCash}</span>
                             </button>
                         </div>
                     )}
@@ -1194,7 +1194,7 @@ export default function DonorDashboardPage() {
                             className="btn btn--zeffy"
                             onClick={closeModal}
                         >
-                            <Ico size={16}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></Ico>
+                            <Ico size={16}><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></Ico>
                             {ui.payViaZeffy}
                         </a>
                         <p className="pay-soon-note">{ui.zeffySoon}</p>
@@ -1205,7 +1205,7 @@ export default function DonorDashboardPage() {
                     {(editingPendingId || payStep === 'cash') && (
                         <form className="mform" onSubmit={onCashPayment}>
                             <div className="cash-guidance">
-                                <Ico size={15}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Ico>
+                                <Ico size={15}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></Ico>
                                 <span>{ui.cashGuidance}</span>
                             </div>
                             <label className="flabel">
@@ -1245,7 +1245,7 @@ export default function DonorDashboardPage() {
             {/* Contact admin */}
             {modal === 'contact' && (
                 <Modal title={ui.contactAdmin} description={ui.contactDesc} onClose={closeModal}>
-                    {error   && <div className="banner banner--error"   role="alert">{error}</div>}
+                    {error && <div className="banner banner--error" role="alert">{error}</div>}
                     {success && <div className="banner banner--success" role="status">{success}</div>}
                     <form className="mform" onSubmit={onContactSend}>
                         <div className="mform-row">

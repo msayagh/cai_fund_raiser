@@ -142,17 +142,21 @@ const approveRequest = async (adminId, adminName, id, body) => {
       donorId = donor.id;
     }
 
+    const normalizedTier = typeof tier === 'string' && tier.trim() ? tier.trim() : 'General';
+    const parsedEngagement = Number(engagement);
+    const normalizedEngagement = Number.isFinite(parsedEngagement) ? parsedEngagement : 0;
+
     const payment = await prisma.payment.create({
       data: {
-        donorId,
+        donor: { connect: { id: donorId } },
         amount,
         date: new Date(date),
         method,
         note: note ?? null,
         displayName: displayName ?? null,
-        tier: tier ?? null,
-        recordedByAdminId: adminId,
-        engagement: engagement ?? null,
+        tier: normalizedTier,
+        recordedByAdmin: { connect: { id: adminId } },
+        engagement: normalizedEngagement,
       },
     });
     extraData = { paymentId: payment.id };

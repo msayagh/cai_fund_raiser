@@ -155,7 +155,9 @@ export function Header({
     const contactLabel = t?.donor?.contactAdmin || 'Contact';
     const logoutLabel = t?.auth?.signOut || 'Sign out';
     const dashboardHref = session?.role === 'admin' ? '/admin/dashboard' : '/donor/dashboard';
-    const dashboardLabel = 'Dashboard';
+    const dashboardLabel = session?.role === 'admin'
+        ? (t?.admin?.dashboard || 'Dashboard')
+        : (t?.donor?.dashboard || t?.admin?.dashboard || 'Dashboard');
 
     async function handleLogout() {
         await logout();

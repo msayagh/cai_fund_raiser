@@ -1,9 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '@/hooks/index.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 import { createApiKey, deleteApiKey, listApiKeys, updateApiKey } from '@/lib/adminApi.js';
 
 export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
+    const { t } = useTranslation();
+    const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
     const [apiKeys, setApiKeys] = useState([]);
     const [title, setTitle] = useState('');
     const [loading, setLoading] = useState(false);
@@ -21,7 +25,7 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
             const data = await listApiKeys();
             setApiKeys(Array.isArray(data) ? data : []);
         } catch (err) {
-            setError(err?.message || 'Unable to load API keys.');
+            setError(err?.message || adminText.unableLoadApiKeys);
         } finally {
             setLoading(false);
         }
@@ -41,7 +45,7 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
     async function handleCreate(event) {
         event.preventDefault();
         if (!title.trim()) {
-            setError('Title is required.');
+            setError(adminText.titleRequired);
             return;
         }
 
@@ -53,10 +57,10 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
             const response = await createApiKey({ title: title.trim() });
             setTitle('');
             setGeneratedKey(response?.generatedKey || '');
-            setMessage('API key created. Copy it now because it will not be shown again.');
+            setMessage(adminText.apiKeyCreatedCopyNow);
             await loadKeys();
         } catch (err) {
-            setError(err?.message || 'Unable to create API key.');
+            setError(err?.message || adminText.unableCreateApiKey);
         } finally {
             setSaving(false);
         }
@@ -76,7 +80,7 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
 
     async function handleUpdate(id) {
         if (!editForm.title.trim()) {
-            setError('Title is required.');
+            setError(adminText.titleRequired);
             return;
         }
 
@@ -89,17 +93,17 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
                 isActive: Boolean(editForm.isActive),
             });
             setApiKeys((prev) => prev.map((item) => (item.id === id ? updated : item)));
-            setMessage('API key updated.');
+            setMessage(adminText.apiKeyUpdated);
             stopEditing();
         } catch (err) {
-            setError(err?.message || 'Unable to update API key.');
+            setError(err?.message || adminText.unableUpdateApiKey);
         } finally {
             setSaving(false);
         }
     }
 
     async function handleDelete(id) {
-        if (typeof window !== 'undefined' && !window.confirm('Delete this API key? This cannot be undone.')) {
+        if (typeof window !== 'undefined' && !window.confirm(adminText.deleteApiKeyRecordConfirm)) {
             return;
         }
 
@@ -109,12 +113,12 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
         try {
             await deleteApiKey(id);
             setApiKeys((prev) => prev.filter((item) => item.id !== id));
-            setMessage('API key deleted.');
+            setMessage(adminText.apiKeyDeleted);
             if (editingId === id) {
                 stopEditing();
             }
         } catch (err) {
-            setError(err?.message || 'Unable to delete API key.');
+            setError(err?.message || adminText.unableDeleteApiKey);
         } finally {
             setSaving(false);
         }
@@ -123,26 +127,26 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
     return (
         <div style={{ display: 'grid', gap: 24 }}>
             <div style={cardStyle}>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>API Key Tools</div>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>{adminText.apiKeyToolsTitle}</div>
                 <p style={{ color: 'var(--text-muted)', marginTop: 0, marginBottom: 20 }}>
-                    Generate and manage API keys for external integrations. Full secrets are only shown once at creation time.
+                    {adminText.apiKeyToolsDescription}
                 </p>
 
                 <form className="admin-form" onSubmit={handleCreate}>
                     <input
                         style={inputStyle}
-                        placeholder="Key title"
+                        placeholder={adminText.apiKeyTitlePlaceholder}
                         value={title}
                         onChange={(event) => setTitle(event.target.value)}
                     />
                     <button type="submit" className="admin-button" disabled={saving}>
-                        {saving ? 'Generating...' : 'Generate API key'}
+                        {saving ? adminText.generatingApiKey : adminText.generateApiKey}
                     </button>
                 </form>
 
                 {generatedKey ? (
                     <div style={{ marginTop: 16, padding: 16, borderRadius: 16, border: '1px solid var(--accent-gold)', background: 'rgba(186, 158, 58, 0.08)' }}>
-                        <div style={{ fontWeight: 700, marginBottom: 8 }}>New API key</div>
+                        <div style={{ fontWeight: 700, marginBottom: 8 }}>{adminText.newApiKey}</div>
                         <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: 14 }}>{generatedKey}</div>
                     </div>
                 ) : null}
@@ -152,10 +156,10 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
             </div>
 
             <div style={cardStyle}>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>Saved API keys</div>
-                {loading ? <div style={{ color: 'var(--text-muted)' }}>Loading API keys...</div> : null}
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, marginBottom: 16 }}>{adminText.savedApiKeys}</div>
+                {loading ? <div style={{ color: 'var(--text-muted)' }}>{adminText.loadingApiKeys}</div> : null}
                 {!loading && sortedKeys.length === 0 ? (
-                    <div className="admin-item">No API keys created yet.</div>
+                    <div className="admin-item">{adminText.noApiKeysYet}</div>
                 ) : null}
 
                 <div className="admin-list">
@@ -176,11 +180,11 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
                                                 checked={editForm.isActive}
                                                 onChange={(event) => setEditForm((prev) => ({ ...prev, isActive: event.target.checked }))}
                                             />
-                                            Active
+                                            {adminText.activeStatus}
                                         </label>
                                         <div className="admin-actions">
-                                            <button type="button" className="admin-button" disabled={saving} onClick={() => handleUpdate(item.id)}>Save</button>
-                                            <button type="button" className="admin-button secondary" disabled={saving} onClick={stopEditing}>Cancel</button>
+                                            <button type="button" className="admin-button" disabled={saving} onClick={() => handleUpdate(item.id)}>{adminText.saveButton}</button>
+                                            <button type="button" className="admin-button secondary" disabled={saving} onClick={stopEditing}>{adminText.cancelButton}</button>
                                         </div>
                                     </div>
                                 ) : (
@@ -190,11 +194,11 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
                                                 <div style={{ fontWeight: 700 }}>{item.title}</div>
                                                 <div style={{ color: 'var(--text-muted)', marginTop: 6, fontFamily: 'monospace' }}>{item.keyPrefix}</div>
                                                 <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
-                                                    Created {new Date(item.createdAt).toLocaleString()}
+                                                    {adminText.createdLabel} {new Date(item.createdAt).toLocaleString()}
                                                 </div>
                                                 {item.createdByAdmin?.name ? (
                                                     <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
-                                                        By {item.createdByAdmin.name}
+                                                        {adminText.byLabel} {item.createdByAdmin.name}
                                                     </div>
                                                 ) : null}
                                             </div>
@@ -206,12 +210,12 @@ export default function ApiKeysSection({ cardStyle, inputStyle, isActive }) {
                                                 fontSize: 12,
                                                 fontWeight: 700,
                                             }}>
-                                                {item.isActive ? 'Active' : 'Inactive'}
+                                                {item.isActive ? adminText.activeStatus : adminText.inactiveStatus}
                                             </div>
                                         </div>
                                         <div className="admin-actions" style={{ marginTop: 16 }}>
-                                            <button type="button" className="admin-button secondary" onClick={() => startEditing(item)}>Edit</button>
-                                            <button type="button" className="admin-button secondary" onClick={() => handleDelete(item.id)}>Delete</button>
+                                            <button type="button" className="admin-button secondary" onClick={() => startEditing(item)}>{adminText.editButton}</button>
+                                            <button type="button" className="admin-button secondary" onClick={() => handleDelete(item.id)}>{adminText.removeButton}</button>
                                         </div>
                                     </>
                                 )}
