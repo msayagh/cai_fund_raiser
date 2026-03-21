@@ -527,7 +527,7 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pi
   return engagement;
 };
 
-const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, date, method, note, displayName, engagement, tier, quantity }) => {
+const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, quantity, date, method, note, displayName, engagement, tier }) => {
   const donor = await prisma.donor.findUnique({ where: { id: donorId } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
@@ -583,7 +583,7 @@ const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, d
   return payment;
 };
 
-const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amount, date, method, note, displayName, engagement, tier, quantity }) => {
+const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amount, quantity, date, method, note, displayName, engagement, tier }) => {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     include: {
@@ -605,7 +605,7 @@ const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amou
       ...(displayName !== undefined ? { displayName: displayName || null } : {}),
       ...(engagement !== undefined ? { engagement: engagement || null } : {}),
       ...(tier !== undefined ? { tier: tier || null } : {}),
-      ...(quantity !== undefined ? { quantity: normalizePaymentQuantity(quantity, 1) } : {}),
+      ...(quantity !== undefined ? { quantity: quantity ?? 1 } : {}),
       recordedByAdminId: adminId,
     },
     include: { recordedByAdmin: { select: { id: true, name: true } } },
@@ -680,10 +680,7 @@ const adminImportPaymentsCsv = async (adminId, adminName, fileBuffer) => {
       const date = parseDateValue(row.date || row.paymentdate || row['payment_date']);
       const method = normalizePaymentMethod(row.method || row.paymentmethod || row['payment_method']);
       const note = (row.note || row.message || row.details || '').trim() || null;
-      const quantity = normalizePaymentQuantity(
-        row.quantity ?? row.qty ?? row.tickets ?? row['ticket_count'],
-        1,
-      );
+      const quantity = row.quantity ?? row.qty ?? row.tickets ?? row['ticket_count'] ?? 1;
       const donorName = (row.name || row.donorname || row['donor_name'] || '').trim();
       const engagementAmount = parseOptionalPositiveAmount(
         row.engagement || row.pledge || row.totalpledge || row['total_pledge'],
