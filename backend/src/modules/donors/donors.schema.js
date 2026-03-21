@@ -62,6 +62,7 @@ const upsertDonorPaymentSchema = z.object({
     displayName: z.string().trim(),
     engagement: z.number().positive('Engagement must be greater than 0').optional(),
     tier: z.enum(['kareem', 'jawaad', 'sabbaq', 'mutasaddiq'], 'Tier must be one of kareem, jawaad, sabbaq, mutasaddiq').optional(),
+    quantity: z.number().int().min(1, 'Quantity must be at least 1').optional(),
   }).refine((data) => {
     return data.engagement !== undefined || data.tier !== undefined;
   }, {

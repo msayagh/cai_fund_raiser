@@ -66,6 +66,7 @@ async function main() {
         create: [
           {
             amount: 250,
+            quantity: 1,
             date: new Date('2024-02-01'),
             method: 'zeffy',
             note: 'First payment',
@@ -76,6 +77,7 @@ async function main() {
           },
           {
             amount: 250,
+            quantity: 1,
             date: new Date('2024-05-01'),
             method: 'zeffy',
             note: 'Second payment',
@@ -117,6 +119,7 @@ async function main() {
         create: [
           {
             amount: 1000,
+            quantity: 1,
             date: new Date('2024-03-01'),
             method: 'zeffy',
             note: 'Spring payment',
@@ -155,6 +158,7 @@ async function main() {
         create: [
           {
             amount: 200,
+            quantity: 1,
             date: new Date('2024-09-01'),
             method: 'other',
             note: 'Bank transfer',
@@ -190,6 +194,7 @@ async function main() {
           },
           {
             amount: 150,
+            quantity: 1,
             date: new Date('2024-11-08'),
             method: 'zeffy',
             note: 'Online community campaign',

@@ -538,7 +538,7 @@ const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, d
       ...(entryId ? { externalEntryId: entryId } : {}),
       donorId,
       amount,
-      quantity,
+      quantity: quantity ?? 1,
       date: new Date(date),
       method,
       note: note ?? null,
