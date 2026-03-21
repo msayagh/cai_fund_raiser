@@ -145,7 +145,7 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
 
         return (
             <div
-                key={`donation-${keySuffix}-${d.email}-${idx}`}
+                key={`donation-${keySuffix}-${d.email || d.donorId || 'row'}-${idx}`}
                 className="donation-item"
                 style={{
                     "--tier-color": tierColor,

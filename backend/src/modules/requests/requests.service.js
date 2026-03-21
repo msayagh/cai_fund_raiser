@@ -146,6 +146,8 @@ const approveRequest = async (adminId, adminName, id, body) => {
     const parsedEngagement = Number(engagement);
     const normalizedEngagement = Number.isFinite(parsedEngagement) ? parsedEngagement : 0;
 
+    console.log(body.payment)
+
     const payment = await prisma.payment.create({
       data: {
         donor: { connect: { id: donorId } },
