@@ -45,6 +45,8 @@ const buildTokenPair = (userId, type) => ({
 const sanitizeNameFromEmail = (email) => email.split('@')[0].replace(/[._-]+/g, ' ').trim();
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
+/* istanbul ignore next — verifyGoogleCredential is reserved for when Google OAuth
+   is re-enabled; both google login endpoints currently short-circuit before calling it */
 const verifyGoogleCredential = async (credential) => {
   if (!config.GOOGLE_CLIENT_ID) {
     throw new AppError(
