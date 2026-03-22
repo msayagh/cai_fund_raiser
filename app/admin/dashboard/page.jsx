@@ -39,6 +39,7 @@ import { startTokenRefreshManager, stopTokenRefreshManager } from '@/lib/tokenRe
 import PaymentPanel from './PaymentPanel.jsx';
 import ApiKeysSection from './ApiKeysSection.jsx';
 import VolunteeringSection from './VolunteeringSection.jsx';
+import VolunteeringSettingsSection from './VolunteeringSettingsSection.jsx';
 import { FEATURES } from '@/constants/features.js';
 const cardStyle = {
     background: 'var(--bg-card)',
@@ -3149,6 +3150,13 @@ export default function AdminDashboardPage() {
                                 <VolunteeringSection
                                     cardStyle={cardStyle}
                                     inputStyle={inputStyle}
+                                    adminText={adminText}
+                                />
+                            ) : null}
+
+                            {activeTab === 'settings' ? (
+                                <VolunteeringSettingsSection
+                                    cardStyle={cardStyle}
                                     adminText={adminText}
                                 />
                             ) : null}

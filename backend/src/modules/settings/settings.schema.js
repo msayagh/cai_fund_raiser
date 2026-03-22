@@ -47,10 +47,18 @@ const updateAllPillarsSchema = z.object({
     message: 'At least one pillar amount is required'
 });
 
+const updateVolunteeringSettingsSchema = z.object({
+    volEnabled: z.boolean(),
+    volShowDiscussion: z.boolean(),
+    volShowHistory: z.boolean(),
+    volShowUnscheduled: z.boolean(),
+});
+
 module.exports = {
     updateGlobalGoalSchema,
     createCampaignSchema,
     updateCampaignSchema,
     updatePillarSchema,
-    updateAllPillarsSchema
+    updateAllPillarsSchema,
+    updateVolunteeringSettingsSchema,
 };

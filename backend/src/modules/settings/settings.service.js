@@ -233,6 +233,58 @@ const updateAllPillars = async (adminId, adminName, pillarsData) => {
     return updated;
 };
 
+// ─── App Settings (volunteering feature toggles) ─────────────────────────────
+
+const DEFAULT_VOL_SETTINGS = {
+    volEnabled: true,
+    volShowDiscussion: true,
+    volShowHistory: true,
+    volShowUnscheduled: true,
+};
+
+const getVolunteeringSettings = async () => {
+    const record = await prisma.appSetting.findUnique({ where: { key: 'volunteering' } });
+    if (!record) return DEFAULT_VOL_SETTINGS;
+    try {
+        return { ...DEFAULT_VOL_SETTINGS, ...JSON.parse(record.value) };
+    } catch {
+        return DEFAULT_VOL_SETTINGS;
+    }
+};
+
+const updateVolunteeringSettings = async (adminId, adminName, settings) => {
+    const safeAdminId = adminId ?? null;
+    const value = JSON.stringify({
+        volEnabled: Boolean(settings.volEnabled),
+        volShowDiscussion: Boolean(settings.volShowDiscussion),
+        volShowHistory: Boolean(settings.volShowHistory),
+        volShowUnscheduled: Boolean(settings.volShowUnscheduled),
+    });
+
+    const record = await prisma.appSetting.upsert({
+        where: { key: 'volunteering' },
+        update: { value },
+        create: { key: 'volunteering', value },
+    });
+
+    if (safeAdminId) {
+        await createLog({
+            actor: `Admin: ${adminName}`,
+            actorType: 'admin',
+            actorId: safeAdminId,
+            action: 'volunteering_settings_updated',
+            details: `Volunteering settings updated: ${value}`,
+            adminId: safeAdminId,
+        });
+    }
+
+    try {
+        return { ...DEFAULT_VOL_SETTINGS, ...JSON.parse(record.value) };
+    } catch {
+        return DEFAULT_VOL_SETTINGS;
+    }
+};
+
 module.exports = {
     // Global Goal
     getGlobalGoal,
@@ -249,5 +301,9 @@ module.exports = {
     getPillars,
     getPillar,
     updatePillar,
-    updateAllPillars
+    updateAllPillars,
+
+    // Volunteering settings
+    getVolunteeringSettings,
+    updateVolunteeringSettings,
 };

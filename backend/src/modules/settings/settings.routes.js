@@ -9,7 +9,8 @@ const {
     createCampaignSchema,
     updateCampaignSchema,
     updatePillarSchema,
-    updateAllPillarsSchema
+    updateAllPillarsSchema,
+    updateVolunteeringSettingsSchema,
 } = require('./settings.schema');
 
 const router = Router();
@@ -30,5 +31,9 @@ router.get('/pillars', ctrl.getPillars);
 router.put('/pillars', requireAdminOrApiKey, validate(updateAllPillarsSchema), ctrl.updateAllPillars);
 router.get('/pillars/:name', ctrl.getPillar);
 router.put('/pillars/:name', requireAdminOrApiKey, validate(updatePillarSchema), ctrl.updatePillar);
+
+// ─── Volunteering settings ────────────────────────────────────────────────────
+router.get('/volunteering', ctrl.getVolunteeringSettings);
+router.put('/volunteering', requireAdminOrApiKey, validate(updateVolunteeringSettingsSchema), ctrl.updateVolunteeringSettings);
 
 module.exports = router;

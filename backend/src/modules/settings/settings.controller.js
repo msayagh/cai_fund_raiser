@@ -156,6 +156,27 @@ const updateAllPillars = async (req, res, next) => {
     }
 };
 
+// ─── Volunteering settings ────────────────────────────────────────────────────
+
+const getVolunteeringSettings = async (req, res, next) => {
+    try {
+        const settings = await service.getVolunteeringSettings();
+        sendSuccess(res, settings, 'Volunteering settings retrieved');
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateVolunteeringSettings = async (req, res, next) => {
+    try {
+        const actor = getRequestActor(req);
+        const settings = await service.updateVolunteeringSettings(actor.id, actor.name, req.body);
+        sendSuccess(res, settings, 'Volunteering settings updated', 200);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     // Global Goal
     getGlobalGoal,
@@ -172,5 +193,9 @@ module.exports = {
     getPillars,
     getPillar,
     updatePillar,
-    updateAllPillars
+    updateAllPillars,
+
+    // Volunteering settings
+    getVolunteeringSettings,
+    updateVolunteeringSettings,
 };

@@ -11,7 +11,7 @@ import {
     donorPostDiscussion,
 } from '@/lib/volunteeringApi.js';
 
-const POLL_INTERVAL_MS = 15000; // refresh discussion every 15 s
+const POLL_INTERVAL_MS = 5000; // refresh discussion every 5 s
 
 const fmtDate = (iso) =>
     iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -63,8 +63,85 @@ function MsgIcon({ size = 15 }) {
     );
 }
 
-export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
+const MAX_CAP_ICONS = 15;
+const SLOT_COLORS = ['#3273dc', '#6c63ff', '#e8a44a', '#00d1b2', '#e76f51', '#a78bfa', '#48c78e'];
+
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return (parts[0][0] || '?').toUpperCase();
+    return ((parts[0][0] || '') + (parts[parts.length - 1][0] || '')).toUpperCase();
+}
+
+function CapacitySlots({ filled, cap, maxShow = MAX_CAP_ICONS, size = 28, mySignup, donorName }) {
+    const isUnlimited = !(cap > 0);
+    const iAmIn = mySignup?.status === 'signed_up';
+    const empty = isUnlimited ? 0 : Math.max(0, cap - filled);
+    const total = filled + empty;
+    const visibleFilled = total > maxShow ? Math.min(filled, maxShow - 1) : filled;
+    const visibleEmpty = total > maxShow ? Math.max(0, maxShow - 1 - visibleFilled) : empty;
+    const overflow = total - visibleFilled - visibleEmpty;
+    const iconSize = Math.round(size * 0.46);
+    const fontSize = Math.round(size * 0.36);
+    return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+            {Array.from({ length: visibleFilled }).map((_, i) => {
+                const isMe = iAmIn && i === 0;
+                return (
+                    <div
+                        key={`f-${i}`}
+                        title={isMe ? donorName : 'Volunteer'}
+                        style={{
+                            width: size, height: size, borderRadius: '50%',
+                            background: isMe ? SLOT_COLORS[0] : 'rgba(72,199,142,.13)',
+                            border: isMe ? '1.5px solid ' + SLOT_COLORS[0] : '1.5px solid rgba(72,199,142,.4)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            color: isMe ? '#fff' : 'rgba(72,199,142,.85)',
+                            fontSize, fontWeight: 700,
+                            cursor: 'default', userSelect: 'none',
+                        }}
+                    >
+                        {isMe ? getInitials(donorName) : (
+                            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                        )}
+                    </div>
+                );
+            })}
+            {Array.from({ length: visibleEmpty }).map((_, i) => (
+                <div key={`e-${i}`} style={{
+                    width: size, height: size, borderRadius: '50%',
+                    border: '1.5px dashed rgba(160,170,200,.18)',
+                    background: 'rgba(160,170,200,.03)', flexShrink: 0,
+                }} />
+            ))}
+            {overflow > 0 && (
+                <span style={{ fontSize: fontSize - 1, color: 'var(--text-secondary)', fontWeight: 700 }}>+{overflow}</span>
+            )}
+            {isUnlimited && (
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {filled > 0 ? `${filled} joined` : 'Open'}
+                </span>
+            )}
+            {!isUnlimited && total > 0 && (
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 1 }}>
+                    {filled}/{cap}
+                </span>
+            )}
+        </div>
+    );
+}
+
+export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSettings }) {
     if (!FEATURES.VOLUNTEERING) return null;
+
+    const {
+        volShowDiscussion = true,
+        volShowHistory = true,
+        volShowUnscheduled = true,
+    } = volSettings || {};
 
     const ui = {
         tabTitle: pageUi?.volunteeringTab || 'Volunteering',
@@ -95,15 +172,18 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
     const [listLoading, setListLoading] = useState(true);
     const [listError, setListError] = useState('');
     const [showHistory, setShowHistory] = useState(false);
+    const [showUnscheduled, setShowUnscheduled] = useState(false);
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+    // signupMap: { [scheduleId]: { status } } — for quick actions in browse list
+    const [signupMap, setSignupMap] = useState({});
 
     // ── Detail state ──
     const [selected, setSelected] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
     const [detailError, setDetailError] = useState('');
 
-    // ── My signups ──
+    // ── My signups (for My Sign-ups tab) ──
     const [mySignups, setMySignups] = useState([]);
     const [mySignupsLoading, setMySignupsLoading] = useState(false);
 
@@ -117,13 +197,21 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
     const discussionEndRef = useRef(null);
     const selectedIdRef = useRef(null);
 
-    // ── Load active activities ──
-    const loadActivities = useCallback(async () => {
+    // ── Load activities + signup map in parallel ──
+    const loadAll = useCallback(async () => {
         setListLoading(true);
         setListError('');
         try {
-            const res = await donorListActivities({ limit: 100 });
-            setActivities(res?.items || []);
+            const [activitiesRes, signupsRes] = await Promise.all([
+                donorListActivities({ limit: 100 }),
+                donorGetMySignups().catch(() => []),
+            ]);
+            setActivities(activitiesRes?.items || []);
+            const map = {};
+            for (const s of (signupsRes || [])) {
+                if (s.schedule?.id) map[s.schedule.id] = { status: s.status };
+            }
+            setSignupMap(map);
         } catch (err) {
             setListError(err.message || 'Failed to load');
         } finally {
@@ -131,7 +219,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
         }
     }, []);
 
-    useEffect(() => { loadActivities(); }, [loadActivities]);
+    useEffect(() => { loadAll(); }, [loadAll]);
 
     // ── Load history (inactive activities based on past signups) ──
     const toggleHistory = async () => {
@@ -156,7 +244,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
         }
     };
 
-    // ── My signups ──
+    // ── My signups (on-demand for My Sign-ups tab) ──
     const loadMySignups = async () => {
         setMySignupsLoading(true);
         try {
@@ -164,6 +252,35 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
             setMySignups(res || []);
         } finally {
             setMySignupsLoading(false);
+        }
+    };
+
+    // ── Quick sign-up / cancel from browse list ──
+    const quickSignUp = async (activityId, scheduleId) => {
+        setSignupLoading(scheduleId);
+        try {
+            await donorSignUp(activityId, scheduleId, undefined);
+            setSignupMap((prev) => ({ ...prev, [scheduleId]: { status: 'signed_up' } }));
+            const res = await donorListActivities({ limit: 100 });
+            setActivities(res?.items || []);
+        } catch (err) {
+            setListError(err.message || 'Sign-up failed');
+        } finally {
+            setSignupLoading('');
+        }
+    };
+
+    const quickCancel = async (activityId, scheduleId) => {
+        setSignupLoading(scheduleId);
+        try {
+            await donorCancelSignup(activityId, scheduleId);
+            setSignupMap((prev) => ({ ...prev, [scheduleId]: { status: 'cancelled' } }));
+            const res = await donorListActivities({ limit: 100 });
+            setActivities(res?.items || []);
+        } catch (err) {
+            setListError(err.message || 'Cancel failed');
+        } finally {
+            setSignupLoading('');
         }
     };
 
@@ -309,7 +426,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
                     <div className="card-hd" style={{ marginBottom: 14 }}>
                         <div className="card-hd-left" style={{ gap: 8 }}>
                             <CalIcon size={15} />
-                            <span style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(160,170,200,.55)' }}>Sessions</span>
+                            <span style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>Sessions</span>
                         </div>
                         {upcomingCount > 0 && (
                             <span className="vol-status vol-status--upcoming" style={{ fontSize: '0.72rem' }}>
@@ -332,60 +449,60 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
                                 const cap = sch.maxVolunteers || selected.maxVolunteers;
                                 const isFull = cap > 0 && (sch._count?.signups ?? 0) >= cap;
                                 const busy = signupLoading === sch.id;
+                                const accentColor = signedUp ? '#48c78e' : isFull ? '#f14668' : isUpcoming ? '#3273dc' : 'rgba(160,170,200,.2)';
 
                                 return (
-                                    <div key={sch.id} className={`vol-sch-card vol-sch-card--${sch.status}`}>
-                                        <div className="vol-sch-info">
-                                            <div className="vol-sch-date">
-                                                <CalIcon size={12} />
-                                                {' '}{fmtDate(sch.scheduledAt)}
-                                            </div>
-                                            <div className="vol-sch-loc">
-                                                <PinIcon size={11} />
-                                                {' '}{sch.location
-                                                    ? sch.location
-                                                    : <span style={{ fontStyle: 'italic' }}>{ui.locationTbd}</span>
-                                                }
-                                            </div>
-                                            <div className="vol-sch-capacity">
-                                                <UsersIcon size={11} />
-                                                {' '}{sch._count?.signups ?? 0} / {cap > 0 ? cap : ui.unlimited}
-                                                {isFull && (
-                                                    <span className="vol-status vol-status--cancelled" style={{ fontSize: '0.68rem', marginLeft: 6 }}>
-                                                        {ui.schedulesFull}
+                                    <div key={sch.id} style={{
+                                        borderRadius: 12,
+                                        background: 'var(--bg-card)',
+                                        borderLeft: `3px solid ${accentColor}`,
+                                        overflow: 'hidden',
+                                        marginBottom: 8,
+                                    }}>
+                                        {/* Top bar: date + location + status */}
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center', flexWrap: 'wrap',
+                                            gap: 10, padding: '10px 14px',
+                                            background: 'var(--bg-card-alt)',
+                                            borderBottom: '1px solid var(--border)',
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                                                <CalIcon size={13} />
+                                                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{fmtDate(sch.scheduledAt)}</span>
+                                                {sch.location && (
+                                                    <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <PinIcon size={11} />{sch.location}
                                                     </span>
                                                 )}
                                             </div>
-                                            {mySignup && (
-                                                <span className={`vol-status vol-status--${mySignup.status}`} style={{ alignSelf: 'flex-start', marginTop: 4 }}>
-                                                    {ui.myStatus}: {mySignup.status.replace('_', ' ')}
+                                            {signedUp && (
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: '#48c78e', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                                                    You&apos;re in
                                                 </span>
                                             )}
+                                            {!signedUp && (
+                                                <span className={`vol-status vol-status--${sch.status}`} style={{ fontSize: 11 }}>{sch.status}</span>
+                                            )}
                                         </div>
-                                        {isUpcoming && selected.isActive && (
-                                            <div className="vol-sch-actions">
-                                                {signedUp ? (
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn--ghost vol-btn-cancel"
-                                                        disabled={busy}
-                                                        onClick={() => handleCancel(sch.id)}
-                                                    >
+                                        {/* Bottom: capacity + CTA */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', flexWrap: 'wrap' }}>
+                                            <div>
+                                                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Volunteers</div>
+                                                <CapacitySlots filled={sch._count?.signups ?? 0} cap={cap} mySignup={mySignup} donorName={donorName} />
+                                            </div>
+                                            {isUpcoming && selected.isActive && (
+                                                signedUp ? (
+                                                    <button type="button" className="btn btn--ghost vol-btn-cancel" style={{ fontSize: 13 }} disabled={busy} onClick={() => handleCancel(sch.id)}>
                                                         {busy ? '…' : ui.cancelSignup}
                                                     </button>
                                                 ) : (
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn--cta"
-                                                        style={{ padding: '8px 16px', fontSize: 14 }}
-                                                        disabled={busy || isFull}
-                                                        onClick={() => handleSignUp(sch.id)}
-                                                    >
+                                                    <button type="button" className="btn btn--cta" style={{ padding: '9px 22px', fontSize: 14, flexShrink: 0 }} disabled={busy || isFull} onClick={() => handleSignUp(sch.id)}>
                                                         {busy ? '…' : isFull ? ui.schedulesFull : ui.signUp}
                                                     </button>
-                                                )}
-                                            </div>
-                                        )}
+                                                )
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -394,15 +511,27 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
                 </div>
 
                 {/* ── Discussion ── */}
+                {volShowDiscussion && (
                 <div className="vol-discussion">
                     <div className="card-hd" style={{ marginBottom: 14 }}>
                         <div className="card-hd-left" style={{ gap: 8 }}>
                             <MsgIcon size={15} />
-                            <span style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(160,170,200,.55)' }}>{ui.discussion}</span>
+                            <span style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>{ui.discussion}</span>
                         </div>
-                        <span className="cell-muted" style={{ fontSize: 12 }}>
-                            {selected.discussions?.length ?? 0} message{(selected.discussions?.length ?? 0) !== 1 ? 's' : ''}
-                        </span>
+                        <div className="card-hd-right">
+                            <span className="cell-muted" style={{ fontSize: 12 }}>
+                                {selected.discussions?.length ?? 0} message{(selected.discussions?.length ?? 0) !== 1 ? 's' : ''}
+                            </span>
+                            <button
+                                type="button"
+                                className="btn btn--ghost"
+                                style={{ fontSize: 12, padding: '4px 10px' }}
+                                onClick={refreshSelected}
+                                title="Refresh messages"
+                            >
+                                ↻
+                            </button>
+                        </div>
                     </div>
 
                     <div className="vol-discussion-list" style={{ marginBottom: 12 }}>
@@ -440,6 +569,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
                         </form>
                     )}
                 </div>
+                )}
             </section>
         );
     }
@@ -476,46 +606,137 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
                 <>
                     {listError && <div className="banner banner--error" style={{ marginBottom: 16 }}>{listError}</div>}
 
-                    {listLoading ? (
-                        <div className="empty-state">
-                            <VolIcon size={40} />
-                            <p>{ui.loading}</p>
-                        </div>
-                    ) : activities.length === 0 ? (
-                        <div className="empty-state">
-                            <VolIcon size={48} />
-                            <p>{ui.noActivities}</p>
-                        </div>
-                    ) : (
-                        <div className="vol-activity-list">
-                            {activities.map((act) => {
-                                const upcomingSessions = act.schedules?.filter((s) => s.status === 'upcoming').length ?? 0;
-                                return (
-                                    <button
-                                        key={act.id}
-                                        type="button"
-                                        className="vol-activity-row"
-                                        onClick={() => openActivity(act.id)}
-                                    >
-                                        <div className="vol-activity-info">
-                                            <div className="vol-activity-title">{act.title}</div>
-                                            <div className="cell-muted" style={{ fontSize: 13, marginTop: 3 }}>
-                                                {act.recurrenceNote || act.recurrenceType}
-                                                {' · '}
-                                                <span className={`vol-status vol-status--${upcomingSessions > 0 ? 'upcoming' : 'inactive'}`} style={{ fontSize: '0.69rem', marginLeft: 2 }}>
-                                                    {upcomingSessions} upcoming
-                                                </span>
+                    {(() => {
+                        if (listLoading) return (
+                            <div className="empty-state"><VolIcon size={40} /><p>{ui.loading}</p></div>
+                        );
+                        const withUpcoming = activities.filter((a) => (a.schedules?.length ?? 0) > 0);
+                        const withoutUpcoming = activities.filter((a) => (a.schedules?.length ?? 0) === 0);
+
+                        return (
+                            <>
+                                {withUpcoming.length === 0 && withoutUpcoming.length === 0 && (
+                                    <div className="empty-state"><VolIcon size={48} /><p>{ui.noActivities}</p></div>
+                                )}
+
+                                {withUpcoming.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {withUpcoming.map((act) => {
+                                            const firstSch = act.schedules[0];
+                                            const mySignup = signupMap[firstSch.id];
+                                            const isSignedUp = mySignup?.status === 'signed_up';
+                                            const cap = firstSch.maxVolunteers || act.maxVolunteers;
+                                            const isFull = cap > 0 && (firstSch._count?.signups ?? 0) >= cap;
+                                            const busy = signupLoading === firstSch.id;
+                                            const multiSessions = act.schedules.length > 1;
+                                            const accentColor = isSignedUp ? '#48c78e' : isFull ? '#f14668' : '#3273dc';
+                                            return (
+                                                <div key={act.id} style={{
+                                                    borderRadius: 12,
+                                                    background: 'var(--bg-card)',
+                                                    borderLeft: `3px solid ${accentColor}`,
+                                                    overflow: 'hidden',
+                                                }}>
+                                                    {/* Row 1: title + CTA button */}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 8px' }}>
+                                                        <div
+                                                            style={{ flex: 1, cursor: 'pointer' }}
+                                                            onClick={() => openActivity(act.id)}
+                                                            role="button" tabIndex={0}
+                                                            onKeyDown={(e) => e.key === 'Enter' && openActivity(act.id)}
+                                                        >
+                                                            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.3 }}>{act.title}</div>
+                                                            {act.recurrenceNote && (
+                                                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>🔁 {act.recurrenceNote}</div>
+                                                            )}
+                                                        </div>
+                                                        {isSignedUp ? (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
+                                                                <span style={{ fontSize: 12, fontWeight: 700, color: '#48c78e', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                                                                    Joined
+                                                                </span>
+                                                                <button type="button" className="btn btn--ghost vol-btn-cancel" style={{ fontSize: 11, padding: '3px 10px' }} disabled={busy} onClick={() => quickCancel(act.id, firstSch.id)}>
+                                                                    {busy ? '…' : 'Cancel'}
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button type="button" className="btn btn--cta" style={{ fontSize: 13, padding: '7px 16px', animation: 'none', flexShrink: 0 }} disabled={busy || isFull} onClick={() => quickSignUp(act.id, firstSch.id)}>
+                                                                {busy ? '…' : isFull ? 'Full' : 'Join →'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {/* Row 2: date + location + micro capacity dots */}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px 10px', flexWrap: 'wrap' }}>
+                                                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <CalIcon size={11} />{fmtDate(firstSch.scheduledAt)}
+                                                        </span>
+                                                        {firstSch.location && (
+                                                            <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                <PinIcon size={11} />{firstSch.location}
+                                                            </span>
+                                                        )}
+                                                        {multiSessions && (
+                                                            <button type="button" className="btn btn--ghost" style={{ fontSize: 11, padding: '1px 6px' }}
+                                                                onClick={(e) => { e.stopPropagation(); openActivity(act.id); }}>
+                                                                +{act.schedules.length - 1} more sessions
+                                                            </button>
+                                                        )}
+                                                        <div style={{ marginLeft: 'auto' }}>
+                                                            <CapacitySlots filled={firstSch._count?.signups ?? 0} cap={cap} maxShow={7} size={22} mySignup={mySignup} donorName={donorName} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Collapsible: activities without upcoming sessions */}
+                                {volShowUnscheduled && withoutUpcoming.length > 0 && (
+                                    <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                                        <button
+                                            type="button"
+                                            className="btn btn--ghost"
+                                            style={{ fontSize: 13, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}
+                                            onClick={() => setShowUnscheduled((v) => !v)}
+                                        >
+                                            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform .2s', transform: showUnscheduled ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+                                                <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                            Not Yet Scheduled
+                                            <span style={{ fontSize: 11, fontWeight: 600, background: 'var(--bg-card-alt)', borderRadius: 999, padding: '1px 7px' }}>{withoutUpcoming.length}</span>
+                                        </button>
+                                        {showUnscheduled && (
+                                            <div className="vol-activity-list" style={{ marginTop: 12 }}>
+                                                {withoutUpcoming.map((act) => (
+                                                    <button
+                                                        key={act.id}
+                                                        type="button"
+                                                        className="vol-activity-row"
+                                                        onClick={() => openActivity(act.id)}
+                                                    >
+                                                        <div className="vol-activity-info">
+                                                            <div className="vol-activity-title">{act.title}</div>
+                                                            <div className="cell-muted" style={{ fontSize: 13, marginTop: 3 }}>
+                                                                {act.recurrenceNote || act.recurrenceType}
+                                                                {' '}<span className="vol-status vol-status--inactive" style={{ fontSize: '0.68rem' }}>No sessions yet</span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="vol-arrow">›</span>
+                                                    </button>
+                                                ))}
                                             </div>
-                                        </div>
-                                        <span className="vol-arrow">›</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
 
                     {/* History toggle */}
-                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                    {volShowHistory && (
+                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
                         <button
                             type="button"
                             className="btn btn--ghost"
@@ -525,10 +746,11 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
                             {showHistory ? ui.hideHistory : ui.showHistory}
                         </button>
                     </div>
+                    )}
 
-                    {showHistory && (
+                    {volShowHistory && showHistory && (
                         <div style={{ marginTop: 16 }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(160,170,200,.55)', marginBottom: 12 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 12 }}>
                                 {ui.historyTitle}
                             </p>
                             {historyLoading ? (
@@ -581,33 +803,45 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi }) {
                             <p>{ui.noSignups}</p>
                         </div>
                     ) : (
-                        <div className="table-wrap">
-                            <div className="table-head" style={{ gridTemplateColumns: '2fr 1.4fr 1.1fr 1fr' }}>
-                                <span>Activity</span>
-                                <span>Session</span>
-                                <span>Location</span>
-                                <span>Status</span>
-                            </div>
-                            {mySignups.map((s) => (
-                                <div
-                                    key={s.id}
-                                    className="table-row"
-                                    style={{ gridTemplateColumns: '2fr 1.4fr 1.1fr 1fr', cursor: 'pointer' }}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => openActivity(s.activity?.id)}
-                                    onKeyDown={(e) => e.key === 'Enter' && openActivity(s.activity?.id)}
-                                >
-                                    <span style={{ fontWeight: 600, color: '#f0f4ff' }}>{s.activity?.title}</span>
-                                    <span className="cell-muted">{fmtDate(s.schedule?.scheduledAt)}</span>
-                                    <span className="cell-muted">{s.schedule?.location || '—'}</span>
-                                    <span>
-                                        <span className={`vol-status vol-status--${s.status}`}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {mySignups.map((s) => {
+                                const statusColor = s.status === 'signed_up' ? '#48c78e' : s.status === 'cancelled' ? '#f14668' : 'rgba(160,170,200,.3)';
+                                return (
+                                    <div
+                                        key={s.id}
+                                        role="button" tabIndex={0}
+                                        onClick={() => openActivity(s.activity?.id)}
+                                        onKeyDown={(e) => e.key === 'Enter' && openActivity(s.activity?.id)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 12,
+                                            padding: '12px 16px', borderRadius: 12,
+                                            background: 'var(--bg-card)',
+                                            borderLeft: `3px solid ${statusColor}`,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {s.activity?.title}
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <CalIcon size={11} />{fmtDate(s.schedule?.scheduledAt)}
+                                                </span>
+                                                {s.schedule?.location && (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <PinIcon size={11} />{s.schedule.location}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <span className={`vol-status vol-status--${s.status}`} style={{ flexShrink: 0 }}>
                                             {s.status.replace('_', ' ')}
                                         </span>
-                                    </span>
-                                </div>
-                            ))}
+                                        <span style={{ color: 'var(--text-muted)', fontSize: 18, flexShrink: 0 }}>›</span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </>

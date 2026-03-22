@@ -83,7 +83,20 @@ const listSignups = async (req, res, next) => {
     sendSuccess(res, data);
   } catch (err) { next(err); }
 };
+const removeSignup = async (req, res, next) => {
+  try {
+    await service.adminRemoveSignup(req.params.id, req.params.sid, req.params.signupId);
+    sendSuccess(res, null, 'Signup removed');
+  } catch (err) { next(err); }
+};
 
+const preAssignVolunteer = async (req, res, next) => {
+  try {
+    const { donorEmail, note } = req.body;
+    const data = await service.adminPreAssignVolunteer(req.params.id, req.params.sid, donorEmail, note);
+    sendSuccess(res, data, 'Volunteer pre-assigned', 201);
+  } catch (err) { next(err); }
+};
 // ─── Discussions ──────────────────────────────────────────────────────────────
 
 const postDiscussion = async (req, res, next) => {
@@ -111,5 +124,7 @@ module.exports = {
   updateSchedule,
   deleteSchedule,
   listSignups,
+  removeSignup,
+  preAssignVolunteer,
   postDiscussion,
 };

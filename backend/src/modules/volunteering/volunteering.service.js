@@ -144,6 +144,44 @@ const deleteSchedule = async (activityId, scheduleId) => {
   await prisma.activitySchedule.delete({ where: { id: scheduleId } });
 };
 
+// ─── Admin: signup management ─────────────────────────────────────────────────
+
+const adminRemoveSignup = async (activityId, scheduleId, signupId) => {
+  const signup = await prisma.activitySignup.findFirst({
+    where: { id: signupId, scheduleId, activityId },
+  });
+  if (!signup) throw new AppError('Signup not found', 404, 'NOT_FOUND');
+  await prisma.activitySignup.delete({ where: { id: signupId } });
+};
+
+const adminPreAssignVolunteer = async (activityId, scheduleId, donorEmail, note) => {
+  const donor = await prisma.donor.findUnique({
+    where: { email: donorEmail.toLowerCase().trim() },
+  });
+  if (!donor) throw new AppError('No donor found with that email', 404, 'NOT_FOUND');
+
+  const schedule = await prisma.activitySchedule.findFirst({
+    where: { id: scheduleId, activityId },
+  });
+  if (!schedule) throw new AppError('Schedule not found', 404, 'NOT_FOUND');
+
+  const existing = await prisma.activitySignup.findUnique({
+    where: { scheduleId_donorId: { scheduleId, donorId: donor.id } },
+  });
+
+  if (existing) {
+    if (existing.status === 'signed_up') throw new AppError('Donor is already signed up', 409, 'CONFLICT');
+    return prisma.activitySignup.update({
+      where: { id: existing.id },
+      data: { status: 'signed_up', note: note ?? existing.note },
+    });
+  }
+
+  return prisma.activitySignup.create({
+    data: { activityId, scheduleId, donorId: donor.id, note: note ?? null, status: 'signed_up' },
+  });
+};
+
 // ─── Admin: signups list ──────────────────────────────────────────────────────
 
 const listSignupsForActivity = async (activityId) => {
@@ -303,6 +341,8 @@ module.exports = {
   addSchedule,
   updateSchedule,
   deleteSchedule,
+  adminRemoveSignup,
+  adminPreAssignVolunteer,
   listSignupsForActivity,
   postDiscussionMessage,
   listPublicActivities,

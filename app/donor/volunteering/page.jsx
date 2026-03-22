@@ -11,6 +11,7 @@ import { getMe, updateMe, updateMyPassword } from '@/lib/donorApi.js';
 import { createRequest } from '@/lib/requestsApi.js';
 import { clearTokens, tryAutoLogin } from '@/lib/auth.js';
 import { clearStoredSession, getStoredSession, setStoredSession } from '@/lib/session.js';
+import { getVolunteeringSettings } from '@/lib/settingsApi.js';
 import { FEATURES } from '@/constants/features.js';
 import VolunteeringTab from '../dashboard/VolunteeringTab.jsx';
 
@@ -131,6 +132,7 @@ export default function DonorVolunteeringPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [volSettings, setVolSettings] = useState({ volEnabled: true, volShowDiscussion: true, volShowHistory: true, volShowUnscheduled: true });
 
     const [profileError, setProfileError] = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
@@ -186,6 +188,8 @@ export default function DonorVolunteeringPage() {
                 setProfile(me);
                 setProfileForm({ name: me.name || '', email: me.email || '' });
                 setStoredSession({ ...session, ...me, role: 'donor' });
+                // Load volunteering feature settings in parallel (non-blocking)
+                getVolunteeringSettings().then((s) => { if (alive) setVolSettings((prev) => ({ ...prev, ...s })); }).catch(() => {});
             } catch (err) {
                 if (!alive) return;
                 clearTokens(); clearStoredSession();
@@ -349,7 +353,7 @@ export default function DonorVolunteeringPage() {
                                 {!isSidenavCollapsed ? (ui.dashboard || 'My donations') : null}
                             </button>
 
-                            {FEATURES.VOLUNTEERING ? (
+                            {FEATURES.VOLUNTEERING && volSettings.volEnabled ? (
                                 <button type="button" className="sidenav-btn sidenav-btn--active" title={isSidenavCollapsed ? (ui.volunteeringTab || 'Volunteering') : undefined}>
                                     <span className="sidenav-icon">
                                         <Ico size={17}>
@@ -412,8 +416,8 @@ export default function DonorVolunteeringPage() {
                             {error && <div className="banner banner--error" role="alert">{error}</div>}
                             {success && <div className="banner banner--success" role="status">{success}</div>}
 
-                            {FEATURES.VOLUNTEERING ? (
-                                <VolunteeringTab donorId={profile?.id} donorName={profile?.name} ui={ui} />
+                            {FEATURES.VOLUNTEERING && volSettings.volEnabled ? (
+                                <VolunteeringTab donorId={profile?.id} donorName={profile?.name} ui={ui} volSettings={volSettings} />
                             ) : (
                                 <p className="admin-muted">{ui.volunteeringTab || 'Volunteering'} is not available.</p>
                             )}

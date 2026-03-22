@@ -14,10 +14,79 @@ import {
     adminUpdateSchedule,
     adminDeleteSchedule,
     adminPostDiscussion,
+    adminRemoveSignup,
+    adminPreAssignVolunteer,
 } from '@/lib/volunteeringApi.js';
+import { getVolunteeringSettings } from '@/lib/settingsApi.js';
 
 const fmtDate = (iso) =>
     iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+const POLL_INTERVAL_MS = 5000;
+
+const MAX_CAP_ICONS = 15;
+const AVATAR_COLORS = ['#6c63ff', '#3273dc', '#48c78e', '#e8a44a', '#00d1b2', '#e76f51', '#a78bfa'];
+
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return (parts[0][0] || '?').toUpperCase();
+    return ((parts[0][0] || '') + (parts[parts.length - 1][0] || '')).toUpperCase();
+}
+
+function CapacityAvatars({ signups, cap, maxShow = MAX_CAP_ICONS }) {
+    const active = (signups || []).filter((s) => s.status === 'signed_up');
+    const filled = active.length;
+    const isUnlimited = !(cap > 0);
+    const empty = isUnlimited ? 0 : Math.max(0, cap - filled);
+    const total = filled + empty;
+    const visibleFilled = total > maxShow ? Math.min(filled, maxShow - 1) : filled;
+    const visibleEmpty = total > maxShow ? Math.max(0, maxShow - 1 - visibleFilled) : empty;
+    const overflow = total - visibleFilled - visibleEmpty;
+    return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+            {active.slice(0, visibleFilled).map((su, i) => (
+                <div
+                    key={su.id}
+                    title={su.donor?.name || 'Volunteer'}
+                    style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: AVATAR_COLORS[i % AVATAR_COLORS.length],
+                        color: '#fff', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0,
+                        cursor: 'default', userSelect: 'none',
+                    }}
+                >
+                    {getInitials(su.donor?.name)}
+                </div>
+            ))}
+            {Array.from({ length: visibleEmpty }).map((_, i) => (
+                <div
+                    key={`e-${i}`}
+                    style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        border: '1.5px dashed rgba(160,170,200,.22)',
+                        background: 'rgba(160,170,200,.04)', flexShrink: 0,
+                    }}
+                />
+            ))}
+            {overflow > 0 && (
+                <span style={{ fontSize: 11, color: 'rgba(160,170,200,.85)', fontWeight: 700, marginLeft: 1 }}>+{overflow}</span>
+            )}
+            {isUnlimited && filled === 0 && (
+                <span style={{ fontSize: 11, color: 'rgba(160,170,200,.72)' }}>No signups yet</span>
+            )}
+            {isUnlimited && filled > 0 && (
+                <span style={{ fontSize: 11, color: 'rgba(160,170,200,.72)', marginLeft: 2 }}>∞</span>
+            )}
+            {!isUnlimited && (
+                <span style={{ fontSize: 10, color: 'rgba(160,170,200,.75)', marginLeft: 3 }}>
+                    {filled}/{cap}
+                </span>
+            )}
+        </div>
+    );
+}
 
 const emptyForm = {
     title: '',
@@ -37,6 +106,12 @@ const emptyScheduleForm = {
 
 export default function VolunteeringSection({ cardStyle, inputStyle, adminId, adminName, adminText: t }) {
     if (!FEATURES.VOLUNTEERING) return null;
+
+    // Donor-facing feature settings (for informational banner only)
+    const [donorSettings, setDonorSettings] = useState(null);
+    useEffect(() => {
+        getVolunteeringSettings().then(setDonorSettings).catch(() => {});
+    }, []);
 
     const ui = {
         title: t?.volunteeringTitle || 'Volunteering Activities',
@@ -111,12 +186,18 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
 
     // ── Expanded schedule signups (inline toggle) ──
     const [expandedScheduleSignups, setExpandedScheduleSignups] = useState(null);
+    // Pre-assign form: scheduleId → email string / error string
+    const [preAssignEmail, setPreAssignEmail] = useState({});
+    const [preAssignError, setPreAssignError] = useState({});
+    const [preAssignSaving, setPreAssignSaving] = useState('');
 
     // ── Discussion ──
     const [discussionMsg, setDiscussionMsg] = useState('');
     const [discussionSending, setDiscussionSending] = useState(false);
     const [discussionError, setDiscussionError] = useState('');
     const discussionEndRef = useRef(null);
+    const selectedIdRef = useRef(null);
+    const [showUnscheduled, setShowUnscheduled] = useState(false);
 
     // ── Load list ──
     const loadList = useCallback(async () => {
@@ -139,6 +220,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
         setDetailLoading(true);
         setSelected(null);
         setExpandedScheduleSignups(null);
+        selectedIdRef.current = id;
         try {
             const res = await adminGetActivity(id);
             setSelected(res);
@@ -148,10 +230,21 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
     };
 
     const refreshSelected = async () => {
-        if (!selected) return;
-        const res = await adminGetActivity(selected.id);
-        setSelected(res);
+        if (!selectedIdRef.current) return;
+        try {
+            const res = await adminGetActivity(selectedIdRef.current);
+            setSelected(res);
+        } catch { /* silent */ }
     };
+
+    // ── Auto-poll while detail view is open ──
+    useEffect(() => {
+        if (!selected) return;
+        selectedIdRef.current = selected.id;
+        const timerId = setInterval(refreshSelected, POLL_INTERVAL_MS);
+        return () => clearInterval(timerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selected?.id]);
 
     // ── Open form for create/edit ──
     const openCreateForm = () => {
@@ -281,6 +374,33 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
     };
 
     // ── Discussion handler ──
+    const handleRemoveSignup = async (scheduleId, signupId) => {
+        if (!window.confirm('Remove this volunteer from the schedule?')) return;
+        try {
+            await adminRemoveSignup(selected.id, scheduleId, signupId);
+            await refreshSelected();
+        } catch (err) {
+            window.alert(err.message || 'Failed to remove signup');
+        }
+    };
+
+    const handlePreAssign = async (scheduleId) => {
+        const email = (preAssignEmail[scheduleId] || '').trim();
+        if (!email) return;
+        setPreAssignSaving(scheduleId);
+        setPreAssignError((prev) => ({ ...prev, [scheduleId]: '' }));
+        try {
+            await adminPreAssignVolunteer(selected.id, scheduleId, { donorEmail: email });
+            setPreAssignEmail((prev) => ({ ...prev, [scheduleId]: '' }));
+            await refreshSelected();
+        } catch (err) {
+            setPreAssignError((prev) => ({ ...prev, [scheduleId]: err.message || 'Failed' }));
+        } finally {
+            setPreAssignSaving('');
+        }
+    };
+
+    // ── Original discussion handler ──
     const handlePostDiscussion = async (e) => {
         e.preventDefault();
         if (!discussionMsg.trim()) return;
@@ -391,7 +511,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                 {/* ── Activity header & schedules ── */}
                 <div className="admin-card" style={cardStyle}>
                     <div className="admin-inline admin-inline--between admin-inline--wrap mb-md">
-                        <button type="button" className="admin-button secondary" onClick={() => { setSelected(null); setExpandedScheduleSignups(null); }}>{ui.backToList}</button>
+                        <button type="button" className="admin-button secondary" onClick={() => { setSelected(null); setExpandedScheduleSignups(null); selectedIdRef.current = null; }}>{ui.backToList}</button>
                         <div className="vol-action-row">
                             <button type="button" className="admin-button secondary" onClick={() => openEditForm(selected)}>{ui.editActivity}</button>
                             {selected.isActive ? (
@@ -436,9 +556,9 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                         <div className="vol-schedule-date">{fmtDate(sch.scheduledAt)}</div>
                                         <div className="admin-muted">{sch.location}</div>
                                         {sch.notes && <div className="admin-muted mt-sm">{sch.notes}</div>}
-                                        <div className="admin-muted mt-sm">
-                                            Signups: {sch.signups?.length ?? 0}
-                                            {(sch.maxVolunteers || selected.maxVolunteers > 0) && ` / ${sch.maxVolunteers || selected.maxVolunteers}`}
+                                        <div className="mt-sm">
+                                            <div className="admin-muted" style={{ fontSize: 11, marginBottom: 6 }}>Volunteers</div>
+                                            <CapacityAvatars signups={sch.signups || []} cap={sch.maxVolunteers || selected.maxVolunteers} />
                                         </div>
                                     </div>
                                     <div className="vol-schedule-actions">
@@ -483,6 +603,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                                             <th>{ui.donorEmail}</th>
                                                             <th>{ui.signupStatus}</th>
                                                             <th>{ui.note}</th>
+                                                            <th></th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -492,11 +613,49 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                                                 <td>{su.donor?.email}</td>
                                                                 <td><span className={`vol-status vol-status--${su.status}`}>{su.status}</span></td>
                                                                 <td>{su.note || '—'}</td>
+                                                                <td>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="admin-button danger"
+                                                                        style={{ padding: '2px 8px', fontSize: 12 }}
+                                                                        onClick={() => handleRemoveSignup(sch.id, su.id)}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
                                             )}
+                                            {/* Pre-assign a volunteer */}
+                                            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                                                <div className="admin-muted" style={{ fontSize: 12, marginBottom: 6 }}>Pre-assign a volunteer by email:</div>
+                                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                                                    <input
+                                                        className="admin-input"
+                                                        style={{ ...inputStyle, flex: '1 1 200px' }}
+                                                        type="email"
+                                                        placeholder="donor@example.com"
+                                                        value={preAssignEmail[sch.id] || ''}
+                                                        onChange={(e) => setPreAssignEmail((prev) => ({ ...prev, [sch.id]: e.target.value }))}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handlePreAssign(sch.id)}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="admin-button"
+                                                        disabled={preAssignSaving === sch.id}
+                                                        onClick={() => handlePreAssign(sch.id)}
+                                                    >
+                                                        {preAssignSaving === sch.id ? 'Saving…' : 'Pre-assign'}
+                                                    </button>
+                                                </div>
+                                                {preAssignError[sch.id] && (
+                                                    <div className="banner banner--error" style={{ marginTop: 6, padding: '6px 10px', fontSize: 13 }}>
+                                                        {preAssignError[sch.id]}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -505,38 +664,80 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                     )}
                 </div>
 
-                {/* ── All Registrants ── */}
+                {/* ── All Registrants — grouped by schedule ── */}
                 {allSignups.length > 0 && (
                     <div className="admin-card" style={cardStyle}>
                         <div className="admin-section-title mb-md">{ui.signups} ({allSignups.length})</div>
-                        <table className="vol-table">
-                            <thead>
-                                <tr>
-                                    <th>{ui.donorName}</th>
-                                    <th>{ui.donorEmail}</th>
-                                    <th>{ui.scheduledAt}</th>
-                                    <th>{ui.signupStatus}</th>
-                                    <th>{ui.note}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {allSignups.map((s) => (
-                                    <tr key={s.id}>
-                                        <td>{s.donor?.name}</td>
-                                        <td>{s.donor?.email}</td>
-                                        <td>{fmtDate(s.schedule?.scheduledAt)}</td>
-                                        <td><span className={`vol-status vol-status--${s.status}`}>{s.status}</span></td>
-                                        <td>{s.note || '—'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        {(selected.schedules || []).map((sch) => {
+                            const schSignups = (sch.signups || []);
+                            if (schSignups.length === 0) return null;
+                            const schCap = sch.maxVolunteers || selected.maxVolunteers;
+                            return (
+                                <div key={sch.id} style={{ marginBottom: 20 }}>
+                                    {/* Schedule header */}
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', flexWrap: 'wrap',
+                                        gap: 10, padding: '8px 10px', marginBottom: 8,
+                                        background: 'rgba(255,255,255,.04)', borderRadius: 8,
+                                        borderLeft: '3px solid rgba(100,130,255,.4)',
+                                    }}>
+                                        <span className={`vol-status vol-status--${sch.status}`} style={{ fontSize: 11 }}>{sch.status}</span>
+                                        <span style={{ fontWeight: 600, fontSize: 13, color: '#e0e6ff' }}>{fmtDate(sch.scheduledAt)}</span>
+                                        {sch.location && (
+                                            <span className="admin-muted" style={{ fontSize: 12 }}>📍 {sch.location}</span>
+                                        )}
+                                        <div style={{ marginLeft: 'auto' }}>
+                                            <CapacityAvatars signups={schSignups} cap={schCap} maxShow={10} />
+                                        </div>
+                                    </div>
+                                    {/* Signups table for this schedule */}
+                                    <table className="vol-table vol-table--compact">
+                                        <thead>
+                                            <tr>
+                                                <th>{ui.donorName}</th>
+                                                <th>{ui.donorEmail}</th>
+                                                <th>{ui.signupStatus}</th>
+                                                <th>{ui.note}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {schSignups.map((su) => (
+                                                <tr key={su.id}>
+                                                    <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                        <div style={{
+                                                            width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                                                            background: AVATAR_COLORS[schSignups.indexOf(su) % AVATAR_COLORS.length],
+                                                            color: '#fff', display: 'flex', alignItems: 'center',
+                                                            justifyContent: 'center', fontSize: 9, fontWeight: 700,
+                                                        }}>
+                                                            {getInitials(su.donor?.name)}
+                                                        </div>
+                                                        {su.donor?.name}
+                                                    </td>
+                                                    <td>{su.donor?.email}</td>
+                                                    <td><span className={`vol-status vol-status--${su.status}`}>{su.status}</span></td>
+                                                    <td>{su.note || '—'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
                 {/* ── Discussion ── */}
                 <div className="admin-card" style={cardStyle}>
-                    <div className="admin-section-title mb-md">{ui.discussion}</div>
+                    <div className="admin-inline admin-inline--between mb-md">
+                        <div className="admin-section-title">{ui.discussion}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span className="admin-muted" style={{ fontSize: 12 }}>
+                                {selected.discussions?.length ?? 0} message{(selected.discussions?.length ?? 0) !== 1 ? 's' : ''}
+                            </span>
+                            <button type="button" className="admin-button secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={refreshSelected} title="Refresh messages">↻</button>
+                        </div>
+                    </div>
                     <div className="vol-discussion-list mb-md">
                         {selected.discussions?.length === 0 && <div className="admin-muted">No messages yet.</div>}
                         {selected.discussions?.map((msg) => (
@@ -570,6 +771,22 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
     // List view
     return (
         <div className="admin-card" style={cardStyle}>
+            {donorSettings && !donorSettings.volEnabled && (
+                <div className="banner banner--warning mb-md" style={{ background: 'rgba(255,180,50,.12)', border: '1px solid rgba(255,180,50,.3)', borderRadius: 10, padding: '10px 16px', fontSize: 14, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span><strong>Volunteering is currently disabled for donors.</strong> Donors cannot see or access this module. Go to <em>Settings</em> to re-enable it.</span>
+                </div>
+            )}
+            {donorSettings && donorSettings.volEnabled && (!donorSettings.volShowDiscussion || !donorSettings.volShowHistory || !donorSettings.volShowUnscheduled) && (
+                <div className="banner mb-md" style={{ background: 'rgba(var(--accent-rgb, 100,160,255),.08)', border: '1px solid rgba(var(--accent-rgb, 100,160,255),.2)', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                    <span>
+                        Some donor sub-features are hidden:{' '}
+                        {[!donorSettings.volShowDiscussion && 'Discussion', !donorSettings.volShowHistory && 'History', !donorSettings.volShowUnscheduled && 'Unscheduled'].filter(Boolean).join(', ')}.
+                        {' '}Manage in <em>Settings</em>.
+                    </span>
+                </div>
+            )}
             <div className="admin-inline admin-inline--between admin-inline--wrap mb-md">
                 <div>
                     <div className="admin-section-title">{ui.title}</div>
@@ -589,27 +806,84 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                 <div className="admin-muted">Loading…</div>
             ) : activities.length === 0 ? (
                 <div className="admin-item">{ui.noActivities}</div>
-            ) : (
-                <div className="vol-activity-list">
-                    {activities.map((act) => (
-                        <div key={act.id} className="vol-activity-row" onClick={() => openActivity(act.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && openActivity(act.id)}>
-                            <div className="vol-activity-info">
-                                <div className="vol-activity-title">{act.title}</div>
-                                <div className="admin-muted">
-                                    {act.recurrenceNote || act.recurrenceType}
-                                    {' · '}
-                                    {act.schedules?.length || 0} schedule(s)
-                                    {' · '}
-                                    {act._count?.signups || 0} signup(s)
-                                </div>
+            ) : (() => {
+                const withSchedules = activities.filter((a) => (a.schedules?.length ?? 0) > 0);
+                const withoutSchedules = activities.filter((a) => (a.schedules?.length ?? 0) === 0);
+                const actRow = (act) => (
+                    <div key={act.id} className="vol-activity-row" onClick={() => openActivity(act.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && openActivity(act.id)}>
+                        <div className="vol-activity-info" style={{ flex: 1 }}>
+                            <div className="vol-activity-title">{act.title}</div>
+                            <div className="admin-muted" style={{ fontSize: 12, marginTop: 2 }}>
+                                {act.recurrenceNote || act.recurrenceType}
                             </div>
-                            <span className={`vol-status vol-status--${act.isActive ? 'active' : 'inactive'}`}>
-                                {act.isActive ? ui.statusActive : ui.statusInactive}
-                            </span>
+                            {/* Per-schedule chips */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
+                                {(act.schedules || []).map((sch) => {
+                                    const schFilled = sch._count?.signups ?? sch.signups?.length ?? 0;
+                                    const schCap = sch.maxVolunteers || act.maxVolunteers;
+                                    const full = schCap > 0 && schFilled >= schCap;
+                                    return (
+                                        <span key={sch.id} className={`vol-status vol-status--${full ? 'cancelled' : sch.status}`}
+                                            style={{ fontSize: 11, fontWeight: 400, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            {fmtDate(sch.scheduledAt)}
+                                            {schCap > 0
+                                                ? <strong style={{ fontWeight: 700 }}>{schFilled}/{schCap}</strong>
+                                                : schFilled > 0 && <strong style={{ fontWeight: 700 }}>{schFilled}</strong>}
+                                        </span>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    ))}
-                </div>
-            )}
+                        <span className={`vol-status vol-status--${act.isActive ? 'active' : 'inactive'}`} style={{ flexShrink: 0 }}>
+                            {act.isActive ? ui.statusActive : ui.statusInactive}
+                        </span>
+                    </div>
+                );
+                return (
+                    <>
+                        {withSchedules.length > 0 && (
+                            <div className="vol-activity-list">
+                                {withSchedules.map(actRow)}
+                            </div>
+                        )}
+                        {withoutSchedules.length > 0 && (
+                            <div style={{ marginTop: withSchedules.length > 0 ? 20 : 0, borderTop: withSchedules.length > 0 ? '1px solid rgba(255,255,255,.08)' : 'none', paddingTop: withSchedules.length > 0 ? 14 : 0 }}>
+                                <button
+                                    type="button"
+                                    className="admin-button secondary"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}
+                                    onClick={() => setShowUnscheduled((v) => !v)}
+                                >
+                                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform .2s', transform: showUnscheduled ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+                                        <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    Not Yet Scheduled
+                                    <span style={{ fontSize: 11, fontWeight: 600, background: 'rgba(255,255,255,.08)', borderRadius: 999, padding: '1px 7px' }}>{withoutSchedules.length}</span>
+                                </button>
+                                {showUnscheduled && (
+                                    <div className="vol-activity-list" style={{ marginTop: 12 }}>
+                                        {withoutSchedules.map((act) => (
+                                            <div key={act.id} className="vol-activity-row" onClick={() => openActivity(act.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && openActivity(act.id)}>
+                                                <div className="vol-activity-info">
+                                                    <div className="vol-activity-title">{act.title}</div>
+                                                    <div className="admin-muted">
+                                                        {act.recurrenceNote || act.recurrenceType}
+                                                        {' · '}
+                                                        <span className="vol-status vol-status--inactive" style={{ fontSize: '0.7rem' }}>No schedules yet</span>
+                                                    </div>
+                                                </div>
+                                                <span className={`vol-status vol-status--${act.isActive ? 'active' : 'inactive'}`}>
+                                                    {act.isActive ? ui.statusActive : ui.statusInactive}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
+                );
+            })()}
         </div>
     );
 }

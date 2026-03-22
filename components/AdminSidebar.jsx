@@ -31,6 +31,8 @@ function NavIcon({ kind }) {
             return <svg {...common}><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 3h14"/><path d="M5 21h14"/></svg>;
         case 'admins':
             return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M17 11l2 2 4-4"/></svg>;
+        case 'settings':
+            return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
         case 'logs':
             return <svg {...common}><path d="M8 7h12"/><path d="M8 12h12"/><path d="M8 17h12"/><path d="M4 7h.01"/><path d="M4 12h.01"/><path d="M4 17h.01"/></svg>;
         case 'volunteering':
@@ -101,6 +103,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout,
     ];
     const otherTabs = [
         { key: 'admins', label: adminText?.admins || 'Admins', icon: 'admins' },
+        { key: 'settings', label: adminText?.settings || 'Settings', icon: 'settings' },
     ];
 
     const handleTabClick = (key) => {

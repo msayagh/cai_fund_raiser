@@ -214,3 +214,10 @@ model ActivityDiscussion {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
 }
+
+// Generic key-value store for application settings
+model AppSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}

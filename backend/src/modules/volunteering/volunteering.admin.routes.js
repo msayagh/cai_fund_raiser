@@ -33,6 +33,8 @@ router.delete('/activities/:id/schedules/:sid', ctrl.deleteSchedule);
 
 // Signups
 router.get('/activities/:id/signups', ctrl.listSignups);
+router.post('/activities/:id/schedules/:sid/signups', ctrl.preAssignVolunteer);
+router.delete('/activities/:id/schedules/:sid/signups/:signupId', ctrl.removeSignup);
 
 // Discussions
 router.post('/activities/:id/discussions', validate(postDiscussionSchema), ctrl.postDiscussion);
