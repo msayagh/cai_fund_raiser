@@ -5,7 +5,7 @@ import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePayment, onDeletePayment, loading, t }) {
     const [paymentDateError, setPaymentDateError] = useState('');
     const [editingPaymentId, setEditingPaymentId] = useState(null);
-    const [editForm, setEditForm] = useState({ amount: '', date: '', method: '', note: '' });
+    const [editForm, setEditForm] = useState({ amount: '', date: '', method: '', note: '', quantity: '1' });
     const adminText = { ...(DEFAULT_TRANSLATION.admin ?? {}), ...(t.admin ?? {}) };
 
     if (!donor) return null;
@@ -30,6 +30,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
             date: String(payment.date || '').slice(0, 10),
             method: payment.method || '',
             note: payment.note || '',
+            quantity: String(payment.quantity ?? 1),
         });
     };
 
@@ -50,6 +51,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                 date: editForm.date,
                 method: editForm.method,
                 note: editForm.note || '',
+                quantity: Math.max(1, Math.floor(Number(editForm.quantity) || 1)),
             });
             cancelEdit();
         } catch (err) {
@@ -122,7 +124,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                     {adminText.recordPayment}
                 </div>
                 <form onSubmit={onAddPayment} className="admin-stack">
-                    <div className="admin-grid admin-grid--2cols">
+                    <div className="admin-grid admin-grid--3cols">
                         <input
                             type="number"
                             min="0"
@@ -131,6 +133,15 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                             placeholder={adminText.amountPlaceholder}
                             required
                             id="payment-amount"
+                        />
+                        <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            className="admin-input"
+                            placeholder={adminText.quantityPlaceholder || 'Quantity'}
+                            defaultValue={1}
+                            id="payment-quantity"
                         />
                         <select className="admin-input" id="payment-method" required>
                             <option value="">{adminText.selectMethodPlaceholder}</option>
@@ -248,7 +259,7 @@ export default function PaymentPanel({ donor, payments, onAddPayment, onUpdatePa
                                         <div>
                                             <div className="admin-item-title">${Number(payment.amount || 0).toLocaleString()}</div>
                                             <div className="admin-muted admin-muted--sm mt-sm">
-                                                {new Date(payment.date).toLocaleDateString()} · {payment.method} {payment.note && `· ${payment.note}`}
+                                                {new Date(payment.date).toLocaleDateString()} · Qty {Number(payment.quantity) >= 1 ? Math.floor(Number(payment.quantity)) : 1} · {payment.method} {payment.note && `· ${payment.note}`}
                                             </div>
                                         </div>
                                         <div className="admin-actions">

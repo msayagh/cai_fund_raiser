@@ -51,7 +51,9 @@ async function main() {
   const donorHash = await bcrypt.hash('demo123', BCRYPT_ROUNDS);
   const placeholderHash = await bcrypt.hash('placeholder-disabled-account', BCRYPT_ROUNDS);
 
-  const ahmed = await prisma.donor.create({
+  // Payments are created after the donor: nested `payments.create` only accepts scalar FKs
+  // (`recordedByAdminId`), not `recordedByAdmin: { connect }`, on this Prisma version.
+  let ahmed = await prisma.donor.create({
     data: {
       name: 'Ahmed Benali',
       email: 'ahmed@example.com',
@@ -62,46 +64,55 @@ async function main() {
           startDate: new Date('2024-01-01'),
         },
       },
-      payments: {
-        create: [
-          {
-            amount: 250,
-            date: new Date('2024-02-01'),
-            method: 'zeffy',
-            note: 'First payment',
-            displayName: 'Ahmed H',
-            engagement: 1000,
-            tier: 'kareem',
-            recordedByAdminId: admin.id,
-          },
-          {
-            amount: 250,
-            date: new Date('2024-05-01'),
-            method: 'zeffy',
-            note: 'Second payment',
-            displayName: 'Ahmed H',
-            engagement: 2000,
-            tier: 'sabbaq',
-            recordedByAdminId: admin.id,
-          },
-          {
-            amount: 500,
-            date: new Date('2024-08-01'),
-            method: 'cash',
-            note: 'Ramadan contribution',
-            displayName: 'Ahmed H',
-            engagement: 500,
-            tier: 'mutasaddiq',
-            recordedByAdminId: admin.id,
-          },
-        ],
-      },
     },
+  });
+  await prisma.payment.createMany({
+    data: [
+      {
+        donorId: ahmed.id,
+        amount: 250,
+        quantity: 1,
+        date: new Date('2024-02-01'),
+        method: 'zeffy',
+        note: 'First payment',
+        displayName: 'Ahmed H',
+        engagement: 1000,
+        tier: 'kareem',
+        recordedByAdminId: admin.id,
+      },
+      {
+        donorId: ahmed.id,
+        amount: 250,
+        quantity: 1,
+        date: new Date('2024-05-01'),
+        method: 'zeffy',
+        note: 'Second payment',
+        displayName: 'Ahmed H',
+        engagement: 2000,
+        tier: 'sabbaq',
+        recordedByAdminId: admin.id,
+      },
+      {
+        donorId: ahmed.id,
+        amount: 500,
+        quantity: 1,
+        date: new Date('2024-08-01'),
+        method: 'cash',
+        note: 'Ramadan contribution',
+        displayName: 'Ahmed H',
+        engagement: 500,
+        tier: 'mutasaddiq',
+        recordedByAdminId: admin.id,
+      },
+    ],
+  });
+  ahmed = await prisma.donor.findUnique({
+    where: { id: ahmed.id },
     include: { engagement: true, payments: true },
   });
   console.log(`  ✓ Donor: ${ahmed.email} (${ahmed.payments.length} payments)`);
 
-  const fatima = await prisma.donor.create({
+  let fatima = await prisma.donor.create({
     data: {
       name: 'Fatima Choudhry',
       email: 'fatima@example.com',
@@ -113,34 +124,41 @@ async function main() {
           endDate: new Date('2025-12-31'),
         },
       },
-      payments: {
-        create: [
-          {
-            amount: 1000,
-            date: new Date('2024-03-01'),
-            method: 'zeffy',
-            note: 'Spring payment',
-            displayName: 'Fa CH',
-            engagement: 1000,
-            tier: 'kareem',
-            recordedByAdminId: admin.id,
-          },
-          {
-            amount: 500,
-            date: new Date('2024-07-01'),
-            method: 'cash',
-            engagement: 500,
-            tier: 'mutasaddiq',
-            recordedByAdminId: admin.id,
-          },
-        ],
-      },
     },
+  });
+  await prisma.payment.createMany({
+    data: [
+      {
+        donorId: fatima.id,
+        amount: 1000,
+        quantity: 1,
+        date: new Date('2024-03-01'),
+        method: 'zeffy',
+        note: 'Spring payment',
+        displayName: 'Fa CH',
+        engagement: 1000,
+        tier: 'kareem',
+        recordedByAdminId: admin.id,
+      },
+      {
+        donorId: fatima.id,
+        amount: 500,
+        quantity: 1,
+        date: new Date('2024-07-01'),
+        method: 'cash',
+        engagement: 500,
+        tier: 'mutasaddiq',
+        recordedByAdminId: admin.id,
+      },
+    ],
+  });
+  fatima = await prisma.donor.findUnique({
+    where: { id: fatima.id },
     include: { engagement: true, payments: true },
   });
   console.log(`  ✓ Donor: ${fatima.email} (${fatima.payments.length} payments)`);
 
-  const youssef = await prisma.donor.create({
+  let youssef = await prisma.donor.create({
     data: {
       name: 'Youssef Mansour',
       email: 'youssef@example.com',
@@ -151,56 +169,66 @@ async function main() {
           startDate: new Date('2024-06-01'),
         },
       },
-      payments: {
-        create: [
-          {
-            amount: 200,
-            date: new Date('2024-09-01'),
-            method: 'other',
-            note: 'Bank transfer',
-            displayName: 'Youssef M',
-            engagement: 500,
-            tier: 'mutasaddiq',
-            recordedByAdminId: admin.id,
-          },
-        ],
-      },
     },
+  });
+  await prisma.payment.create({
+    data: {
+      donorId: youssef.id,
+      amount: 200,
+      quantity: 1,
+      date: new Date('2024-09-01'),
+      method: 'other',
+      note: 'Bank transfer',
+      displayName: 'Youssef M',
+      engagement: 500,
+      tier: 'mutasaddiq',
+      recordedByAdminId: admin.id,
+    },
+  });
+  youssef = await prisma.donor.findUnique({
+    where: { id: youssef.id },
     include: { engagement: true, payments: true },
   });
   console.log(`  ✓ Donor: ${youssef.email} (${youssef.payments.length} payment)`);
 
-  const layla = await prisma.donor.create({
+  let layla = await prisma.donor.create({
     data: {
       name: 'Layla Hassan',
       email: 'layla@example.com',
       passwordHash: placeholderHash,
       accountCreated: false,
-      payments: {
-        create: [
-          {
-            amount: 300,
-            date: new Date('2024-09-13'),
-            method: 'cash',
-            note: 'Friday prayer collection',
-            displayName: 'Layla H',
-            engagement: 500,
-            tier: 'mutasaddiq',
-            recordedByAdminId: admin.id,
-          },
-          {
-            amount: 150,
-            date: new Date('2024-11-08'),
-            method: 'zeffy',
-            note: 'Online community campaign',
-            displayName: 'Layla H',
-            engagement: 2000,
-            tier: 'sabbaq',
-            recordedByAdminId: admin.id,
-          },
-        ],
-      },
     },
+  });
+  await prisma.payment.createMany({
+    data: [
+      {
+        donorId: layla.id,
+        amount: 300,
+        quantity: 1,
+        date: new Date('2024-09-13'),
+        method: 'cash',
+        note: 'Friday prayer collection',
+        displayName: 'Layla H',
+        engagement: 500,
+        tier: 'mutasaddiq',
+        recordedByAdminId: admin.id,
+      },
+      {
+        donorId: layla.id,
+        amount: 150,
+        quantity: 1,
+        date: new Date('2024-11-08'),
+        method: 'zeffy',
+        note: 'Online community campaign',
+        displayName: 'Layla H',
+        engagement: 2000,
+        tier: 'sabbaq',
+        recordedByAdminId: admin.id,
+      },
+    ],
+  });
+  layla = await prisma.donor.findUnique({
+    where: { id: layla.id },
     include: { payments: true },
   });
   console.log(`  ✓ Placeholder donor: ${layla.email} (${layla.payments.length} payments)`);

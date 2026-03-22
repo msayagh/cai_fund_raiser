@@ -751,7 +751,7 @@ describe('adminUpsertDonorPayment', () => {
 
     const result = await adminUpsertDonorPayment('admin-1', 'Admin', {
       donor:   { email: 'alice@test.com', name: 'Alice' },
-      payment: { entryId: 'entry-001', amount: 100, date: '2025-01-01', method: 'cash' },
+      payment: { entryId: 'entry-001', amount: 100, date: '2025-01-01', method: 'cash', quantity: 1 },
     });
     expect(result.duplicate).toBe(true);
     expect(result.paymentCreated).toBe(false);
@@ -772,7 +772,7 @@ describe('adminUpsertDonorPayment', () => {
 
     const result = await adminUpsertDonorPayment('admin-1', 'Admin', {
       donor:   { email: 'new@test.com', name: 'New Person' },
-      payment: { entryId: 'entry-002', amount: 100, date: '2025-01-01', method: 'cash' },
+      payment: { entryId: 'entry-002', amount: 100, date: '2025-01-01', method: 'cash', quantity: 1 },
     });
     expect(result.donorCreated).toBe(true);
     expect(result.paymentCreated).toBe(true);
@@ -788,7 +788,7 @@ describe('adminUpsertDonorPayment', () => {
 
     const result = await adminUpsertDonorPayment('admin-1', 'Admin', {
       donor:   { email: 'alice@test.com', name: 'Alice' }, // same name → no donor.update triggered
-      payment: { entryId: 'entry-003', amount: 200, date: '2025-02-01', method: 'card' },
+      payment: { entryId: 'entry-003', amount: 200, date: '2025-02-01', method: 'card', quantity: 1 },
     });
     expect(result.donorCreated).toBe(false);
     expect(result.duplicate).toBe(false);

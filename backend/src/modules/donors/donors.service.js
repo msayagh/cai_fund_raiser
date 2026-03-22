@@ -105,6 +105,14 @@ const normalizePaymentMethod = (raw) => {
   throw new AppError('Method must be one of: cash, card, zeffy', 400, 'INVALID_METHOD');
 };
 
+/** Positive integer count (e.g. tickets / units per payment row). Defaults to 1. */
+const normalizePaymentQuantity = (raw, fallback = 1) => {
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(Math.floor(n), 2147483647);
+};
+
 // ─── Self-service ─────────────────────────────────────────────────────────────
 
 const getMe = async (donorId) => {
@@ -519,7 +527,7 @@ const adminSetEngagement = async (adminId, adminName, donorId, { totalPledge, pi
   return engagement;
 };
 
-const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, date, method, note, displayName, engagement, tier }) => {
+const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, quantity, date, method, note, displayName, engagement, tier }) => {
   const donor = await prisma.donor.findUnique({ where: { id: donorId } });
   if (!donor) throw new AppError('Donor not found', 404, 'NOT_FOUND');
 
@@ -528,6 +536,7 @@ const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, d
       ...(entryId ? { externalEntryId: entryId } : {}),
       donorId,
       amount,
+      quantity: Number(quantity || 1),
       date: new Date(date),
       method,
       note: note ?? null,
@@ -574,7 +583,7 @@ const adminAddPayment = async (adminId, adminName, donorId, { entryId, amount, d
   return payment;
 };
 
-const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amount, date, method, note, displayName, engagement, tier }) => {
+const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amount, quantity, date, method, note, displayName, engagement, tier }) => {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     include: {
@@ -596,6 +605,7 @@ const adminUpdatePayment = async (adminId, adminName, donorId, paymentId, { amou
       ...(displayName !== undefined ? { displayName: displayName || null } : {}),
       ...(engagement !== undefined ? { engagement: engagement || null } : {}),
       ...(tier !== undefined ? { tier: tier || null } : {}),
+      ...(quantity !== undefined ? { quantity: Number(quantity || 1) } : {}),
       recordedByAdminId: adminId,
     },
     include: { recordedByAdmin: { select: { id: true, name: true } } },
@@ -670,6 +680,7 @@ const adminImportPaymentsCsv = async (adminId, adminName, fileBuffer) => {
       const date = parseDateValue(row.date || row.paymentdate || row['payment_date']);
       const method = normalizePaymentMethod(row.method || row.paymentmethod || row['payment_method']);
       const note = (row.note || row.message || row.details || '').trim() || null;
+      const quantity = Number(row.quantity || row.qty || row.tickets || row['ticket_count'] || 1);
       const donorName = (row.name || row.donorname || row['donor_name'] || '').trim();
       const engagementAmount = parseOptionalPositiveAmount(
         row.engagement || row.pledge || row.totalpledge || row['total_pledge'],
@@ -719,6 +730,7 @@ const adminImportPaymentsCsv = async (adminId, adminName, fileBuffer) => {
         data: {
           donorId: donor.id,
           amount,
+          quantity: Number(quantity || 1),
           date,
           method,
           note,
@@ -923,6 +935,7 @@ const generatePaymentConfirmation = async (donorId, paymentId, adminId) => {
   doc.fontSize(11).font('Helvetica');
   doc.text(`Payment ID: ${paymentId}`, { indent: 20 });
   doc.text(`Amount: $${Number(payment.amount).toLocaleString()}`, { indent: 20 });
+  doc.text(`Quantity: ${Number.isFinite(Number(payment.quantity)) && Number(payment.quantity) >= 1 ? Math.floor(Number(payment.quantity)) : 1}`, { indent: 20 });
   doc.text(`Date: ${new Date(payment.date).toLocaleDateString()}`, { indent: 20 });
   doc.text(`Method: ${payment.method}`, { indent: 20 });
   if (payment.note) {

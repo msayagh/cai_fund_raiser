@@ -61,6 +61,7 @@ model Payment {
   donorId           String
   donor             Donor    @relation(fields: [donorId], references: [id], onDelete: Cascade)
   amount            Float
+  quantity          Int      @default(1)
   date              DateTime
   method            String
   note              String?

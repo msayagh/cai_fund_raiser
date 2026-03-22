@@ -420,6 +420,7 @@ async function main() {
               ? {
                   create: donor.payments.map((p) => ({
                     amount: p.amount,
+                    quantity: p.quantity != null ? Math.max(1, Math.floor(Number(p.quantity))) : 1,
                     date: p.date,
                     method: p.method,
                     note: p.note,

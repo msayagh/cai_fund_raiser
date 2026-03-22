@@ -39,6 +39,7 @@ const adminPaymentSchema = z.object({
   date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format'),
   method: z.enum(['cash', 'card', 'zeffy']),
   note: z.string().max(500).optional(),
+  quantity: z.number().int().min(1).optional(),
 });
 
 const adminUpdatePaymentSchema = z.object({
@@ -46,7 +47,8 @@ const adminUpdatePaymentSchema = z.object({
   date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format').optional(),
   method: z.enum(['cash', 'card', 'zeffy']).optional(),
   note: z.string().max(500).nullable().optional(),
-}).refine((data) => data.amount !== undefined || data.date !== undefined || data.method !== undefined || data.note !== undefined, {
+  quantity: z.number().int().min(1).optional(),
+}).refine((data) => data.amount !== undefined || data.date !== undefined || data.method !== undefined || data.note !== undefined || data.quantity !== undefined, {
   message: 'At least one field is required',
 });
 

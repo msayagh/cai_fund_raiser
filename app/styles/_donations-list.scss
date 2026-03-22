@@ -118,14 +118,14 @@
     flex-direction: column;
     gap: 10px;
     min-height: max-content;
-    animation: donations-list-marquee-down 32s linear infinite;
+    animation: donations-list-marquee-down 38s linear infinite;
 }
 
 .donations-list-marquee-track--horizontal {
     flex-direction: row;
     min-width: max-content;
     min-height: auto;
-    animation: donations-list-marquee-left 36s linear infinite;
+    animation: donations-list-marquee-left 42s linear infinite;
 }
 
 .donations-list-marquee-track--horizontal.donations-list-marquee-track--right {

@@ -271,6 +271,9 @@ function buildPaymentExportRows(donors, paymentsByDonor) {
             accountStatus: donor.accountCreated === false ? 'placeholder' : 'active',
             engagementAmount: Number(donor.engagement?.totalPledge || 0),
             amount: Number(payment.amount || 0),
+            quantity: Number.isFinite(Number(payment.quantity)) && Number(payment.quantity) >= 1
+                ? Math.floor(Number(payment.quantity))
+                : 1,
             method: payment.method || '',
             date: formatIsoDate(payment.date || payment.createdAt),
             note: payment.note || '',
@@ -1241,6 +1244,7 @@ export default function AdminDashboardPage() {
         if (!selectedDonorId) return;
 
         const amountInput = document.getElementById('payment-amount');
+        const quantityInput = document.getElementById('payment-quantity');
         const methodSelect = document.getElementById('payment-method');
         const dateInput = document.getElementById('payment-date');
         const noteInput = document.getElementById('payment-note');
@@ -1260,6 +1264,7 @@ export default function AdminDashboardPage() {
         try {
             await addPayment(selectedDonorId, {
                 amount: Number(amountInput.value),
+                quantity: Math.max(1, Math.floor(Number(quantityInput?.value) || 1)),
                 method: methodSelect.value,
                 date: dateInput.value,
                 note: noteInput?.value || '',
@@ -1269,6 +1274,7 @@ export default function AdminDashboardPage() {
 
             // Reset form
             amountInput.value = '';
+            if (quantityInput) quantityInput.value = '1';
             methodSelect.value = '';
             dateInput.value = '';
             noteInput.value = '';

@@ -35,7 +35,13 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) {
+    console.log(`Origin: ${origin}`);
+    console.log(`FRONTEND_URLS: ${config.FRONTEND_URLS}`);
+    console.log(`config.FRONTEND_URLS.includes(origin): ${config.FRONTEND_URLS.includes(origin)}`);
     if (!origin || config.FRONTEND_URLS.includes(origin)) {
+      callback(null, true);
+      return;
+    } else if (origin === 'http://localhost:3000') {
       callback(null, true);
       return;
     }

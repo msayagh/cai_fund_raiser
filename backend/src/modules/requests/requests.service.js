@@ -130,7 +130,7 @@ const approveRequest = async (adminId, adminName, id, body) => {
       console.error('Failed to send donor account creation email:', error);
     }
   } else if (request.type === 'payment_upload') {
-    const { amount, date, method, note, displayName, engagement, tier } = body;
+    const { amount, quantity, date, method, note, displayName, engagement, tier } = body;
     if (!amount || !date || !method) {
       throw new AppError('amount, date, and method are required to approve payment_upload', 400, 'VALIDATION_ERROR');
     }
@@ -146,10 +146,13 @@ const approveRequest = async (adminId, adminName, id, body) => {
     const parsedEngagement = Number(engagement);
     const normalizedEngagement = Number.isFinite(parsedEngagement) ? parsedEngagement : 0;
 
+    console.log(body.payment)
+
     const payment = await prisma.payment.create({
       data: {
         donor: { connect: { id: donorId } },
         amount,
+        quantity: Number(quantity || 1),
         date: new Date(date),
         method,
         note: note ?? null,
