@@ -18,11 +18,12 @@ model Donor {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  engagement    Engagement?
-  payments      Payment[]
-  requests      Request[]
-  logs          ActivityLog[]
-  refreshTokens RefreshToken[]
+  engagement         Engagement?
+  payments           Payment[]
+  requests           Request[]
+  logs               ActivityLog[]
+  refreshTokens      RefreshToken[]
+  volunteerSignups   ActivitySignup[] @relation("DonorVolunteerSignups")
 }
 
 model Admin {
@@ -36,10 +37,11 @@ model Admin {
   addedBy      Admin?   @relation("AdminHierarchy", fields: [addedById], references: [id])
   addedAdmins  Admin[]  @relation("AdminHierarchy")
 
-  paymentsRecorded Payment[]
-  logs             ActivityLog[]
-  refreshTokens    RefreshToken[]
-  createdApiKeys   ApiKey[]
+  paymentsRecorded    Payment[]
+  logs                ActivityLog[]
+  refreshTokens       RefreshToken[]
+  createdApiKeys      ApiKey[]
+  volunteerActivities VolunteerActivity[] @relation("AdminVolunteerActivities")
 }
 
 model Engagement {
@@ -146,4 +148,68 @@ model ApiKey {
   lastUsedAt       DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+// ─── Volunteering Feature ─────────────────────────────────────────────────────
+
+model VolunteerActivity {
+  id               String   @id @default(cuid())
+  title            String
+  description      String   
+  skills           String?
+  recurrenceType   String   @default("none")
+  recurrenceNote   String?
+  maxVolunteers    Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdByAdminId String
+  createdByAdmin   Admin    @relation("AdminVolunteerActivities", fields: [createdByAdminId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  schedules   ActivitySchedule[]
+  signups     ActivitySignup[]
+  discussions ActivityDiscussion[]
+}
+
+model ActivitySchedule {
+  id            String            @id @default(cuid())
+  activityId    String
+  activity      VolunteerActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  scheduledAt   DateTime
+  location      String?
+  notes         String?
+  maxVolunteers Int?
+  status        String            @default("upcoming")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  signups ActivitySignup[]
+}
+
+model ActivitySignup {
+  id         String            @id @default(cuid())
+  activityId String
+  activity   VolunteerActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  scheduleId String
+  schedule   ActivitySchedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  donorId    String
+  donor      Donor             @relation("DonorVolunteerSignups", fields: [donorId], references: [id], onDelete: Cascade)
+  note       String?
+  status     String            @default("signed_up")
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@unique([scheduleId, donorId])
+}
+
+model ActivityDiscussion {
+  id         String            @id @default(cuid())
+  activityId String
+  activity   VolunteerActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorType String
+  authorName String
+  message    String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 }

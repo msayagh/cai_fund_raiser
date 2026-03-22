@@ -38,6 +38,8 @@ import { clearStoredSession, getStoredSession, setStoredSession } from '@/lib/se
 import { startTokenRefreshManager, stopTokenRefreshManager } from '@/lib/tokenRefreshManager.js';
 import PaymentPanel from './PaymentPanel.jsx';
 import ApiKeysSection from './ApiKeysSection.jsx';
+import VolunteeringSection from './VolunteeringSection.jsx';
+import { FEATURES } from '@/constants/features.js';
 const cardStyle = {
     background: 'var(--bg-card)',
     border: '1px solid var(--border)',
@@ -505,7 +507,7 @@ export default function AdminDashboardPage() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const savedTab = localStorage.getItem('adminActiveTab');
-            if (savedTab && ['overview', 'requests', 'imports', 'exports', 'apiKeys', 'admins', 'logs', 'accounts'].includes(savedTab)) {
+            if (savedTab && ['overview', 'requests', 'imports', 'exports', 'apiKeys', 'admins', 'logs', 'accounts', 'volunteering'].includes(savedTab)) {
                 setActiveTabState(savedTab);
             }
         }
@@ -3135,6 +3137,14 @@ export default function AdminDashboardPage() {
                                         </div>
                                     </div>
                                 </div>
+                            ) : null}
+
+                            {activeTab === 'volunteering' && FEATURES.VOLUNTEERING ? (
+                                <VolunteeringSection
+                                    cardStyle={cardStyle}
+                                    inputStyle={inputStyle}
+                                    adminText={adminText}
+                                />
                             ) : null}
 
                             {activeTab === 'accounts' ? (

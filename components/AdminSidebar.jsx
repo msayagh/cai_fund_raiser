@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { FEATURES } from '@/constants/features.js';
 
 const TOOL_TAB_KEYS = ['imports', 'exports', 'apiKeys', 'logs'];
 
@@ -32,6 +33,8 @@ function NavIcon({ kind }) {
             return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M17 11l2 2 4-4"/></svg>;
         case 'logs':
             return <svg {...common}><path d="M8 7h12"/><path d="M8 12h12"/><path d="M8 17h12"/><path d="M4 7h.01"/><path d="M4 12h.01"/><path d="M4 17h.01"/></svg>;
+        case 'volunteering':
+            return <svg {...common}><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
         case 'accounts':
             return <svg {...common}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>;
         case 'tools':
@@ -87,6 +90,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, isRTL, onLogout,
         { key: 'overview', label: adminText?.overview || 'Overview', icon: 'overview' },
         { key: 'accounts', label: adminText?.donors || 'Donors', icon: 'accounts' },
         { key: 'requests', label: adminText?.requests || 'Requests', icon: 'requests' },
+        ...(FEATURES.VOLUNTEERING ? [{ key: 'volunteering', label: adminText?.volunteering || 'Volunteering', icon: 'volunteering' }] : []),
     ];
 
     const toolTabs = [

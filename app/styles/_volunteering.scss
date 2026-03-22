@@ -1,0 +1,504 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// _volunteering.scss
+// Styles for the Volunteering feature (admin + donor sides).
+// Only rendered when FEATURE_VOLUNTEERING toggle is enabled.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Shared utilities ──────────────────────────────────────────────────────────
+
+.vol-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.vol-tag {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(var(--accent-rgb, 100, 160, 255), 0.12);
+    color: var(--accent, #64a0ff);
+    border: 1px solid rgba(var(--accent-rgb, 100, 160, 255), 0.25);
+}
+
+.vol-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+
+    &--upcoming, &--signed_up, &--active {
+        background: rgba(72, 199, 142, 0.12);
+        color: #48c78e;
+        border: 1px solid rgba(72, 199, 142, 0.3);
+    }
+    &--completed, &--attended {
+        background: rgba(var(--accent-rgb, 100, 160, 255), 0.1);
+        color: var(--accent, #64a0ff);
+        border: 1px solid rgba(var(--accent-rgb, 100, 160, 255), 0.2);
+    }
+    &--cancelled {
+        background: rgba(220, 80, 80, 0.1);
+        color: #dc3545;
+        border: 1px solid rgba(220, 80, 80, 0.2);
+    }
+    &--inactive {
+        background: rgba(160, 160, 160, 0.1);
+        color: var(--text-muted, #888);
+        border: 1px solid rgba(160, 160, 160, 0.2);
+    }
+}
+
+.vol-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &--admin {
+        background: rgba(255, 180, 50, 0.15);
+        color: #f0a500;
+    }
+    &--donor {
+        background: rgba(100, 160, 255, 0.12);
+        color: var(--accent, #64a0ff);
+    }
+}
+
+// ── Discussion ────────────────────────────────────────────────────────────────
+
+.vol-discussion {
+    margin-top: 24px;
+}
+
+.vol-discussion-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.vol-discussion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.vol-msg {
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+
+    &--admin {
+        background: rgba(255, 180, 50, 0.05);
+        border-color: rgba(255, 180, 50, 0.15);
+    }
+    &--donor {
+        background: rgba(var(--accent-rgb, 100, 160, 255), 0.04);
+    }
+}
+
+.vol-msg-author {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.vol-msg-body {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+
+.vol-discussion-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+
+    input {
+        flex: 1;
+    }
+}
+
+.vol-msg-input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+
+    &:focus {
+        outline: none;
+        border-color: var(--accent, #64a0ff);
+    }
+}
+
+// ── Activity list (shared) ────────────────────────────────────────────────────
+
+.vol-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vol-activity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card, transparent);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    text-align: start;
+    width: 100%;
+    color: inherit;
+
+    &:hover, &:focus-visible {
+        border-color: var(--accent, #64a0ff);
+        background: rgba(var(--accent-rgb, 100, 160, 255), 0.04);
+        outline: none;
+    }
+}
+
+.vol-activity-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.vol-activity-info {
+    flex: 1;
+}
+
+.vol-arrow {
+    font-size: 1.2rem;
+    color: var(--text-muted, #888);
+    margin-left: 8px;
+}
+
+// ── Admin: action rows ────────────────────────────────────────────────────────
+
+.vol-action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.vol-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.vol-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+// ── Admin: schedule cards ─────────────────────────────────────────────────────
+
+.vol-schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vol-schedule-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    flex-wrap: wrap;
+}
+
+.vol-schedule-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.vol-schedule-date {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.vol-schedule-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+// ── Admin: signups table ──────────────────────────────────────────────────────
+
+.vol-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87rem;
+
+    th, td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+
+    th {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+    }
+}
+
+// ── Admin: modal overlay ──────────────────────────────────────────────────────
+
+.vol-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    padding: 20px;
+}
+
+.vol-modal {
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+}
+
+.vol-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.vol-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.12s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+}
+
+// ── Admin: form layout ────────────────────────────────────────────────────────
+
+.vol-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.vol-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.vol-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+
+    @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.vol-textarea {
+    resize: vertical;
+    min-height: 90px;
+}
+
+.vol-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 6px;
+}
+
+// ── Donor: volunteering tab ───────────────────────────────────────────────────
+
+.vol-tab {
+    margin-top: 24px;
+}
+
+.vol-tab-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.vol-tab-nav {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.vol-tab-btn--active {
+    font-weight: 700;
+    color: var(--accent, #64a0ff) !important;
+    border-bottom: 2px solid var(--accent, #64a0ff);
+    border-radius: 0;
+}
+
+.vol-detail-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.vol-detail-desc {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+}
+
+// ── Donor: schedule cards ─────────────────────────────────────────────────────
+
+.vol-schedules {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vol-sch-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+
+    &--completed {
+        opacity: 0.6;
+    }
+    &--cancelled {
+        opacity: 0.45;
+        text-decoration: line-through;
+    }
+}
+
+.vol-sch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.vol-sch-date {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.vol-sch-loc {
+    font-size: 0.87rem;
+    color: var(--text-secondary);
+}
+
+.vol-sch-capacity {
+    font-size: 0.8rem;
+    color: var(--text-muted, #888);
+}
+
+.vol-sch-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.vol-btn-signup {
+    min-width: 90px;
+}
+
+.vol-btn-cancel {
+    min-width: 90px;
+    color: #dc3545 !important;
+    border-color: rgba(220, 80, 80, 0.35) !important;
+
+    &:hover {
+        background: rgba(220, 80, 80, 0.07) !important;
+    }
+}
+
+// ── Donor: my signups ──────────────────────────────────────────────────────────
+
+.vol-my-signups {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vol-my-signup-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+}
