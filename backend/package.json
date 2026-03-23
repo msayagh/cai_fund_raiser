@@ -11,14 +11,15 @@
     "dev": "node --watch server.js",
     "prestart": "npm run db:generate",
     "start": "node server.js",
-    "db:migrate": "npm run prisma:run -- db push",
-    "db:migrate:dev": "npm run prisma:run -- migrate dev",
+    "db:migrate": "npm run prisma:run -- migrate dev",
+    "db:deploy": "npm run prisma:run -- migrate deploy",
+    "db:push": "npm run prisma:run -- db push",
     "db:generate": "npm run prisma:run -- generate",
     "db:seed": "npm run db:generate && node prisma/seed.js",
     "db:import:donors": "npm run db:generate && node scripts/import-donors-from-sheet.js",
     "db:import:donors:dry": "npm run db:generate && node scripts/import-donors-from-sheet.js --dry-run",
     "db:studio": "npm run prisma:run -- studio",
-    "db:reset": "npm run prisma:run -- db push --force-reset && node prisma/seed.js"
+    "db:reset": "npm run db:push -- --force-reset && node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -36,10 +36,15 @@ if (!datasourceProviderPattern.test(sourceSchema)) {
   process.exit(1);
 }
 
-const runtimeSchema = sourceSchema.replace(
+let runtimeSchema = sourceSchema.replace(
   datasourceProviderPattern,
   `$1${dbConfig.dbProvider}$2`,
 );
+
+// SQLite does not support native type annotations (@db.*). Strip them.
+if (dbConfig.dbProvider === 'sqlite') {
+  runtimeSchema = runtimeSchema.replace(/\s+@db\.\S+/g, '');
+}
 
 fs.writeFileSync(runtimeSchemaPath, runtimeSchema, 'utf8');
 

@@ -30,7 +30,7 @@ fi
 
 if [ "${RUN_DB_MIGRATE:-true}" = "true" ]; then
   echo "Applying database schema (db push)..."
-  npm run db:migrate
+  npm run db:push
 fi
 
 exec node server.js
