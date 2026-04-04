@@ -1207,11 +1207,16 @@ export default function DonorDashboardPage() {
                     {/* Step 0: Choose payment method */}
                     {!editingPendingId && payStep === null && (
                         <div className="pay-method-grid">
-                            <button type="button" className="pay-method-btn" onClick={() => setPayStep('zeffy')}>
-                                <Ico size={22}><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></Ico>
-                                <span className="pay-method-label">{ui.payViaZeffy}</span>
-                                <span className="pay-method-sub">{ui.paymentMethodZeffy}</span>
-                            </button>
+                            <a
+                            href="https://www.zeffy.com/fr-CA/donation-form/nouveau-centre-al-imane"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn--zeffy"
+                            onClick={closeModal}
+                        >
+                            <Ico size={16}><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></Ico>
+                            {ui.payViaZeffy}
+                        </a>
                             <button type="button" className="pay-method-btn" onClick={() => setPayStep('cash')}>
                                 <Ico size={22}><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></Ico>
                                 <span className="pay-method-label">{ui.payByCash}</span>
@@ -1221,7 +1226,8 @@ export default function DonorDashboardPage() {
                     )}
 
                     {/* Step 1a: Zeffy */}
-                    {!editingPendingId && payStep === 'zeffy' && (<>
+                    {!editingPendingId && payStep === 'zeffy' && (
+                    <>
                         <a
                             href="https://www.zeffy.com/fr-CA/donation-form/nouveau-centre-al-imane"
                             target="_blank"
