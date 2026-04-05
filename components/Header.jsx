@@ -282,10 +282,9 @@ export function Header({
                         <AccessibilityWidget compact />
                         <button
                             onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
-                            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                            title={themeMode === "dark" ? (t.switchToLightMode || "Switch to light mode") : (t.switchToDarkMode || "Switch to dark mode")}
                             className="theme-toggle-button"
-                            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                        >
+                            aria-label={themeMode === "dark" ? (t.switchToLightMode || "Switch to light mode") : (t.switchToDarkMode || "Switch to dark mode")}>
                             {themeMode === "dark" ? "☀" : "☾"}
                         </button>
                         <span className="language-label">
@@ -398,14 +397,13 @@ export function Header({
                                         </Link>
                                     ) : null}
                                     <div className="header-menu-item header-menu-item--inline">
-                                        <span className="header-menu-item-label">{themeMode === "dark" ? "Light mode" : "Dark mode"}</span>
+                                        <span className="header-menu-item-label">{themeMode === "dark" ? (t.lightMode || "Light mode") : (t.darkMode || "Dark mode")}</span>
                                         <button
                                             type="button"
                                             onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
-                                            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                                            title={themeMode === "dark" ? (t.switchToLightMode || "Switch to light mode") : (t.switchToDarkMode || "Switch to dark mode")}
                                             className="theme-toggle-button"
-                                            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                                        >
+                                            aria-label={themeMode === "dark" ? (t.switchToLightMode || "Switch to light mode") : (t.switchToDarkMode || "Switch to dark mode")}>
                                             {themeMode === "dark" ? "☀" : "☾"}
                                         </button>
                                     </div>

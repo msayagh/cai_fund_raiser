@@ -13,6 +13,7 @@ const activityWithCounts = {
     },
   },
   _count: { select: { signups: true, discussions: true } },
+  checklistItems: { orderBy: { order: 'asc' } },
 };
 
 // ─── Admin: activities ────────────────────────────────────────────────────────
@@ -45,11 +46,15 @@ const getActivity = async (id) => {
         orderBy: { scheduledAt: 'asc' },
         include: {
           signups: {
-            include: { donor: { select: { id: true, name: true, email: true } } },
+            include: {
+              donor: { select: { id: true, name: true, email: true } },
+              checklistProgress: { select: { checklistItemId: true } },
+            },
           },
         },
       },
       discussions: { orderBy: { createdAt: 'asc' } },
+      checklistItems: { orderBy: { order: 'asc' } },
       _count: { select: { signups: true } },
     },
   });
@@ -66,6 +71,7 @@ const createActivity = async (adminId, data) => {
       recurrenceType: data.recurrenceType ?? 'none',
       recurrenceNote: data.recurrenceNote ?? null,
       maxVolunteers: data.maxVolunteers ?? 0,
+      estimatedMinutes: data.estimatedMinutes ?? null,
       createdByAdminId: adminId,
     },
   });
@@ -84,6 +90,7 @@ const updateActivity = async (id, data) => {
       ...(data.recurrenceType !== undefined && { recurrenceType: data.recurrenceType }),
       ...(data.recurrenceNote !== undefined && { recurrenceNote: data.recurrenceNote }),
       ...(data.maxVolunteers !== undefined && { maxVolunteers: data.maxVolunteers }),
+      ...(data.estimatedMinutes !== undefined && { estimatedMinutes: data.estimatedMinutes }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
     },
   });
@@ -198,6 +205,50 @@ const listSignupsForActivity = async (activityId) => {
   });
 };
 
+// ─── Admin: checklist items ──────────────────────────────────────────────────
+
+const addChecklistItem = async (activityId, title, order) => {
+  const activity = await prisma.volunteerActivity.findUnique({ where: { id: activityId } });
+  if (!activity) throw new AppError('Activity not found', 404, 'NOT_FOUND');
+
+  // Default order: append after existing items
+  let itemOrder = order;
+  if (itemOrder === undefined || itemOrder === null) {
+    const last = await prisma.activityChecklistItem.findFirst({
+      where: { activityId },
+      orderBy: { order: 'desc' },
+    });
+    itemOrder = (last?.order ?? -1) + 1;
+  }
+
+  return prisma.activityChecklistItem.create({
+    data: { activityId, title, order: itemOrder },
+  });
+};
+
+const updateChecklistItem = async (activityId, itemId, data) => {
+  const item = await prisma.activityChecklistItem.findFirst({
+    where: { id: itemId, activityId },
+  });
+  if (!item) throw new AppError('Checklist item not found', 404, 'NOT_FOUND');
+
+  return prisma.activityChecklistItem.update({
+    where: { id: itemId },
+    data: {
+      ...(data.title !== undefined && { title: data.title }),
+      ...(data.order !== undefined && { order: data.order }),
+    },
+  });
+};
+
+const deleteChecklistItem = async (activityId, itemId) => {
+  const item = await prisma.activityChecklistItem.findFirst({
+    where: { id: itemId, activityId },
+  });
+  if (!item) throw new AppError('Checklist item not found', 404, 'NOT_FOUND');
+  await prisma.activityChecklistItem.delete({ where: { id: itemId } });
+};
+
 // ─── Shared: discussions ──────────────────────────────────────────────────────
 
 const postDiscussionMessage = async (activityId, authorId, authorType, authorName, message) => {
@@ -210,6 +261,41 @@ const postDiscussionMessage = async (activityId, authorId, authorType, authorNam
 };
 
 // ─── Donor: public activities ─────────────────────────────────────────────────
+
+// ─── Donor: checklist check / uncheck ───────────────────────────────────────
+
+const checkItem = async (activityId, scheduleId, donorId, itemId) => {
+  const signup = await prisma.activitySignup.findUnique({
+    where: { scheduleId_donorId: { scheduleId, donorId } },
+  });
+  if (!signup || signup.activityId !== activityId || signup.status !== 'signed_up') {
+    throw new AppError('Active signup not found', 404, 'NOT_FOUND');
+  }
+
+  const item = await prisma.activityChecklistItem.findFirst({
+    where: { id: itemId, activityId },
+  });
+  if (!item) throw new AppError('Checklist item not found', 404, 'NOT_FOUND');
+
+  return prisma.signupChecklist.upsert({
+    where: { signupId_checklistItemId: { signupId: signup.id, checklistItemId: itemId } },
+    create: { signupId: signup.id, checklistItemId: itemId },
+    update: { checkedAt: new Date() },
+  });
+};
+
+const uncheckItem = async (activityId, scheduleId, donorId, itemId) => {
+  const signup = await prisma.activitySignup.findUnique({
+    where: { scheduleId_donorId: { scheduleId, donorId } },
+  });
+  if (!signup || signup.activityId !== activityId) {
+    throw new AppError('Signup not found', 404, 'NOT_FOUND');
+  }
+
+  await prisma.signupChecklist.deleteMany({
+    where: { signupId: signup.id, checklistItemId: itemId },
+  });
+};
 
 const listPublicActivities = async ({ page = 1, limit = 20 } = {}) => {
   const safeLimit = Math.min(Number(limit) || 20, 100);
@@ -230,7 +316,7 @@ const listPublicActivities = async ({ page = 1, limit = 20 } = {}) => {
           orderBy: { scheduledAt: 'asc' },
           include: { _count: { select: { signups: true } } },
         },
-        _count: { select: { discussions: true } },
+        _count: { select: { discussions: true, checklistItems: true } },
       },
     }),
   ]);
@@ -248,11 +334,20 @@ const getPublicActivity = async (id, donorId, { includeInactive = false } = {}) 
         include: {
           _count: { select: { signups: true } },
           signups: donorId
-            ? { where: { donorId }, select: { id: true, status: true, note: true } }
+            ? {
+                where: { donorId },
+                select: {
+                  id: true,
+                  status: true,
+                  note: true,
+                  checklistProgress: { select: { checklistItemId: true } },
+                },
+              }
             : false,
         },
       },
       discussions: { orderBy: { createdAt: 'asc' } },
+      checklistItems: { orderBy: { order: 'asc' } },
     },
   });
   if (!activity) throw new AppError('Activity not found', 404, 'NOT_FOUND');
@@ -344,6 +439,9 @@ module.exports = {
   adminRemoveSignup,
   adminPreAssignVolunteer,
   listSignupsForActivity,
+  addChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem,
   postDiscussionMessage,
   listPublicActivities,
   getPublicActivity,
@@ -351,4 +449,6 @@ module.exports = {
   cancelSignup,
   updateSignupNote,
   getMySignups,
+  checkItem,
+  uncheckItem,
 };

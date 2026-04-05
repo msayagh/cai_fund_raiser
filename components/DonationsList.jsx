@@ -137,8 +137,8 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
         const tierColor = (tier?.color ?? TIER_CONFIG[d.tier]?.color) ?? th.border;
         const amount = tier ? tier.amount : 500;
         const progressPct = amount > 0 ? Math.min(100, (d.totalDonated / amount) * 100) : 0;
-        const displayName = d.donorLabel.replace('"', '') || "Anonymous";
-        const tierLabel = tier ? tier.label : d.tier || "Unknown";
+        const displayName = d.donorLabel.replace('"', '') || (t?.anonymous || "Anonymous");
+        const tierLabel = tier ? tier.label : d.tier || (t?.unknownTier || "Unknown");
         const donated = d.totalDonated;
         const donatedLabel = dollarFirst ? `$${donated.toLocaleString()}` : `${donated.toLocaleString()} $`;
         const quantity = d.ticketCount || 1;
@@ -155,7 +155,7 @@ function DonationsListInner({ tiers, language, theme, totalsByEmail, t, isLoadin
                 }}
             >
                 <div className="donation-item-top">
-                    <div className="donation-item-progress-badge" aria-label={`${Math.round(progressPct)}% funded`}>
+                    <div className="donation-item-progress-badge" aria-label={`${Math.round(progressPct)}% ${t?.progressFunded || 'funded'}`}>
                         {Math.round(progressPct / quantity)}%
                     </div>
                 </div>

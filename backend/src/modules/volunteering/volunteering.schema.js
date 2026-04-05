@@ -9,6 +9,7 @@ const createActivitySchema = z.object({
   recurrenceType: z.enum(['none', 'weekly', 'custom']).optional(),
   recurrenceNote: z.string().max(300).optional(),
   maxVolunteers: z.number().int().min(0).optional(),
+  estimatedMinutes: z.number().int().min(1).max(1440).nullable().optional(),
 });
 
 const updateActivitySchema = z.object({
@@ -18,6 +19,7 @@ const updateActivitySchema = z.object({
   recurrenceType: z.enum(['none', 'weekly', 'custom']).optional(),
   recurrenceNote: z.string().max(300).optional(),
   maxVolunteers: z.number().int().min(0).optional(),
+  estimatedMinutes: z.number().int().min(1).max(1440).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -44,6 +46,16 @@ const signupNoteSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const addChecklistItemSchema = z.object({
+  title: z.string().min(1).max(300),
+  order: z.number().int().min(0).optional(),
+});
+
+const updateChecklistItemSchema = z.object({
+  title: z.string().min(1).max(300).optional(),
+  order: z.number().int().min(0).optional(),
+});
+
 module.exports = {
   createActivitySchema,
   updateActivitySchema,
@@ -51,4 +63,6 @@ module.exports = {
   updateScheduleSchema,
   postDiscussionSchema,
   signupNoteSchema,
+  addChecklistItemSchema,
+  updateChecklistItemSchema,
 };

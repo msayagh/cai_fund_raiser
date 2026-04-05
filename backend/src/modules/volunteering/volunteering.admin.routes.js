@@ -11,6 +11,8 @@ const {
   addScheduleSchema,
   updateScheduleSchema,
   postDiscussionSchema,
+  addChecklistItemSchema,
+  updateChecklistItemSchema,
 } = require('./volunteering.schema');
 
 const router = Router();
@@ -38,5 +40,10 @@ router.delete('/activities/:id/schedules/:sid/signups/:signupId', ctrl.removeSig
 
 // Discussions
 router.post('/activities/:id/discussions', validate(postDiscussionSchema), ctrl.postDiscussion);
+
+// Checklist items
+router.post('/activities/:id/checklist', validate(addChecklistItemSchema), ctrl.addChecklistItem);
+router.patch('/activities/:id/checklist/:itemId', validate(updateChecklistItemSchema), ctrl.updateChecklistItem);
+router.delete('/activities/:id/checklist/:itemId', ctrl.deleteChecklistItem);
 
 module.exports = router;

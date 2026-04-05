@@ -26,4 +26,8 @@ router.patch('/activities/:id/schedules/:sid/signup', validate(signupNoteSchema)
 // Discussions
 router.post('/activities/:id/discussions', validate(postDiscussionSchema), ctrl.postDiscussion);
 
+// Checklist check / uncheck
+router.post('/activities/:id/schedules/:sid/checklist/:itemId/check', ctrl.checkItem);
+router.delete('/activities/:id/schedules/:sid/checklist/:itemId/check', ctrl.uncheckItem);
+
 module.exports = router;

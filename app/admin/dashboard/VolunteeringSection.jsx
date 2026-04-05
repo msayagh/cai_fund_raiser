@@ -16,11 +16,23 @@ import {
     adminPostDiscussion,
     adminRemoveSignup,
     adminPreAssignVolunteer,
+    adminAddChecklistItem,
+    adminUpdateChecklistItem,
+    adminDeleteChecklistItem,
 } from '@/lib/volunteeringApi.js';
 import { getVolunteeringSettings } from '@/lib/settingsApi.js';
 
 const fmtDate = (iso) =>
     iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+const fmtDuration = (mins) => {
+    if (!mins) return null;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+};
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -34,7 +46,7 @@ function getInitials(name) {
     return ((parts[0][0] || '') + (parts[parts.length - 1][0] || '')).toUpperCase();
 }
 
-function CapacityAvatars({ signups, cap, maxShow = MAX_CAP_ICONS }) {
+function CapacityAvatars({ signups, cap, maxShow = MAX_CAP_ICONS, noSignupsLabel = 'No signups yet' }) {
     const active = (signups || []).filter((s) => s.status === 'signed_up');
     const filled = active.length;
     const isUnlimited = !(cap > 0);
@@ -74,7 +86,7 @@ function CapacityAvatars({ signups, cap, maxShow = MAX_CAP_ICONS }) {
                 <span style={{ fontSize: 11, color: 'rgba(160,170,200,.85)', fontWeight: 700, marginLeft: 1 }}>+{overflow}</span>
             )}
             {isUnlimited && filled === 0 && (
-                <span style={{ fontSize: 11, color: 'rgba(160,170,200,.72)' }}>No signups yet</span>
+                <span style={{ fontSize: 11, color: 'rgba(160,170,200,.72)' }}>{noSignupsLabel}</span>
             )}
             {isUnlimited && filled > 0 && (
                 <span style={{ fontSize: 11, color: 'rgba(160,170,200,.72)', marginLeft: 2 }}>∞</span>
@@ -95,6 +107,7 @@ const emptyForm = {
     recurrenceType: 'none',
     recurrenceNote: '',
     maxVolunteers: 0,
+    estimatedMinutes: '',
 };
 
 const emptyScheduleForm = {
@@ -120,14 +133,22 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
         activityTitle: t?.activityTitle || 'Title',
         activityDescription: t?.activityDescription || 'Description',
         activitySkills: t?.activitySkills || 'Skills (comma-separated tags)',
+        activitySkillsPlaceholder: t?.activitySkillsPlaceholder || 'e.g. driving, cooking, IT',
         recurrenceType: t?.recurrenceType || 'Recurrence',
         recurrenceNote: t?.recurrenceNote || 'Recurrence note (e.g. Every Friday)',
+        recurrenceNone: t?.recurrenceNone || 'One-time',
+        recurrenceWeekly: t?.recurrenceWeekly || 'Weekly',
+        recurrenceCustom: t?.recurrenceCustom || 'Custom',
         maxVolunteers: t?.maxVolunteers || 'Max volunteers (0 = unlimited)',
+        estimatedTimeLabel: t?.estimatedTimeLabel || 'Estimated time (minutes)',
+        estimatedTimePlaceholder: t?.estimatedTimePlaceholder || 'e.g. 60',
         addSchedule: t?.addSchedule || 'Add Schedule',
         scheduledAt: t?.scheduledAt || 'Date & Time',
         location: t?.scheduleLocation || 'Location',
+        scheduleLocationPlaceholder: t?.scheduleLocationPlaceholder || 'Optional — e.g. Main hall, Room 3',
         scheduleNotes: t?.scheduleNotes || 'Notes',
         scheduleMaxVol: t?.scheduleMaxVol || 'Override max volunteers',
+        scheduleMaxVolPlaceholder: t?.scheduleMaxVolPlaceholder || 'Leave blank to use activity default',
         signups: t?.signups || 'Signups',
         discussion: t?.discussion || 'Discussion',
         postMessage: t?.postMessage || 'Post',
@@ -136,6 +157,9 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
         reactivate: t?.reactivateActivity || 'Re-activate',
         deleteActivity: t?.deleteActivity || 'Delete permanently',
         deleteActivityConfirm: t?.deleteActivityConfirm || 'Permanently delete this activity? All schedules, signups, and messages will be removed and cannot be recovered.',
+        deactivateConfirm: t?.deactivateConfirm || 'Deactivate this activity? Donors will no longer see it.',
+        reactivateConfirm: t?.reactivateConfirm || 'Re-activate this activity? It will become visible to donors again.',
+        deleteScheduleConfirm: t?.deleteScheduleConfirm || 'Delete this schedule? All signups for it will also be removed.',
         backToList: t?.backToList || '← Back',
         saveActivity: t?.saveActivity || 'Save',
         cancel: t?.cancel || 'Cancel',
@@ -152,12 +176,47 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
         deleteSchedule: t?.deleteSchedule || 'Delete',
         editSchedule: t?.editSchedule || 'Edit',
         saving: t?.saving || 'Saving…',
+        saveFailed: t?.saveFailed || 'Save failed',
         viewSignups: t?.viewSignups || 'View signups',
+        hideRegistrants: t?.hideRegistrants || 'Hide registrants',
         donorName: t?.donorName || 'Donor',
         donorEmail: t?.donorEmail || 'Email',
         signupStatus: t?.signupStatus || 'Status',
         note: t?.note || 'Note',
         noSignups: t?.noSignups || 'No signups yet.',
+        volRecurrenceLabel: t?.volRecurrenceLabel || 'Recurrence',
+        volMaxVolunteersLabel: t?.volMaxVolunteersLabel || 'Max volunteers',
+        volEstTimeLabel: t?.volEstTimeLabel || 'Est. time',
+        volStatusLabel: t?.volStatusLabel || 'Status',
+        volTotalSignupsLabel: t?.volTotalSignupsLabel || 'Total signups',
+        volSchedulesTitle: t?.volSchedulesTitle || 'Schedules',
+        volNoSchedules: t?.volNoSchedules || 'No schedules yet.',
+        volVolunteersLabel: t?.volVolunteersLabel || 'Volunteers',
+        volRemoveBtn: t?.volRemoveBtn || 'Remove',
+        volPreAssignLabel: t?.volPreAssignLabel || 'Pre-assign a volunteer by email:',
+        volPreAssign: t?.volPreAssign || 'Pre-assign',
+        volPreAssignSaving: t?.volPreAssignSaving || 'Saving…',
+        volConfirmRemoveVolunteer: t?.volConfirmRemoveVolunteer || 'Remove this volunteer from the schedule?',
+        volErrorRemoveSignup: t?.volErrorRemoveSignup || 'Failed to remove signup',
+        volChecklistTitle: t?.volChecklistTitle || 'Task Checklist',
+        volNoChecklist: t?.volNoChecklist || 'No checklist items yet. Add items volunteers must complete.',
+        volChecklistSave: t?.volChecklistSave || 'Save',
+        volChecklistEdit: t?.volChecklistEdit || 'Edit',
+        volChecklistAdd: t?.volChecklistAdd || '+ Add item',
+        volChecklistAddPlaceholder: t?.volChecklistAddPlaceholder || 'Add a new checklist item…',
+        volChecklistAdding: t?.volChecklistAdding || 'Adding…',
+        volConfirmDeleteChecklist: t?.volConfirmDeleteChecklist || 'Delete this checklist item? All volunteer progress on it will also be removed.',
+        volErrorAddChecklist: t?.volErrorAddChecklist || 'Failed to add item',
+        volErrorDeleteChecklist: t?.volErrorDeleteChecklist || 'Failed to delete item',
+        volErrorUpdateChecklist: t?.volErrorUpdateChecklist || 'Failed to update item',
+        volUnlimited: t?.volUnlimited || 'Unlimited',
+        volNoMessages: t?.volNoMessages || 'No messages yet.',
+        volErrorPost: t?.volErrorPost || 'Failed to post',
+        volErrorLoadActivities: t?.volErrorLoadActivities || 'Failed to load activities',
+        showInactive: t?.showInactive || 'Show inactive',
+        notYetScheduled: t?.notYetScheduled || 'Not Yet Scheduled',
+        volItemSingular: t?.volItemSingular || 'item',
+        volItemPlural: t?.volItemPlural || 'items',
     };
 
     // ── List view state ──
@@ -199,6 +258,13 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
     const selectedIdRef = useRef(null);
     const [showUnscheduled, setShowUnscheduled] = useState(false);
 
+    // ── Checklist ──
+    const [newChecklistTitle, setNewChecklistTitle] = useState('');
+    const [checklistAdding, setChecklistAdding] = useState(false);
+    const [checklistError, setChecklistError] = useState('');
+    const [editingChecklistItem, setEditingChecklistItem] = useState(null); // { id, title }
+    const [editingChecklistTitle, setEditingChecklistTitle] = useState('');
+
     // ── Load list ──
     const loadList = useCallback(async () => {
         setListLoading(true);
@@ -207,7 +273,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
             const res = await adminListActivities({ includeInactive: includeInactive ? 'true' : 'false', limit: 100 });
             setActivities(res?.items || []);
         } catch (err) {
-            setListError(err.message || 'Failed to load activities');
+            setListError(err.message || ui.volErrorLoadActivities);
         } finally {
             setListLoading(false);
         }
@@ -263,6 +329,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
             recurrenceType: activity.recurrenceType,
             recurrenceNote: activity.recurrenceNote || '',
             maxVolunteers: activity.maxVolunteers,
+            estimatedMinutes: activity.estimatedMinutes ?? '',
         });
         setFormError('');
         setShowForm(true);
@@ -280,6 +347,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                 recurrenceType: form.recurrenceType,
                 recurrenceNote: form.recurrenceNote || undefined,
                 maxVolunteers: Number(form.maxVolunteers) || 0,
+                estimatedMinutes: form.estimatedMinutes ? Number(form.estimatedMinutes) : null,
             };
             if (editingActivity) {
                 await adminUpdateActivity(editingActivity.id, payload);
@@ -290,21 +358,21 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
             setShowForm(false);
             loadList();
         } catch (err) {
-            setFormError(err.message || 'Save failed');
+            setFormError(err.message || ui.saveFailed);
         } finally {
             setFormSaving(false);
         }
     };
 
     const handleDeactivate = async (id) => {
-        if (!window.confirm('Deactivate this activity? Donors will no longer see it.')) return;
+        if (!window.confirm(ui.deactivateConfirm)) return;
         await adminDeactivateActivity(id);
         loadList();
         if (selected?.id === id) await refreshSelected();
     };
 
     const handleReactivate = async (id) => {
-        if (!window.confirm('Re-activate this activity? It will become visible to donors again.')) return;
+        if (!window.confirm(ui.reactivateConfirm)) return;
         await adminReactivateActivity(id);
         loadList();
         if (selected?.id === id) await refreshSelected();
@@ -356,14 +424,14 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
             setShowScheduleForm(false);
             await refreshSelected();
         } catch (err) {
-            setScheduleError(err.message || 'Save failed');
+            setScheduleError(err.message || ui.saveFailed);
         } finally {
             setScheduleSaving(false);
         }
     };
 
     const handleDeleteSchedule = async (scheduleId) => {
-        if (!window.confirm('Delete this schedule? All signups for it will also be removed.')) return;
+        if (!window.confirm(ui.deleteScheduleConfirm)) return;
         await adminDeleteSchedule(selected.id, scheduleId);
         await refreshSelected();
     };
@@ -375,12 +443,12 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
 
     // ── Discussion handler ──
     const handleRemoveSignup = async (scheduleId, signupId) => {
-        if (!window.confirm('Remove this volunteer from the schedule?')) return;
+        if (!window.confirm(ui.volConfirmRemoveVolunteer)) return;
         try {
             await adminRemoveSignup(selected.id, scheduleId, signupId);
             await refreshSelected();
         } catch (err) {
-            window.alert(err.message || 'Failed to remove signup');
+            window.alert(err.message || ui.volErrorRemoveSignup);
         }
     };
 
@@ -400,9 +468,48 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
         }
     };
 
-    // ── Original discussion handler ──
-    const handlePostDiscussion = async (e) => {
+    // ── Checklist handlers ──
+    const handleAddChecklistItem = async (e) => {
         e.preventDefault();
+        const title = newChecklistTitle.trim();
+        if (!title) return;
+        setChecklistAdding(true);
+        setChecklistError('');
+        try {
+            await adminAddChecklistItem(selected.id, { title });
+            setNewChecklistTitle('');
+            await refreshSelected();
+        } catch (err) {
+            setChecklistError(err.message || ui.volErrorAddChecklist);
+        } finally {
+            setChecklistAdding(false);
+        }
+    };
+
+    const handleDeleteChecklistItem = async (itemId) => {
+        if (!window.confirm(ui.volConfirmDeleteChecklist)) return;
+        try {
+            await adminDeleteChecklistItem(selected.id, itemId);
+            await refreshSelected();
+        } catch (err) {
+            window.alert(err.message || ui.volErrorDeleteChecklist);
+        }
+    };
+
+    const handleSaveChecklistItemEdit = async (itemId) => {
+        const title = editingChecklistTitle.trim();
+        if (!title) return;
+        try {
+            await adminUpdateChecklistItem(selected.id, itemId, { title });
+            setEditingChecklistItem(null);
+            await refreshSelected();
+        } catch (err) {
+            window.alert(err.message || ui.volErrorUpdateChecklist);
+        }
+    };
+
+    // ── Original discussion handler ──
+    const handlePostDiscussion = async (e) => {        e.preventDefault();
         if (!discussionMsg.trim()) return;
         setDiscussionSending(true);
         setDiscussionError('');
@@ -412,7 +519,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
             await refreshSelected();
             setTimeout(() => discussionEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         } catch (err) {
-            setDiscussionError(err.message || 'Failed to post');
+            setDiscussionError(err.message || ui.volErrorPost);
         } finally {
             setDiscussionSending(false);
         }
@@ -438,14 +545,14 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                             <textarea className="admin-input vol-textarea" style={inputStyle} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} required rows={4} />
                         </label>
                         <label className="vol-label">{ui.activitySkills}
-                            <input className="admin-input" style={inputStyle} value={form.skills} onChange={(e) => setForm((f) => ({ ...f, skills: e.target.value }))} placeholder="e.g. driving, cooking, IT" />
+                            <input className="admin-input" style={inputStyle} value={form.skills} onChange={(e) => setForm((f) => ({ ...f, skills: e.target.value }))} placeholder={ui.activitySkillsPlaceholder} />
                         </label>
                         <div className="vol-row">
                             <label className="vol-label">{ui.recurrenceType}
                                 <select className="admin-input" style={inputStyle} value={form.recurrenceType} onChange={(e) => setForm((f) => ({ ...f, recurrenceType: e.target.value }))}>
-                                    <option value="none">One-time</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="custom">Custom</option>
+                                    <option value="none">{ui.recurrenceNone}</option>
+                                    <option value="weekly">{ui.recurrenceWeekly}</option>
+                                    <option value="custom">{ui.recurrenceCustom}</option>
                                 </select>
                             </label>
                             <label className="vol-label">{ui.recurrenceNote}
@@ -454,6 +561,9 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                         </div>
                         <label className="vol-label">{ui.maxVolunteers}
                             <input type="number" min="0" className="admin-input" style={inputStyle} value={form.maxVolunteers} onChange={(e) => setForm((f) => ({ ...f, maxVolunteers: e.target.value }))} />
+                        </label>
+                        <label className="vol-label">{ui.estimatedTimeLabel}
+                            <input type="number" min="1" max="1440" className="admin-input" style={inputStyle} value={form.estimatedMinutes} onChange={(e) => setForm((f) => ({ ...f, estimatedMinutes: e.target.value }))} placeholder={ui.estimatedTimePlaceholder} />
                         </label>
                         <div className="vol-form-actions">
                             <button type="button" className="admin-button secondary" onClick={() => setShowForm(false)}>{ui.cancel}</button>
@@ -480,13 +590,13 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                             <input type="datetime-local" className="admin-input" style={inputStyle} value={scheduleForm.scheduledAt} onChange={(e) => setScheduleForm((f) => ({ ...f, scheduledAt: e.target.value }))} required />
                         </label>
                         <label className="vol-label">{ui.location}
-                            <input className="admin-input" style={inputStyle} value={scheduleForm.location} onChange={(e) => setScheduleForm((f) => ({ ...f, location: e.target.value }))} placeholder="Optional — e.g. Main hall, Room 3" />
+                            <input className="admin-input" style={inputStyle} value={scheduleForm.location} onChange={(e) => setScheduleForm((f) => ({ ...f, location: e.target.value }))} placeholder={ui.scheduleLocationPlaceholder} />
                         </label>
                         <label className="vol-label">{ui.scheduleNotes}
                             <textarea className="admin-input vol-textarea" style={inputStyle} value={scheduleForm.notes} onChange={(e) => setScheduleForm((f) => ({ ...f, notes: e.target.value }))} rows={3} />
                         </label>
                         <label className="vol-label">{ui.scheduleMaxVol}
-                            <input type="number" min="1" className="admin-input" style={inputStyle} value={scheduleForm.maxVolunteers} onChange={(e) => setScheduleForm((f) => ({ ...f, maxVolunteers: e.target.value }))} placeholder="Leave blank to use activity default" />
+                            <input type="number" min="1" className="admin-input" style={inputStyle} value={scheduleForm.maxVolunteers} onChange={(e) => setScheduleForm((f) => ({ ...f, maxVolunteers: e.target.value }))} placeholder={ui.scheduleMaxVolPlaceholder} />
                         </label>
                         <div className="vol-form-actions">
                             <button type="button" className="admin-button secondary" onClick={() => setShowScheduleForm(false)}>{ui.cancel}</button>
@@ -500,7 +610,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
 
     // Detail view
     if (selected || detailLoading) {
-        if (detailLoading) return <div className="admin-card" style={cardStyle}><div className="admin-muted">Loading…</div></div>;
+        if (detailLoading) return <div className="admin-card" style={cardStyle}><div className="admin-muted">{ui.volLoading}</div></div>;
 
         const allSignups = (selected.schedules || []).flatMap((sch) =>
             (sch.signups || []).map((su) => ({ ...su, schedule: sch }))
@@ -535,19 +645,20 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                     )}
 
                     <div className="admin-grid admin-grid--4cols mb-md">
-                        <div className="admin-stat"><div className="admin-muted">Recurrence</div><div className="admin-value-md">{selected.recurrenceNote || selected.recurrenceType}</div></div>
-                        <div className="admin-stat"><div className="admin-muted">Max volunteers</div><div className="admin-value-md">{selected.maxVolunteers === 0 ? 'Unlimited' : selected.maxVolunteers}</div></div>
-                        <div className="admin-stat"><div className="admin-muted">Status</div><div className="admin-value-md">{selected.isActive ? ui.statusActive : ui.statusInactive}</div></div>
-                        <div className="admin-stat"><div className="admin-muted">Total signups</div><div className="admin-value-md">{allSignups.length}</div></div>
+                        <div className="admin-stat"><div className="admin-muted">{ui.volRecurrenceLabel}</div><div className="admin-value-md">{selected.recurrenceNote || selected.recurrenceType}</div></div>
+                        <div className="admin-stat"><div className="admin-muted">{ui.volMaxVolunteersLabel}</div><div className="admin-value-md">{selected.maxVolunteers === 0 ? ui.volUnlimited : selected.maxVolunteers}</div></div>
+                        <div className="admin-stat"><div className="admin-muted">{ui.volEstTimeLabel}</div><div className="admin-value-md">{fmtDuration(selected.estimatedMinutes) || '—'}</div></div>
+                        <div className="admin-stat"><div className="admin-muted">{ui.volStatusLabel}</div><div className="admin-value-md">{selected.isActive ? ui.statusActive : ui.statusInactive}</div></div>
+                        <div className="admin-stat"><div className="admin-muted">{ui.volTotalSignupsLabel}</div><div className="admin-value-md">{allSignups.length}</div></div>
                     </div>
 
                     <div className="vol-section-header mb-sm">
-                        <span className="admin-section-title" style={{ fontSize: '1rem' }}>Schedules</span>
+                        <span className="admin-section-title" style={{ fontSize: '1rem' }}>{ui.volSchedulesTitle}</span>
                         <button type="button" className="admin-button" onClick={openAddSchedule}>{ui.addSchedule}</button>
                     </div>
 
                     {(selected.schedules?.length ?? 0) === 0 ? (
-                        <div className="admin-muted mb-md">No schedules yet.</div>
+                        <div className="admin-muted mb-md">{ui.volNoSchedules}</div>
                     ) : (
                         <div className="vol-schedule-list mb-md">
                             {selected.schedules?.map((sch) => (
@@ -557,12 +668,12 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                         <div className="admin-muted">{sch.location}</div>
                                         {sch.notes && <div className="admin-muted mt-sm">{sch.notes}</div>}
                                         <div className="mt-sm">
-                                            <div className="admin-muted" style={{ fontSize: 11, marginBottom: 6 }}>Volunteers</div>
-                                            <CapacityAvatars signups={sch.signups || []} cap={sch.maxVolunteers || selected.maxVolunteers} />
+                                            <div className="admin-muted" style={{ fontSize: 11, marginBottom: 6 }}>{ui.volVolunteersLabel}</div>
+                                            <CapacityAvatars signups={sch.signups || []} cap={sch.maxVolunteers || selected.maxVolunteers} noSignupsLabel={ui.volNoSignupsYet} />
                                         </div>
                                     </div>
                                     <div className="vol-schedule-actions">
-                                        <span className={`vol-status vol-status--${sch.status}`}>{sch.status}</span>
+                                        <span className={`vol-status vol-status--${sch.status}`}>{sch.status === 'upcoming' ? ui.statusUpcoming : sch.status === 'completed' ? ui.statusCompleted : ui.statusCancelled}</span>
                                         {sch.status === 'upcoming' && (
                                             <>
                                                 <button type="button" className="admin-button secondary" onClick={() => openEditSchedule(sch)}>{ui.editSchedule}</button>
@@ -588,7 +699,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                             className="admin-button secondary"
                                             onClick={() => setExpandedScheduleSignups(expandedScheduleSignups === sch.id ? null : sch.id)}
                                         >
-                                            {expandedScheduleSignups === sch.id ? 'Hide registrants' : `${ui.viewSignups} (${sch.signups?.length ?? 0})`}
+                                            {expandedScheduleSignups === sch.id ? ui.hideRegistrants : `${ui.viewSignups} (${sch.signups?.length ?? 0})`}
                                         </button>
                                     </div>
                                     {expandedScheduleSignups === sch.id && (
@@ -619,9 +730,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                                                         className="admin-button danger"
                                                                         style={{ padding: '2px 8px', fontSize: 12 }}
                                                                         onClick={() => handleRemoveSignup(sch.id, su.id)}
-                                                                    >
-                                                                        Remove
-                                                                    </button>
+                                                                        >{ui.volRemoveBtn}</button>
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -630,7 +739,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                             )}
                                             {/* Pre-assign a volunteer */}
                                             <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                                                <div className="admin-muted" style={{ fontSize: 12, marginBottom: 6 }}>Pre-assign a volunteer by email:</div>
+                                                <div className="admin-muted" style={{ fontSize: 12, marginBottom: 6 }}>{ui.volPreAssignLabel}</div>
                                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                                     <input
                                                         className="admin-input"
@@ -647,7 +756,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                                         disabled={preAssignSaving === sch.id}
                                                         onClick={() => handlePreAssign(sch.id)}
                                                     >
-                                                        {preAssignSaving === sch.id ? 'Saving…' : 'Pre-assign'}
+                                                        {preAssignSaving === sch.id ? ui.volPreAssignSaving : ui.volPreAssign}
                                                     </button>
                                                 </div>
                                                 {preAssignError[sch.id] && (
@@ -664,8 +773,69 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                     )}
                 </div>
 
-                {/* ── All Registrants — grouped by schedule ── */}
-                {allSignups.length > 0 && (
+                {/* ── Checklist items ── */}
+                <div className="admin-card" style={cardStyle}>
+                    <div className="admin-inline admin-inline--between mb-md">
+                        <div className="admin-section-title">{ui.volChecklistTitle}</div>
+                        <span className="admin-muted" style={{ fontSize: 12 }}>
+                            {(selected.checklistItems?.length ?? 0)} {(selected.checklistItems?.length ?? 0) !== 1 ? ui.volItemPlural : ui.volItemSingular}
+                        </span>
+                    </div>
+                    {(selected.checklistItems?.length ?? 0) === 0 ? (
+                        <div className="admin-muted mb-md">{ui.volNoChecklist}</div>
+                    ) : (
+                        <div className="vol-checklist-list mb-md">
+                            {selected.checklistItems.map((item, idx) => (
+                                <div key={item.id} className="vol-checklist-item">
+                                    <span className="vol-checklist-num">{idx + 1}.</span>
+                                    {editingChecklistItem === item.id ? (
+                                        <input
+                                            className="admin-input"
+                                            style={{ ...inputStyle, flex: 1, padding: '4px 8px' }}
+                                            value={editingChecklistTitle}
+                                            onChange={(e) => setEditingChecklistTitle(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleSaveChecklistItemEdit(item.id);
+                                                if (e.key === 'Escape') setEditingChecklistItem(null);
+                                            }}
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <span className="vol-checklist-title">{item.title}</span>
+                                    )}
+                                    <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                                        {editingChecklistItem === item.id ? (
+                                            <>
+                                                <button type="button" className="admin-button" style={{ padding: '2px 10px', fontSize: 12 }} onClick={() => handleSaveChecklistItemEdit(item.id)}>{ui.volChecklistSave}</button>
+                                                <button type="button" className="admin-button secondary" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => setEditingChecklistItem(null)}>{ui.cancel}</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button type="button" className="admin-button secondary" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => { setEditingChecklistItem(item.id); setEditingChecklistTitle(item.title); }}>{ui.volChecklistEdit}</button>
+                                                <button type="button" className="admin-button danger" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => handleDeleteChecklistItem(item.id)}>✕</button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {checklistError && <div className="banner banner--error mb-sm" style={{ fontSize: 13 }}>{checklistError}</div>}
+                    <form onSubmit={handleAddChecklistItem} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <input
+                            className="admin-input"
+                            style={{ ...inputStyle, flex: '1 1 200px' }}
+                            value={newChecklistTitle}
+                            onChange={(e) => setNewChecklistTitle(e.target.value)}
+                            placeholder={ui.volChecklistAddPlaceholder}
+                        />
+                        <button type="submit" className="admin-button" disabled={checklistAdding || !newChecklistTitle.trim()}>
+                            {checklistAdding ? ui.volChecklistAdding : ui.volChecklistAdd}
+                        </button>
+                    </form>
+                </div>
+
+                {/* ── All Registrants — grouped by schedule ── */}                {allSignups.length > 0 && (
                     <div className="admin-card" style={cardStyle}>
                         <div className="admin-section-title mb-md">{ui.signups} ({allSignups.length})</div>
                         {(selected.schedules || []).map((sch) => {
@@ -681,13 +851,13 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                         background: 'rgba(255,255,255,.04)', borderRadius: 8,
                                         borderLeft: '3px solid rgba(100,130,255,.4)',
                                     }}>
-                                        <span className={`vol-status vol-status--${sch.status}`} style={{ fontSize: 11 }}>{sch.status}</span>
+                                        <span className={`vol-status vol-status--${sch.status}`} style={{ fontSize: 11 }}>{sch.status === 'upcoming' ? ui.statusUpcoming : sch.status === 'completed' ? ui.statusCompleted : ui.statusCancelled}</span>
                                         <span style={{ fontWeight: 600, fontSize: 13, color: '#e0e6ff' }}>{fmtDate(sch.scheduledAt)}</span>
                                         {sch.location && (
                                             <span className="admin-muted" style={{ fontSize: 12 }}>📍 {sch.location}</span>
                                         )}
                                         <div style={{ marginLeft: 'auto' }}>
-                                            <CapacityAvatars signups={schSignups} cap={schCap} maxShow={10} />
+                                            <CapacityAvatars signups={schSignups} cap={schCap} maxShow={10} noSignupsLabel={ui.volNoSignupsYet} />
                                         </div>
                                     </div>
                                     {/* Signups table for this schedule */}
@@ -739,7 +909,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                         </div>
                     </div>
                     <div className="vol-discussion-list mb-md">
-                        {selected.discussions?.length === 0 && <div className="admin-muted">No messages yet.</div>}
+                        {selected.discussions?.length === 0 && <div className="admin-muted">{ui.volNoMessages}</div>}
                         {selected.discussions?.map((msg) => (
                             <div key={msg.id} className={`vol-msg vol-msg--${msg.authorType}`}>
                                 <div className="vol-msg-author">
@@ -794,7 +964,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                 <div className="vol-action-row">
                     <label className="vol-toggle-label">
                         <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} />
-                        Show inactive
+                        {ui.showInactive}
                     </label>
                     <button type="button" className="admin-button" onClick={openCreateForm}>{ui.createActivity}</button>
                 </div>
@@ -803,7 +973,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
             {listError && <div className="banner banner--error mb-md">{listError}</div>}
 
             {listLoading ? (
-                <div className="admin-muted">Loading…</div>
+                <div className="admin-muted">{ui.volLoading}</div>
             ) : activities.length === 0 ? (
                 <div className="admin-item">{ui.noActivities}</div>
             ) : (() => {
@@ -857,7 +1027,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                     <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform .2s', transform: showUnscheduled ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
                                         <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
-                                    Not Yet Scheduled
+                                    {ui.notYetScheduled}
                                     <span style={{ fontSize: 11, fontWeight: 600, background: 'rgba(255,255,255,.08)', borderRadius: 999, padding: '1px 7px' }}>{withoutSchedules.length}</span>
                                 </button>
                                 {showUnscheduled && (
@@ -869,7 +1039,7 @@ export default function VolunteeringSection({ cardStyle, inputStyle, adminId, ad
                                                     <div className="admin-muted">
                                                         {act.recurrenceNote || act.recurrenceType}
                                                         {' · '}
-                                                        <span className="vol-status vol-status--inactive" style={{ fontSize: '0.7rem' }}>No schedules yet</span>
+                                                        <span className="vol-status vol-status--inactive" style={{ fontSize: '0.7rem' }}>{ui.volNoSchedules}</span>
                                                     </div>
                                                 </div>
                                                 <span className={`vol-status vol-status--${act.isActive ? 'active' : 'inactive'}`}>

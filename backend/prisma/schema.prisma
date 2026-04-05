@@ -161,15 +161,17 @@ model VolunteerActivity {
   recurrenceType   String   @default("none")
   recurrenceNote   String?
   maxVolunteers    Int      @default(0)
+  estimatedMinutes Int?
   isActive         Boolean  @default(true)
   createdByAdminId String
   createdByAdmin   Admin    @relation("AdminVolunteerActivities", fields: [createdByAdminId], references: [id])
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  schedules   ActivitySchedule[]
-  signups     ActivitySignup[]
-  discussions ActivityDiscussion[]
+  schedules      ActivitySchedule[]
+  signups        ActivitySignup[]
+  discussions    ActivityDiscussion[]
+  checklistItems ActivityChecklistItem[]
 }
 
 model ActivitySchedule {
@@ -200,6 +202,8 @@ model ActivitySignup {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
 
+  checklistProgress SignupChecklist[]
+
   @@unique([scheduleId, donorId])
 }
 
@@ -220,4 +224,29 @@ model AppSetting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+// ─── Volunteering Checklist ───────────────────────────────────────────────────
+
+model ActivityChecklistItem {
+  id         String            @id @default(cuid())
+  activityId String
+  activity   VolunteerActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  title      String
+  order      Int               @default(0)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  checkProgress SignupChecklist[]
+}
+
+model SignupChecklist {
+  id              String                @id @default(cuid())
+  signupId        String
+  signup          ActivitySignup        @relation(fields: [signupId], references: [id], onDelete: Cascade)
+  checklistItemId String
+  checklistItem   ActivityChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  checkedAt       DateTime              @default(now())
+
+  @@unique([signupId, checklistItemId])
 }

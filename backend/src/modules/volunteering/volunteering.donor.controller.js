@@ -72,6 +72,24 @@ const postDiscussion = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Checklist check / uncheck ──────────────────────────────────────────────────
+
+const checkItem = async (req, res, next) => {
+  try {
+    const { id: activityId, sid: scheduleId, itemId } = req.params;
+    const data = await service.checkItem(activityId, scheduleId, req.donor.id, itemId);
+    sendSuccess(res, data, 'Item checked', 201);
+  } catch (err) { next(err); }
+};
+
+const uncheckItem = async (req, res, next) => {
+  try {
+    const { id: activityId, sid: scheduleId, itemId } = req.params;
+    await service.uncheckItem(activityId, scheduleId, req.donor.id, itemId);
+    sendSuccess(res, null, 'Item unchecked');
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   listActivities,
   getActivity,
@@ -80,4 +98,6 @@ module.exports = {
   updateSignupNote,
   getMySignups,
   postDiscussion,
+  checkItem,
+  uncheckItem,
 };

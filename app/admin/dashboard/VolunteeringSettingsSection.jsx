@@ -94,7 +94,8 @@ function ToggleRow({ label, description, checked, onChange, disabled = false, in
     );
 }
 
-export default function VolunteeringSettingsSection({ cardStyle }) {
+export default function VolunteeringSettingsSection({ cardStyle, adminText }) {
+    const ui = adminText || {};
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -133,9 +134,9 @@ export default function VolunteeringSettingsSection({ cardStyle }) {
             const saved = await updateVolunteeringSettings(settings);
             setSettings({ ...DEFAULT_SETTINGS, ...saved });
             setDirty(false);
-            setMessage('Settings saved successfully.');
+            setMessage(ui.volSettingsSaved || 'Settings saved successfully.');
         } catch (err) {
-            setError(err?.message || 'Failed to save settings.');
+            setError(err?.message || ui.volSettingsFailed || 'Failed to save settings.');
         } finally {
             setSaving(false);
         }
@@ -144,7 +145,7 @@ export default function VolunteeringSettingsSection({ cardStyle }) {
     if (loading) {
         return (
             <div className="admin-card" style={cardStyle}>
-                <div className="admin-muted">Loading settings…</div>
+                <div className="admin-muted">{ui.volSettingsLoading || 'Loading settings…'}</div>
             </div>
         );
     }
@@ -157,13 +158,12 @@ export default function VolunteeringSettingsSection({ cardStyle }) {
             {/* ── Volunteering feature toggles ── */}
             <div className="admin-card" style={cardStyle}>
                 <div style={{ marginBottom: 20 }}>
-                    <div className="admin-section-title" style={{ marginBottom: 4 }}>Volunteering</div>
+                    <div className="admin-section-title" style={{ marginBottom: 4 }}>{ui.volSettingsTitle || 'Volunteering'}</div>
                     <div className="admin-muted" style={{ fontSize: 14, lineHeight: 1.6 }}>
-                        Control visibility of the volunteering module and its sub-features for donors.
-                        Disabling the master switch automatically hides all sub-features.
+                        {ui.volSettingsDescription || 'Control visibility of the volunteering module and its sub-features for donors. Disabling the master switch automatically hides all sub-features.'}
                         {!FEATURES.VOLUNTEERING && (
                             <span style={{ color: '#f14668', fontWeight: 600, display: 'block', marginTop: 6 }}>
-                                ⚠ The NEXT_PUBLIC_FEATURE_VOLUNTEERING env flag is off — donors cannot see volunteering regardless of these settings.
+                                {ui.volSettingsEnvWarning || '⚠ The NEXT_PUBLIC_FEATURE_VOLUNTEERING env flag is off — donors cannot see volunteering regardless of these settings.'}
                             </span>
                         )}
                     </div>
@@ -171,8 +171,8 @@ export default function VolunteeringSettingsSection({ cardStyle }) {
 
                 {/* Master toggle */}
                 <ToggleRow
-                    label="Volunteering Module"
-                    description="When disabled, the Volunteering tab is hidden from donors entirely and none of the sub-features are accessible."
+                    label={ui.volSettingsModuleLabel || 'Volunteering Module'}
+                    description={ui.volSettingsModuleDesc || 'When disabled, the Volunteering tab is hidden from donors entirely and none of the sub-features are accessible.'}
                     checked={settings.volEnabled}
                     onChange={(v) => update('volEnabled', v)}
                 />
@@ -186,24 +186,24 @@ export default function VolunteeringSettingsSection({ cardStyle }) {
                     transition: 'border-color 0.2s',
                 }}>
                     <ToggleRow
-                        label="Discussion"
-                        description="Show the discussion / messaging panel inside each activity detail view, allowing donors to communicate with admins."
+                        label={ui.volSettingsDiscussionLabel || 'Discussion'}
+                        description={ui.volSettingsDiscussionDesc || 'Show the discussion / messaging panel inside each activity detail view, allowing donors to communicate with admins.'}
                         checked={settings.volShowDiscussion}
                         onChange={(v) => update('volShowDiscussion', v)}
                         disabled={subDisabled}
                         indent
                     />
                     <ToggleRow
-                        label="Activity History"
-                        description='Show the "Show activity history" button that lets donors browse their past activity sign-ups.'
+                        label={ui.volSettingsHistoryLabel || 'Activity History'}
+                        description={ui.volSettingsHistoryDesc || 'Show the “Show activity history” button that lets donors browse their past activity sign-ups.'}
                         checked={settings.volShowHistory}
                         onChange={(v) => update('volShowHistory', v)}
                         disabled={subDisabled}
                         indent
                     />
                     <ToggleRow
-                        label="Not Yet Scheduled Activities"
-                        description='Show the collapsible "Not Yet Scheduled" section listing activities that have no upcoming sessions.'
+                        label={ui.volSettingsUnscheduledLabel || 'Not Yet Scheduled Activities'}
+                        description={ui.volSettingsUnscheduledDesc || 'Show the collapsible “Not Yet Scheduled” section listing activities that have no upcoming sessions.'}
                         checked={settings.volShowUnscheduled}
                         onChange={(v) => update('volShowUnscheduled', v)}
                         disabled={subDisabled}
@@ -220,7 +220,7 @@ export default function VolunteeringSettingsSection({ cardStyle }) {
                         onClick={handleSave}
                         style={{ opacity: dirty ? 1 : 0.55 }}
                     >
-                        {saving ? 'Saving…' : 'Save settings'}
+                        {saving ? (ui.volSettingsSaving || 'Saving…') : (ui.volSettingsSave || 'Save settings')}
                     </button>
                     {message && (
                         <span style={{ color: '#48c78e', fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>

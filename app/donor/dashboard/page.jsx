@@ -14,7 +14,7 @@ import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
-import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText, TRANSLATION_MODULES } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import {
     createEngagement, getMe, getMyPayments, getMyRequests,
     updateEngagement, updateMe, updateMyPassword,
@@ -49,117 +49,6 @@ function Ico({ size = 16, children }) {
 // ─────────────────────────────────────────────
 // Donor i18n fallback (English) — module-level constant
 // ─────────────────────────────────────────────
-const EN_DONOR = {
-    welcome: 'Welcome',
-    settings: 'Settings',
-    contactAdmin: 'Contact admin',
-    logout: 'Log out',
-    engTitle: 'Your engagement',
-    editEng: 'Edit engagement',
-    historyTitle: 'Payment history',
-    makePayment: 'Make a payment',
-    paid: 'Paid so far',
-    pledged: 'Total pledged',
-    remaining: 'Remaining',
-    deadline: 'Deadline',
-    daysLeft: 'days remaining',
-    stateInProgress: 'Engagement in progress',
-    stateOverdue: 'Engagement overdue',
-    stateCompleted: 'Engagement completed',
-    chipInProgress: 'In progress',
-    chipOverdue: 'Overdue',
-    chipCompleted: 'Completed',
-    noPayments: 'No payments recorded yet.',
-    profile: 'Profile',
-    password: 'Password',
-    saveProfile: 'Save profile',
-    updatePwd: 'Update password',
-    curPwd: 'Current password',
-    newPwd: 'New password',
-    confPwd: 'Confirm password',
-    pledgeAmt: 'Pledge amount ($)',
-    updateEng: 'Update engagement',
-    createEng: 'Create engagement',
-    reqType: 'Request type',
-    message: 'Message',
-    yourName: 'Your name',
-    yourEmail: 'E-mail',
-    payViaZeffy: 'Pay via Zeffy',
-    submitCash: 'Submit cash receipt',
-    amount: 'Amount ($)',
-    note: 'Note',
-    sendReq: 'Send request',
-    attachFiles: 'Attach files (optional)',
-    zeffySoon: 'Once your Zeffy payment is completed, it will be reflected in your dashboard within a few minutes.',
-    payDesc: 'Pay online or submit a cash payment receipt.',
-    payZeffyNote: 'Your payment will appear here automatically within a few minutes after completion.',
-    zeffyBtnLabel: 'Pay via Zeffy (new tab)',
-    contactDesc: 'Send us a message for support or any question.',
-    cashOk: 'Cash payment request submitted.',
-    pwdMismatch: 'Passwords do not match.',
-    colDate: 'Date',
-    colDisplayName: 'Display name',
-    colAmount: 'Amount',
-    colMethod: 'Method',
-    colNote: 'Note',
-    colReceipt: 'Receipt',
-    adminNote: 'Note for admin',
-    personalNote: 'Personal note',
-    viewReceipt: 'View receipt',
-    personalNotePh: 'Note visible only to you in your payment history',
-    adminNotePh: 'Message for the admin team',
-    or: 'or',
-    name: 'Name',
-    reqGeneral: 'General request',
-    reqPayment: 'Payment upload',
-    reqEngagement: 'Engagement change',
-    reqAccount: 'Account help',
-    // Success messages
-    profileUpdated: 'Profile updated successfully.',
-    passwordUpdated: 'Password updated successfully.',
-    engUpdated: 'Engagement updated successfully.',
-    reqSubmitted: 'Request submitted successfully.',
-    // Error messages
-    invalidAmount: 'Please enter a valid amount.',
-    invalidPledge: 'Please enter a valid pledge amount.',
-    invalidDate: 'Please enter a valid date (YYYY-MM-DD).',
-    errUpdateProfile: 'Unable to update profile.',
-    errUpdatePassword: 'Unable to update password.',
-    errUpdateEng: 'Unable to update engagement.',
-    errSubmitReq: 'Unable to submit request.',
-    errSubmitCash: 'Unable to submit cash payment.',
-    // Pending payments
-    pendingBadge: 'Pending',
-    pendingInfo: 'Awaiting admin confirmation — you can edit or cancel this submission.',
-    editPayment: 'Edit',
-    cancelPayment: 'Cancel',
-    confirmCancel: 'Are you sure you want to cancel this pending payment?',
-    paymentCancelled: 'Pending payment cancelled.',
-    paymentUpdated: 'Pending payment updated.',
-    chooseMethod: 'How would you like to pay?',
-    payByCash: 'Cash / Interac',
-    cashGuidance: 'To help us validate your payment, always include: your email on the envelope (cash), or the Interac transaction number / a screenshot of the transfer.',
-    backToMethod: '← Back',
-    close: 'Close',
-    loadingDashboard: 'Loading dashboard',
-    loading: 'Loading',
-    donorNavigation: 'Donor navigation',
-    menu: 'Menu',
-    sessionExpired: 'Session expired. Please log in again.',
-    unableLoadDashboard: 'Unable to load dashboard.',
-    fullNamePlaceholder: 'Full name',
-    emailPlaceholder: 'Email',
-    pledgeExample: 'e.g. 2000',
-    zeroPlaceholder: '0',
-    paymentMethodCash: 'Cash',
-    paymentMethodZeffy: 'Zeffy',
-    collapseSidebar: 'Collapse sidebar',
-    expandSidebar: 'Expand sidebar',
-    dashboard: 'My donations',
-    sectionCommunity: 'My community',
-    sectionSupport: 'Support',
-};
-
 // ─────────────────────────────────────────────
 // Engagement-state colour tokens
 // ─────────────────────────────────────────────
@@ -262,16 +151,11 @@ export default function DonorDashboardPage() {
     const siteUrl = getSiteUrl();
     const pageUrl = getAbsoluteUrl(`/donor/dashboard?lang=${language}`, siteUrl);
     const socialImg = getAbsoluteUrl('/logo-ccai.png', siteUrl);
-    const pageTitle = `Donor Dashboard | ${t.centerName || DEFAULT_TRANSLATION.centerName}`;
-    const pageDesc = truncateText('Manage your donor profile, engagement, payments, and support requests.');
+    const pageTitle = `${t.donor?.loadingDashboard || DEFAULT_TRANSLATION.donor?.loadingDashboard || 'Donor Dashboard'} | ${t.centerName || DEFAULT_TRANSLATION.centerName}`;
+    const pageDesc = truncateText(t.donor?.unableLoadDashboard || DEFAULT_TRANSLATION.donor?.unableLoadDashboard || 'Manage your donor profile, engagement, payments, and support requests.');
 
     // ── i18n labels ──
-    // Read directly from the imported ES module (bypasses the 30-day localStorage
-    // translation cache, which may not yet contain the donor section).
-    const ui = useMemo(
-        () => ({ ...EN_DONOR, ...(TRANSLATION_MODULES[language]?.donor ?? {}) }),
-        [language],
-    );
+    const ui = { ...(DEFAULT_TRANSLATION.donor ?? {}), ...(t.donor ?? {}) };
 
     // ── SEO side-effect ──
     useEffect(() => {
@@ -713,15 +597,17 @@ export default function DonorDashboardPage() {
                             {/* ── My Community ── */}
                             {!isSidenavCollapsed && <p className="sidenav-section-label">{ui.sectionCommunity || 'My community'}</p>}
 
-                            <button type="button" className="sidenav-btn sidenav-btn--active" title={isSidenavCollapsed ? (ui.dashboard || 'My donations') : undefined}>
-                                <span className="sidenav-icon">
-                                    <Ico size={17}>
-                                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-                                        <line x1="1" y1="10" x2="23" y2="10" />
-                                    </Ico>
-                                </span>
-                                {!isSidenavCollapsed ? (ui.dashboard || 'My donations') : null}
-                            </button>
+                            {FEATURES.DONATIONS ? (
+                                <button type="button" className="sidenav-btn sidenav-btn--active" title={isSidenavCollapsed ? (ui.dashboard || 'My donations') : undefined}>
+                                    <span className="sidenav-icon">
+                                        <Ico size={17}>
+                                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                                            <line x1="1" y1="10" x2="23" y2="10" />
+                                        </Ico>
+                                    </span>
+                                    {!isSidenavCollapsed ? (ui.dashboard || 'My donations') : null}
+                                </button>
+                            ) : null}
 
                             {FEATURES.VOLUNTEERING ? (
                                 <button type="button" className="sidenav-btn" onClick={() => router.push('/donor/volunteering')} title={isSidenavCollapsed ? (ui.volunteeringTab || 'Volunteering') : undefined}>
@@ -789,6 +675,8 @@ export default function DonorDashboardPage() {
                             {/* Global feedback banners */}
                             {!hasOpenModal && error ? <div className="banner banner--error" role="alert">{error}</div> : null}
                             {!hasOpenModal && success ? <div className="banner banner--success" role="status">{success}</div> : null}
+
+                            {FEATURES.DONATIONS && (<>
 
                             {/* ─────────────────────────────────
                                 ENGAGEMENT CARD
@@ -1073,6 +961,8 @@ export default function DonorDashboardPage() {
                                 )}
                             </section>
 
+                            </>)}
+
                         </div>{/* /content */}
                     </div>
                 )}
@@ -1122,7 +1012,7 @@ export default function DonorDashboardPage() {
                                 <div style={{ position: 'relative' }}>
                                     <input className="finput" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.currentPassword}
                                         onChange={e => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowCurrentPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowCurrentPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showCurrentPassword ? ui.hidePassword : ui.showPassword}>
                                         {showCurrentPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (
@@ -1136,7 +1026,7 @@ export default function DonorDashboardPage() {
                                 <div style={{ position: 'relative' }}>
                                     <input className="finput" type={showNewPassword ? 'text' : 'password'} value={passwordForm.newPassword}
                                         onChange={e => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowNewPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowNewPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewPassword ? ui.hidePassword : ui.showPassword}>
                                         {showNewPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (
@@ -1150,7 +1040,7 @@ export default function DonorDashboardPage() {
                                 <div style={{ position: 'relative' }}>
                                     <input className="finput" type={showConfirmPassword ? 'text' : 'password'} value={passwordForm.confirmPassword}
                                         onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showConfirmPassword ? ui.hidePassword : ui.showPassword}>
                                         {showConfirmPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (

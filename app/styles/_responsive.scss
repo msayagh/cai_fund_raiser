@@ -4,6 +4,10 @@
 
 // Mobile header adjustments (@1200px breakpoint)
 @media (max-width: 1200px) {
+    .mosque-donation-header {
+        padding-inline: 16px;
+    }
+
     .header-title {
         display: none;
     }
@@ -50,13 +54,13 @@
 
     .header-menu-panel {
         position: fixed;
-        top: 84px;
-        inset-inline-start: 50%;
-        inset-inline-end: auto;
-        transform: translateX(-50%);
-        width: min(560px, calc(100vw - 24px));
+        top: 120px;
+        inset-inline-end: 12px;
+        inset-inline-start: auto;
+        transform: none;
+        width: min(340px, calc(100vw - 24px));
         max-width: calc(100vw - 24px);
-        max-height: calc(100vh - 96px);
+        max-height: calc(100vh - 132px);
         overflow: auto;
     }
 
@@ -417,6 +421,29 @@
         left: 50%;
         right: auto;
         transform: translateX(-50%);
+    }
+}
+
+// Narrow phone header refinements (@600px)
+@media (max-width: 600px) {
+    .mosque-donation-header {
+        padding: 10px 12px 10px;
+    }
+
+    .header-logo {
+        width: 60px;
+        height: 60px;
+    }
+
+    .header-menu-panel {
+        top: 86px;
+        inset-inline-end: 8px;
+        max-height: calc(100vh - 98px);
+    }
+
+    .header-menu-languages {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
     }
 }
 

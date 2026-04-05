@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import { useTranslation, useThemeMode } from '@/hooks/index.js';
 import { THEMES } from '@/constants/config.js';
-import { DEFAULT_TRANSLATION, TRANSLATION_MODULES } from '@/lib/translationUtils.js';
+import { DEFAULT_TRANSLATION } from '@/lib/translationUtils.js';
 import { getMe, updateMe, updateMyPassword } from '@/lib/donorApi.js';
 import { createRequest } from '@/lib/requestsApi.js';
 import { clearTokens, tryAutoLogin } from '@/lib/auth.js';
@@ -35,55 +35,6 @@ function Ico({ size = 16, children }) {
         </svg>
     );
 }
-
-// ─────────────────────────────────────────────
-// i18n fallback labels (English)
-// ─────────────────────────────────────────────
-const EN_DONOR = {
-    welcome: 'Welcome',
-    settings: 'Settings',
-    contactAdmin: 'Contact admin',
-    logout: 'Log out',
-    dashboard: 'My donations',
-    volunteeringTab: 'Volunteering',
-    profile: 'Profile',
-    password: 'Password',
-    saveProfile: 'Save profile',
-    updatePwd: 'Update password',
-    curPwd: 'Current password',
-    newPwd: 'New password',
-    confPwd: 'Confirm password',
-    reqType: 'Request type',
-    message: 'Message',
-    yourName: 'Your name',
-    yourEmail: 'E-mail',
-    sendReq: 'Send request',
-    attachFiles: 'Attach files (optional)',
-    contactDesc: 'Send us a message for support or any question.',
-    loading: 'Loading',
-    sessionExpired: 'Session expired. Please log in again.',
-    unableLoadDashboard: 'Unable to load page.',
-    menu: 'Menu',
-    donorNavigation: 'Donor navigation',
-    collapseSidebar: 'Collapse sidebar',
-    expandSidebar: 'Expand sidebar',
-    profileUpdated: 'Profile updated successfully.',
-    passwordUpdated: 'Password updated successfully.',
-    reqSubmitted: 'Request submitted successfully.',
-    pwdMismatch: 'Passwords do not match.',
-    errUpdateProfile: 'Unable to update profile.',
-    errUpdatePassword: 'Unable to update password.',
-    errSubmitReq: 'Unable to submit request.',
-    reqGeneral: 'General request',
-    reqPayment: 'Payment upload',
-    reqEngagement: 'Engagement change',
-    reqAccount: 'Account help',
-    fullNamePlaceholder: 'Full name',
-    emailPlaceholder: 'Email',
-    close: 'Close',
-    sectionCommunity: 'My community',
-    sectionSupport: 'Support',
-};
 
 // ─────────────────────────────────────────────
 // Modal wrapper (matches dashboard)
@@ -160,10 +111,8 @@ export default function DonorVolunteeringPage() {
         passwordForm.confirmPassword.trim()
     );
 
-    const ui = useMemo(
-        () => ({ ...EN_DONOR, ...(TRANSLATION_MODULES[language]?.donor ?? {}) }),
-        [language],
-    );
+    // ── i18n labels ──
+    const ui = { ...(DEFAULT_TRANSLATION.donor ?? {}), ...(t.donor ?? {}) };
 
     // ── Bootstrap ──
     useEffect(() => {
@@ -419,7 +368,7 @@ export default function DonorVolunteeringPage() {
                             {FEATURES.VOLUNTEERING && volSettings.volEnabled ? (
                                 <VolunteeringTab donorId={profile?.id} donorName={profile?.name} ui={ui} volSettings={volSettings} />
                             ) : (
-                                <p className="admin-muted">{ui.volunteeringTab || 'Volunteering'} is not available.</p>
+                                <p className="admin-muted">{ui.volunteeringTab || 'Volunteering'} {ui.volNotAvailable || 'is not available.'}</p>
                             )}
                         </div>
 
@@ -467,7 +416,7 @@ export default function DonorVolunteeringPage() {
                                 <div style={{ position: 'relative' }}>
                                     <input className="finput" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.currentPassword}
                                         onChange={e => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowCurrentPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowCurrentPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showCurrentPassword ? ui.hidePassword : ui.showPassword}>
                                         {showCurrentPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (
@@ -481,7 +430,7 @@ export default function DonorVolunteeringPage() {
                                 <div style={{ position: 'relative' }}>
                                     <input className="finput" type={showNewPassword ? 'text' : 'password'} value={passwordForm.newPassword}
                                         onChange={e => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowNewPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowNewPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewPassword ? ui.hidePassword : ui.showPassword}>
                                         {showNewPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (
@@ -495,7 +444,7 @@ export default function DonorVolunteeringPage() {
                                 <div style={{ position: 'relative' }}>
                                     <input className="finput" type={showConfirmPassword ? 'text' : 'password'} value={passwordForm.confirmPassword}
                                         onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
+                                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showConfirmPassword ? ui.hidePassword : ui.showPassword}>
                                         {showConfirmPassword ? (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                         ) : (

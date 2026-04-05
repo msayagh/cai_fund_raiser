@@ -9,12 +9,36 @@ import {
     donorSignUp,
     donorCancelSignup,
     donorPostDiscussion,
+    donorCheckItem,
+    donorUncheckItem,
 } from '@/lib/volunteeringApi.js';
 
 const POLL_INTERVAL_MS = 5000; // refresh discussion every 5 s
 
 const fmtDate = (iso) =>
     iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+const fmtDuration = (mins) => {
+    if (!mins) return null;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+};
+
+const fmtDateShort = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleDateString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric',
+        ...(sameYear ? {} : { year: 'numeric' }),
+    });
+};
+
+const fmtTime = (iso) =>
+    iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
 
 function VolIcon({ size = 17 }) {
     return (
@@ -63,8 +87,31 @@ function MsgIcon({ size = 15 }) {
     );
 }
 
-const MAX_CAP_ICONS = 15;
-const SLOT_COLORS = ['#3273dc', '#6c63ff', '#e8a44a', '#00d1b2', '#e76f51', '#a78bfa', '#48c78e'];
+function ClockIcon({ size = 13 }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+        </svg>
+    );
+}
+
+function CheckIcon({ size = 13 }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12" />
+        </svg>
+    );
+}
+
+function RefreshIcon({ size = 14 }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 .49-3.5" />
+        </svg>
+    );
+}
 
 function getInitials(name) {
     if (!name) return '?';
@@ -73,62 +120,23 @@ function getInitials(name) {
     return ((parts[0][0] || '') + (parts[parts.length - 1][0] || '')).toUpperCase();
 }
 
-function CapacitySlots({ filled, cap, maxShow = MAX_CAP_ICONS, size = 28, mySignup, donorName }) {
+function SpotsBar({ filled, cap, tSpots }) {
     const isUnlimited = !(cap > 0);
-    const iAmIn = mySignup?.status === 'signed_up';
-    const empty = isUnlimited ? 0 : Math.max(0, cap - filled);
-    const total = filled + empty;
-    const visibleFilled = total > maxShow ? Math.min(filled, maxShow - 1) : filled;
-    const visibleEmpty = total > maxShow ? Math.max(0, maxShow - 1 - visibleFilled) : empty;
-    const overflow = total - visibleFilled - visibleEmpty;
-    const iconSize = Math.round(size * 0.46);
-    const fontSize = Math.round(size * 0.36);
+    const pct = isUnlimited ? 0 : Math.min(100, Math.round((filled / cap) * 100));
+    const isFull = !isUnlimited && filled >= cap;
+    const barColor = isFull ? '#f14668' : pct > 70 ? '#e8a44a' : 'var(--accent, #3273dc)';
     return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-            {Array.from({ length: visibleFilled }).map((_, i) => {
-                const isMe = iAmIn && i === 0;
-                return (
-                    <div
-                        key={`f-${i}`}
-                        title={isMe ? donorName : 'Volunteer'}
-                        style={{
-                            width: size, height: size, borderRadius: '50%',
-                            background: isMe ? SLOT_COLORS[0] : 'rgba(72,199,142,.13)',
-                            border: isMe ? '1.5px solid ' + SLOT_COLORS[0] : '1.5px solid rgba(72,199,142,.4)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                            color: isMe ? '#fff' : 'rgba(72,199,142,.85)',
-                            fontSize, fontWeight: 700,
-                            cursor: 'default', userSelect: 'none',
-                        }}
-                    >
-                        {isMe ? getInitials(donorName) : (
-                            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                            </svg>
-                        )}
-                    </div>
-                );
-            })}
-            {Array.from({ length: visibleEmpty }).map((_, i) => (
-                <div key={`e-${i}`} style={{
-                    width: size, height: size, borderRadius: '50%',
-                    border: '1.5px dashed rgba(160,170,200,.18)',
-                    background: 'rgba(160,170,200,.03)', flexShrink: 0,
-                }} />
-            ))}
-            {overflow > 0 && (
-                <span style={{ fontSize: fontSize - 1, color: 'var(--text-secondary)', fontWeight: 700 }}>+{overflow}</span>
-            )}
-            {isUnlimited && (
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {filled > 0 ? `${filled} joined` : 'Open'}
-                </span>
-            )}
-            {!isUnlimited && total > 0 && (
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 1 }}>
-                    {filled}/{cap}
-                </span>
+        <div className="vol-spots">
+            <span className="vol-spots-label">
+                {isUnlimited
+                    ? (filled > 0 ? `${filled} ${tSpots?.spotsJoinedOpen || 'joined · Open'}` : (tSpots?.spotsOpen || 'Open · Unlimited spots'))
+                    : <><strong className={isFull ? 'vol-spots-full' : ''}>{filled}</strong> / {cap} {tSpots?.spotsLabel || 'spots'}{isFull ? (tSpots?.spotsFull || ' · Full') : ''}</>
+                }
+            </span>
+            {!isUnlimited && (
+                <div className="vol-spots-track">
+                    <div className="vol-spots-fill" style={{ width: `${pct}%`, background: barColor }} />
+                </div>
             )}
         </div>
     );
@@ -143,27 +151,58 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
         volShowUnscheduled = true,
     } = volSettings || {};
 
-    const ui = {
-        tabTitle: pageUi?.volunteeringTab || 'Volunteering',
-        browseTitle: pageUi?.volBrowseTitle || 'Available Activities',
-        mySignupsTitle: pageUi?.volMySignupsTitle || 'My Sign-ups',
-        signUp: pageUi?.volSignUp || 'Sign up',
-        cancelSignup: pageUi?.volCancelSignup || 'Cancel sign-up',
-        discussion: pageUi?.volDiscussion || 'Discussion',
-        postMessage: pageUi?.volPostMessage || 'Post',
-        messagePlaceholder: pageUi?.volMsgPlaceholder || 'Write a message…',
-        backToList: pageUi?.volBackToList || '← Back',
-        noActivities: pageUi?.volNoActivities || 'No activities available right now.',
-        noSignups: pageUi?.volNoSignups || "You haven't signed up for any activities yet.",
-        schedulesFull: pageUi?.volSchedulesFull || 'Full',
-        unlimited: pageUi?.volUnlimited || 'Unlimited',
-        myStatus: pageUi?.volMyStatus || 'My status',
-        loading: pageUi?.loading || 'Loading…',
-        locationTbd: pageUi?.volLocationTbd || 'Location TBD',
-        showHistory: pageUi?.volShowHistory || 'Show activity history',
-        hideHistory: pageUi?.volHideHistory || 'Hide history',
-        historyTitle: pageUi?.volHistoryTitle || 'Past Activities',
-        noHistory: pageUi?.volNoHistory || 'No past activities found.',
+    const t = {
+        title:             pageUi?.volunteeringTab           || 'Volunteering',
+        browse:            pageUi?.volBrowseTitle            || 'Discover',
+        mySignups:         pageUi?.volMySignupsTitle         || 'My Sign-ups',
+        signUp:            pageUi?.volSignUp                 || 'Join',
+        cancelSignup:      pageUi?.volCancelSignup           || 'Leave',
+        discussion:        pageUi?.volDiscussion             || 'Discussion',
+        postMessage:       pageUi?.volPostMessage            || 'Send',
+        msgPlaceholder:    pageUi?.volMsgPlaceholder         || 'Write a message…',
+        back:              pageUi?.volBackToList             || '← Back',
+        noActivities:      pageUi?.volNoActivities           || 'No activities available right now.',
+        noSignups:         pageUi?.volNoSignups              || "You haven't signed up for any activities yet.",
+        full:              pageUi?.volSchedulesFull          || 'Full',
+        loading:           pageUi?.loading                   || 'Loading…',
+        showHistory:       pageUi?.volShowHistory            || 'Show past activities',
+        hideHistory:       pageUi?.volHideHistory            || 'Hide past activities',
+        noHistory:         pageUi?.volNoHistory              || 'No past activities found.',
+        closed:            pageUi?.volClosed                 || 'Closed',
+        tabSessions:       pageUi?.volTabSessions            || 'Sessions',
+        tabAbout:          pageUi?.volTabAbout               || 'About',
+        activityClosed:    pageUi?.volActivityClosedBanner   || 'This activity is no longer accepting new registrations.',
+        noSessions:        pageUi?.volNoSessionsYet          || 'No sessions scheduled yet.',
+        upcomingLabel:     pageUi?.volUpcomingLabel          || 'Upcoming',
+        pastSessions:      pageUi?.volPastSessionsPrefix     || 'Past sessions',
+        attended:          pageUi?.volAttended               || 'Attended',
+        noDescription:     pageUi?.volNoDescription          || 'No description provided.',
+        noMessages:        pageUi?.volNoMessages             || 'No messages yet — be the first to post.',
+        myTasks:           pageUi?.volMyTasksLabel           || 'My Tasks',
+        youreIn:           pageUi?.volYoureIn                || "You're in",
+        joined:            pageUi?.volJoinedBadge            || 'Joined',
+        leave:             pageUi?.volLeaveBtn               || 'Leave',
+        comingSoon:        pageUi?.volComingSoon             || 'Coming Soon',
+        tbd:               pageUi?.volTBD                    || 'TBD',
+        pastLabel:         pageUi?.volPastLabel              || 'Past',
+        spotsOpen:         pageUi?.volSpotsOpen              || 'Open · Unlimited spots',
+        spotsJoinedOpen:   pageUi?.volSpotsJoinedOpen        || 'joined · Open',
+        spotsLabel:        pageUi?.volSpotsLabel             || 'spots',
+        spotsFull:         pageUi?.volSpotsFull              || ' · Full',
+        moreSchedules:     pageUi?.volMoreSchedules          || 'more',
+        errorLoad:         pageUi?.volErrorLoad              || 'Failed to load',
+        errorSignup:       pageUi?.volErrorSignup            || 'Sign-up failed',
+        errorCancel:       pageUi?.volErrorCancel            || 'Cancel failed',
+        errorLoadActivity: pageUi?.volErrorLoadActivity      || 'Failed to load activity',
+        errorPost:         pageUi?.volErrorPost              || 'Failed to post',
+        volEstPrefix:      pageUi?.volEstPrefix              || 'Est. ',
+        volTaskSingular:   pageUi?.volTaskSingular           || 'task',
+        volTaskPlural:     pageUi?.volTaskPlural             || 'tasks',
+        volMessageSingular: pageUi?.volMessageSingular       || 'message',
+        volMessagePlural:  pageUi?.volMessagePlural          || 'messages',
+        volRefreshTitle:   pageUi?.volRefreshTitle           || 'Refresh',
+        volAuthorDonor:    pageUi?.volAuthorDonor            || 'Donor',
+        volAuthorAdmin:    pageUi?.volAuthorAdmin            || 'Staff',
     };
 
     // ── List / browse state ──
@@ -197,6 +236,10 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
     const discussionEndRef = useRef(null);
     const selectedIdRef = useRef(null);
 
+    // ── Checklist ──
+    const [checklistLoading, setChecklistLoading] = useState({}); // { [itemId]: bool }
+    const [detailTab, setDetailTab] = useState('sessions'); // 'sessions' | 'about' | 'discussion'
+
     // ── Load activities + signup map in parallel ──
     const loadAll = useCallback(async () => {
         setListLoading(true);
@@ -213,7 +256,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
             }
             setSignupMap(map);
         } catch (err) {
-            setListError(err.message || 'Failed to load');
+            setListError(err.message || t.errorLoad);
         } finally {
             setListLoading(false);
         }
@@ -264,7 +307,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
             const res = await donorListActivities({ limit: 100 });
             setActivities(res?.items || []);
         } catch (err) {
-            setListError(err.message || 'Sign-up failed');
+            setListError(err.message || t.errorSignup);
         } finally {
             setSignupLoading('');
         }
@@ -278,7 +321,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
             const res = await donorListActivities({ limit: 100 });
             setActivities(res?.items || []);
         } catch (err) {
-            setListError(err.message || 'Cancel failed');
+            setListError(err.message || t.errorCancel);
         } finally {
             setSignupLoading('');
         }
@@ -294,7 +337,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
             const res = await donorGetActivity(id, { includeInactive: fromHistory });
             setSelected(res);
         } catch (err) {
-            setDetailError(err.message || 'Failed to load activity');
+            setDetailError(err.message || t.errorLoadActivity);
         } finally {
             setDetailLoading(false);
         }
@@ -340,9 +383,24 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
         }
     };
 
+    // ── Checklist toggle ──
+    const handleToggleChecklistItem = async (scheduleId, itemId, isChecked) => {
+        setChecklistLoading((prev) => ({ ...prev, [itemId]: true }));
+        try {
+            if (isChecked) {
+                await donorUncheckItem(selected.id, scheduleId, itemId);
+            } else {
+                await donorCheckItem(selected.id, scheduleId, itemId);
+            }
+            await refreshSelected();
+        } catch { /* silent — UI will revert on next refresh */ }
+        finally {
+            setChecklistLoading((prev) => ({ ...prev, [itemId]: false }));
+        }
+    };
+
     // ── Discussion post ──
-    const handlePostDiscussion = async (e) => {
-        e.preventDefault();
+    const handlePostDiscussion = async (e) => {        e.preventDefault();
         if (!discussionMsg.trim()) return;
         setDiscussionSending(true);
         setDiscussionError('');
@@ -352,7 +410,7 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
             await refreshSelected();
             setTimeout(() => discussionEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         } catch (err) {
-            setDiscussionError(err.message || 'Failed to post');
+            setDiscussionError(err.message || t.errorPost);
         } finally {
             setDiscussionSending(false);
         }
@@ -361,214 +419,289 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
     // ── Detail view ──
     if (selected || detailLoading) {
         if (detailLoading) return (
-            <section className="card">
-                <div className="card-hd">
-                    <div className="card-hd-left">
-                        <span className="card-icon"><VolIcon /></span>
-                        <h2 className="card-title">{ui.tabTitle}</h2>
-                    </div>
+            <section className="card vol-detail-loading">
+                <div className="vol-back-row">
+                    <button type="button" className="vol-back-btn" onClick={() => { setSelected(null); selectedIdRef.current = null; }}>{t.back}</button>
                 </div>
-                <div className="empty-state">
-                    <VolIcon size={40} />
-                    <p>{ui.loading}</p>
-                </div>
+                <div className="vol-skeleton vol-skeleton--title" />
+                <div className="vol-skeleton vol-skeleton--body" />
+                <div className="vol-skeleton vol-skeleton--body vol-skeleton--short" />
+                <div className="vol-skeleton vol-skeleton--card" style={{ marginTop: 20 }} />
+                <div className="vol-skeleton vol-skeleton--card" />
             </section>
         );
 
-        const upcomingCount = selected.schedules?.filter((s) => s.status === 'upcoming').length ?? 0;
+        const upcomingSchedules = selected.schedules?.filter((s) => s.status === 'upcoming') ?? [];
+        const pastSchedules = selected.schedules?.filter((s) => s.status !== 'upcoming') ?? [];
+        const hasChecklist = (selected.checklistItems?.length ?? 0) > 0;
+
+        const msgCount = selected.discussions?.length ?? 0;
 
         return (
             <section className="card">
-                {/* ── Header row: back + inactive badge ── */}
-                <div className="card-hd">
-                    <div className="card-hd-left">
-                        <button
-                            type="button"
-                            className="btn btn--ghost"
-                            style={{ padding: '7px 14px', fontSize: 14 }}
-                            onClick={() => { setSelected(null); selectedIdRef.current = null; }}
-                        >
-                            {ui.backToList}
-                        </button>
-                    </div>
-                    {!selected.isActive && (
-                        <div className="card-hd-right">
-                            <span className="vol-status vol-status--inactive">Closed</span>
+                {/* ── Back row ── */}
+                <div className="vol-back-row">
+                    <button type="button" className="vol-back-btn" onClick={() => { setSelected(null); selectedIdRef.current = null; }}>
+                        {t.back}
+                    </button>
+                    {!selected.isActive && <span className="vol-closed-badge">{t.closed}</span>}
+                </div>
+
+                {detailError && <div className="banner banner--error mb-md">{detailError}</div>}
+
+                {/* ── Compact header: title + meta chips only ── */}
+                <div className="vol-detail-header">
+                    <h2 className="vol-hero-title">{selected.title}</h2>
+                    {(selected.estimatedMinutes || selected.recurrenceNote || hasChecklist) && (
+                        <div className="vol-meta-row">
+                            {selected.estimatedMinutes > 0 && (
+                                <span className="vol-meta-chip"><ClockIcon size={12} />{t.volEstPrefix}{fmtDuration(selected.estimatedMinutes)}</span>
+                            )}
+                            {selected.recurrenceNote && (
+                                <span className="vol-meta-chip"><RefreshIcon size={12} />{selected.recurrenceNote}</span>
+                            )}
+                            {hasChecklist && (
+                                <span className="vol-meta-chip"><CheckIcon size={12} />{selected.checklistItems.length} {selected.checklistItems.length !== 1 ? t.volTaskPlural : t.volTaskSingular}</span>
+                            )}
                         </div>
                     )}
                 </div>
 
-                {detailError && <div className="banner banner--error" style={{ marginBottom: 16 }}>{detailError}</div>}
-                {!selected.isActive && (
-                    <div className="banner banner--warn" style={{ marginBottom: 16 }}>
-                        This activity is no longer accepting new registrations.
-                    </div>
-                )}
-
-                {/* ── Activity info ── */}
-                <h2 className="vol-detail-title">{selected.title}</h2>
-                <p className="vol-detail-desc">{selected.description}</p>
-
-                {selected.skills && (
-                    <div className="vol-tags" style={{ marginBottom: 14 }}>
-                        {selected.skills.split(',').map((s) => s.trim()).filter(Boolean).map((tag) => (
-                            <span key={tag} className="vol-tag">{tag}</span>
-                        ))}
-                    </div>
-                )}
-
-                {selected.recurrenceNote && (
-                    <p className="cell-muted" style={{ marginBottom: 14, fontSize: 13 }}>🔁 {selected.recurrenceNote}</p>
-                )}
-
-                {/* ── Schedules ── */}
-                <div style={{ marginBottom: 24 }}>
-                    <div className="card-hd" style={{ marginBottom: 14 }}>
-                        <div className="card-hd-left" style={{ gap: 8 }}>
-                            <CalIcon size={15} />
-                            <span style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>Sessions</span>
-                        </div>
-                        {upcomingCount > 0 && (
-                            <span className="vol-status vol-status--upcoming" style={{ fontSize: '0.72rem' }}>
-                                {upcomingCount} upcoming
-                            </span>
+                {/* ── Sub-tab nav ── */}
+                <div className="vol-detail-tabs">
+                    <button
+                        type="button"
+                        className={`vol-dtab${detailTab === 'sessions' ? ' vol-dtab--active' : ''}`}
+                        onClick={() => setDetailTab('sessions')}
+                    >
+                        {t.tabSessions}
+                        {upcomingSchedules.length > 0 && (
+                            <span className="vol-dtab-badge">{upcomingSchedules.length}</span>
                         )}
-                    </div>
+                    </button>
+                    <button
+                        type="button"
+                        className={`vol-dtab${detailTab === 'about' ? ' vol-dtab--active' : ''}`}
+                        onClick={() => setDetailTab('about')}
+                    >
+                        {t.tabAbout}
+                    </button>
+                    {volShowDiscussion && (
+                        <button
+                            type="button"
+                            className={`vol-dtab${detailTab === 'discussion' ? ' vol-dtab--active' : ''}`}
+                            onClick={() => setDetailTab('discussion')}
+                        >
+                            {t.discussion}
+                            {msgCount > 0 && <span className="vol-dtab-badge">{msgCount}</span>}
+                        </button>
+                    )}
+                </div>
 
-                    {(selected.schedules?.length ?? 0) === 0 ? (
-                        <div className="empty-state" style={{ padding: '28px 20px' }}>
-                            <CalIcon size={36} />
-                            <p style={{ fontSize: 14 }}>No sessions scheduled yet.</p>
-                        </div>
-                    ) : (
-                        <div className="vol-schedules">
-                            {selected.schedules.map((sch) => {
-                                const isUpcoming = sch.status === 'upcoming';
-                                const mySignup = sch.signups?.[0];
-                                const signedUp = mySignup?.status === 'signed_up';
-                                const cap = sch.maxVolunteers || selected.maxVolunteers;
-                                const isFull = cap > 0 && (sch._count?.signups ?? 0) >= cap;
-                                const busy = signupLoading === sch.id;
-                                const accentColor = signedUp ? '#48c78e' : isFull ? '#f14668' : isUpcoming ? '#3273dc' : 'rgba(160,170,200,.2)';
+                {/* ── Tab: Sessions ── */}
+                {detailTab === 'sessions' && (
+                    <div className="vol-tab-panel">
+                        {!selected.isActive && (
+                            <div className="banner banner--warn mb-md">
+                                {t.activityClosed}
+                            </div>
+                        )}
+                        {(selected.schedules?.length ?? 0) === 0 ? (
+                            <div className="vol-empty-section">
+                                <CalIcon size={30} />
+                                <p>{t.noSessions}</p>
+                            </div>
+                        ) : (
+                            <div className="vol-sessions">
+                                {upcomingSchedules.length > 0 && (
+                                    <div className="vol-section-label">
+                                        <CalIcon size={12} />
+                                        {t.upcomingLabel}
+                                        <span className="vol-section-count">{upcomingSchedules.length}</span>
+                                    </div>
+                                )}
 
-                                return (
-                                    <div key={sch.id} style={{
-                                        borderRadius: 12,
-                                        background: 'var(--bg-card)',
-                                        borderLeft: `3px solid ${accentColor}`,
-                                        overflow: 'hidden',
-                                        marginBottom: 8,
-                                    }}>
-                                        {/* Top bar: date + location + status */}
-                                        <div style={{
-                                            display: 'flex', alignItems: 'center', flexWrap: 'wrap',
-                                            gap: 10, padding: '10px 14px',
-                                            background: 'var(--bg-card-alt)',
-                                            borderBottom: '1px solid var(--border)',
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-                                                <CalIcon size={13} />
-                                                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{fmtDate(sch.scheduledAt)}</span>
-                                                {sch.location && (
-                                                    <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <PinIcon size={11} />{sch.location}
+                                {upcomingSchedules.map((sch) => {
+                                    const mySignup = sch.signups?.[0];
+                                    const signedUp = mySignup?.status === 'signed_up';
+                                    const cap = sch.maxVolunteers || selected.maxVolunteers;
+                                    const filled = sch._count?.signups ?? 0;
+                                    const isFull = cap > 0 && filled >= cap;
+                                    const busy = signupLoading === sch.id;
+                                    const checkedIds = signedUp
+                                        ? new Set((mySignup?.checklistProgress ?? []).map((p) => p.checklistItemId))
+                                        : null;
+                                    const checkTotal = hasChecklist ? selected.checklistItems.length : 0;
+                                    const checkDone = checkedIds ? selected.checklistItems.filter((i) => checkedIds.has(i.id)).length : 0;
+                                    const checkPct = checkTotal > 0 ? Math.round((checkDone / checkTotal) * 100) : 0;
+
+                                    return (
+                                        <div key={sch.id} className={`vol-session-card${signedUp ? ' vol-session-card--joined' : ''}`}>
+                                            <div className="vol-session-top">
+                                                <div className="vol-session-datetime">
+                                                    <span className="vol-session-date">{fmtDateShort(sch.scheduledAt)}</span>
+                                                    <span className="vol-session-time">{fmtTime(sch.scheduledAt)}</span>
+                                                </div>
+                                                {signedUp && (
+                                                    <span className="vol-joined-badge">
+                                                        <CheckIcon size={11} /> {t.youreIn}
                                                     </span>
                                                 )}
                                             </div>
-                                            {signedUp && (
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: '#48c78e', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-                                                    You&apos;re in
-                                                </span>
+
+                                            {sch.location && (
+                                                <div className="vol-session-loc"><PinIcon size={12} />{sch.location}</div>
                                             )}
-                                            {!signedUp && (
-                                                <span className={`vol-status vol-status--${sch.status}`} style={{ fontSize: 11 }}>{sch.status}</span>
+
+                                            {sch.notes && <p className="vol-session-notes">{sch.notes}</p>}
+
+                                            <SpotsBar filled={filled} cap={cap} tSpots={t} />
+
+                                            {selected.isActive && (
+                                                <div className="vol-session-cta">
+                                                    {signedUp ? (
+                                                        <button type="button" className="vol-btn-leave" disabled={busy} onClick={() => handleCancel(sch.id)}>
+                                                            {busy ? '\u2026' : t.cancelSignup}
+                                                        </button>
+                                                    ) : (
+                                                        <button type="button" className="vol-btn-join" disabled={busy || isFull} onClick={() => handleSignUp(sch.id)}>
+                                                            {busy ? '\u2026' : isFull ? t.full : `${t.signUp} \u2192`}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {signedUp && hasChecklist && (
+                                                <div className="vol-task-section">
+                                                    <div className="vol-task-header">
+                                                        <span className="vol-task-label">{t.myTasks}</span>
+                                                        <span className={`vol-task-count${checkDone === checkTotal ? ' vol-task-count--done' : ''}`}>
+                                                            {checkDone} / {checkTotal}
+                                                        </span>
+                                                    </div>
+                                                    <div className="vol-task-track">
+                                                        <div
+                                                            className="vol-task-fill"
+                                                            style={{ width: `${checkPct}%`, background: checkPct === 100 ? '#48c78e' : 'var(--accent, #3273dc)' }}
+                                                        />
+                                                    </div>
+                                                    <div className="vol-task-items">
+                                                        {selected.checklistItems.map((item) => {
+                                                            const checked = checkedIds.has(item.id);
+                                                            const loading = !!checklistLoading[item.id];
+                                                            return (
+                                                                <label key={item.id} className={`vol-task-item${checked ? ' vol-task-item--done' : ''}`}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        disabled={loading}
+                                                                        onChange={() => handleToggleChecklistItem(sch.id, item.id, checked)}
+                                                                        className="vol-task-checkbox"
+                                                                    />
+                                                                    <span className="vol-task-text">{item.title}</span>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
-                                        {/* Bottom: capacity + CTA */}
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', flexWrap: 'wrap' }}>
-                                            <div>
-                                                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Volunteers</div>
-                                                <CapacitySlots filled={sch._count?.signups ?? 0} cap={cap} mySignup={mySignup} donorName={donorName} />
-                                            </div>
-                                            {isUpcoming && selected.isActive && (
-                                                signedUp ? (
-                                                    <button type="button" className="btn btn--ghost vol-btn-cancel" style={{ fontSize: 13 }} disabled={busy} onClick={() => handleCancel(sch.id)}>
-                                                        {busy ? '…' : ui.cancelSignup}
-                                                    </button>
-                                                ) : (
-                                                    <button type="button" className="btn btn--cta" style={{ padding: '9px 22px', fontSize: 14, flexShrink: 0 }} disabled={busy || isFull} onClick={() => handleSignUp(sch.id)}>
-                                                        {busy ? '…' : isFull ? ui.schedulesFull : ui.signUp}
-                                                    </button>
-                                                )
-                                            )}
+                                    );
+                                })}
+
+                                {pastSchedules.length > 0 && (
+                                    <details className="vol-past-sessions">
+                                        <summary className="vol-past-summary">{t.pastSessions} ({pastSchedules.length})</summary>
+                                        <div className="vol-past-list">
+                                            {pastSchedules.map((sch) => {
+                                                const attended = sch.signups?.[0]?.status === 'signed_up';
+                                                return (
+                                                    <div key={sch.id} className="vol-past-row">
+                                                        <span className="vol-past-date">{fmtDateShort(sch.scheduledAt)}</span>
+                                                        {sch.location && <span className="vol-past-loc"><PinIcon size={11} />{sch.location}</span>}
+                                                        <span className={`vol-status vol-status--${sch.status}`}>{sch.status}</span>
+                                                        {attended && <span className="vol-past-attended"><CheckIcon size={11} /> {t.attended}</span>}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* ── Discussion ── */}
-                {volShowDiscussion && (
-                <div className="vol-discussion">
-                    <div className="card-hd" style={{ marginBottom: 14 }}>
-                        <div className="card-hd-left" style={{ gap: 8 }}>
-                            <MsgIcon size={15} />
-                            <span style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>{ui.discussion}</span>
-                        </div>
-                        <div className="card-hd-right">
-                            <span className="cell-muted" style={{ fontSize: 12 }}>
-                                {selected.discussions?.length ?? 0} message{(selected.discussions?.length ?? 0) !== 1 ? 's' : ''}
-                            </span>
-                            <button
-                                type="button"
-                                className="btn btn--ghost"
-                                style={{ fontSize: 12, padding: '4px 10px' }}
-                                onClick={refreshSelected}
-                                title="Refresh messages"
-                            >
-                                ↻
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="vol-discussion-list" style={{ marginBottom: 12 }}>
-                        {(selected.discussions?.length ?? 0) === 0 && (
-                            <div className="empty-state" style={{ padding: '24px 20px' }}>
-                                <MsgIcon size={34} />
-                                <p style={{ fontSize: 14 }}>No messages yet. Be the first to post.</p>
+                                    </details>
+                                )}
                             </div>
                         )}
-                        {selected.discussions?.map((msg) => (
-                            <div key={msg.id} className={`vol-msg vol-msg--${msg.authorType}`}>
-                                <div className="vol-msg-author">
-                                    <strong>{msg.authorName}</strong>
-                                    <span className={`vol-badge vol-badge--${msg.authorType}`}>{msg.authorType}</span>
-                                    <span className="cell-muted" style={{ fontSize: 12 }}>{fmtDate(msg.createdAt)}</span>
-                                </div>
-                                <div className="vol-msg-body">{msg.message}</div>
-                            </div>
-                        ))}
-                        <div ref={discussionEndRef} />
                     </div>
+                )}
 
-                    {discussionError && <div className="banner banner--error" style={{ marginBottom: 10 }}>{discussionError}</div>}
-                    {selected.isActive && (
-                        <form onSubmit={handlePostDiscussion} className="vol-discussion-form">
-                            <input
-                                className="vol-msg-input"
-                                value={discussionMsg}
-                                onChange={(e) => setDiscussionMsg(e.target.value)}
-                                placeholder={ui.messagePlaceholder}
-                            />
-                            <button type="submit" className="btn btn--ghost" disabled={discussionSending || !discussionMsg.trim()}>
-                                {ui.postMessage}
+                {/* ── Tab: About ── */}
+                {detailTab === 'about' && (
+                    <div className="vol-tab-panel vol-about">
+                        {selected.description ? (
+                            <p className="vol-hero-desc">{selected.description}</p>
+                        ) : (
+                        <p className="vol-about-empty">{t.noDescription}</p>
+                        )}
+                        {selected.skills && (
+                            <div className="vol-tags" style={{ marginTop: 12 }}>
+                                {selected.skills.split(',').map((s) => s.trim()).filter(Boolean).map((tag) => (
+                                    <span key={tag} className="vol-tag">{tag}</span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── Tab: Discussion ── */}
+                {volShowDiscussion && detailTab === 'discussion' && (
+                    <div className="vol-tab-panel">
+                        <div className="vol-discussion-hd">
+                            <div className="vol-section-label" style={{ marginBottom: 0 }}>
+                                <MsgIcon size={13} />
+                                {msgCount} {msgCount !== 1 ? t.volMessagePlural : t.volMessageSingular}
+                            </div>
+                            <button type="button" className="vol-refresh-btn" onClick={refreshSelected} title={t.volRefreshTitle}>
+                                <RefreshIcon size={13} />
                             </button>
-                        </form>
-                    )}
-                </div>
+                        </div>
+
+                        <div className="vol-chat-list">
+                            {msgCount === 0 ? (
+                                <div className="vol-chat-empty">
+                                    <MsgIcon size={28} />
+                                    <p>{t.noMessages}</p>
+                                </div>
+                            ) : (
+                                selected.discussions.map((msg) => (
+                                    <div key={msg.id} className={`vol-chat-msg vol-chat-msg--${msg.authorType}`}>
+                                        <div className="vol-chat-avatar" aria-hidden="true">{getInitials(msg.authorName)}</div>
+                                        <div className="vol-chat-body">
+                                            <div className="vol-chat-meta">
+                                                <strong>{msg.authorName}</strong>
+                                                <span className={`vol-badge vol-badge--${msg.authorType}`}>{msg.authorType === 'admin' ? t.volAuthorAdmin : t.volAuthorDonor}</span>
+                                                <span className="vol-chat-time">{fmtDate(msg.createdAt)}</span>
+                                            </div>
+                                            <p className="vol-chat-text">{msg.message}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                            <div ref={discussionEndRef} />
+                        </div>
+
+                        {discussionError && <div className="banner banner--error mb-sm">{discussionError}</div>}
+                        {selected.isActive && (
+                            <form onSubmit={handlePostDiscussion} className="vol-chat-form">
+                                <input
+                                    className="vol-chat-input"
+                                    value={discussionMsg}
+                                    onChange={(e) => setDiscussionMsg(e.target.value)}
+                                    placeholder={t.msgPlaceholder}
+                                />
+                                <button type="submit" className="vol-chat-send" disabled={discussionSending || !discussionMsg.trim()}>
+                                    {t.postMessage}
+                                </button>
+                            </form>
+                        )}
+                    </div>
                 )}
             </section>
         );
@@ -580,149 +713,122 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
             <div className="card-hd">
                 <div className="card-hd-left">
                     <span className="card-icon"><VolIcon /></span>
-                    <h2 className="card-title">{ui.tabTitle}</h2>
+                    <h2 className="card-title">{t.title}</h2>
                 </div>
                 <div className="card-hd-right">
-                    <div className="vol-tab-nav">
+                    <div className="vol-tabs">
                         <button
                             type="button"
-                            className={`btn btn--ghost${view === 'browse' ? ' vol-tab-btn--active' : ''}`}
+                            className={`vol-tab-pill${view === 'browse' ? ' vol-tab-pill--active' : ''}`}
                             onClick={() => setView('browse')}
                         >
-                            {ui.browseTitle}
+                            {t.browse}
                         </button>
                         <button
                             type="button"
-                            className={`btn btn--ghost${view === 'mySignups' ? ' vol-tab-btn--active' : ''}`}
+                            className={`vol-tab-pill${view === 'mySignups' ? ' vol-tab-pill--active' : ''}`}
                             onClick={() => { setView('mySignups'); loadMySignups(); }}
                         >
-                            {ui.mySignupsTitle}
+                            {t.mySignups}
                         </button>
                     </div>
                 </div>
             </div>
 
             {view === 'browse' && (
-                <>
-                    {listError && <div className="banner banner--error" style={{ marginBottom: 16 }}>{listError}</div>}
+                <div className="vol-browse">
+                    {listError && <div className="banner banner--error mb-md">{listError}</div>}
 
-                    {(() => {
-                        if (listLoading) return (
-                            <div className="empty-state"><VolIcon size={40} /><p>{ui.loading}</p></div>
-                        );
+                    {listLoading ? (
+                        <div className="vol-skeleton-list">
+                            <div className="vol-skeleton vol-skeleton--card" />
+                            <div className="vol-skeleton vol-skeleton--card" />
+                            <div className="vol-skeleton vol-skeleton--card" />
+                        </div>
+                    ) : (() => {
                         const withUpcoming = activities.filter((a) => (a.schedules?.length ?? 0) > 0);
                         const withoutUpcoming = activities.filter((a) => (a.schedules?.length ?? 0) === 0);
 
+                        if (withUpcoming.length === 0 && withoutUpcoming.length === 0) {
+                            return (
+                                <div className="empty-state">
+                                    <VolIcon size={48} />
+                                    <p>{t.noActivities}</p>
+                                </div>
+                            );
+                        }
+
                         return (
                             <>
-                                {withUpcoming.length === 0 && withoutUpcoming.length === 0 && (
-                                    <div className="empty-state"><VolIcon size={48} /><p>{ui.noActivities}</p></div>
-                                )}
+                                <div className="vol-browse-list">
+                                    {withUpcoming.map((act) => {
+                                        const firstSch = act.schedules[0];
+                                        const mySignup = signupMap[firstSch.id];
+                                        const isSignedUp = mySignup?.status === 'signed_up';
+                                        const cap = firstSch.maxVolunteers || act.maxVolunteers;
+                                        const filled = firstSch._count?.signups ?? 0;
+                                        const isFull = cap > 0 && filled >= cap;
+                                        const busy = signupLoading === firstSch.id;
 
-                                {withUpcoming.length > 0 && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        {withUpcoming.map((act) => {
-                                            const firstSch = act.schedules[0];
-                                            const mySignup = signupMap[firstSch.id];
-                                            const isSignedUp = mySignup?.status === 'signed_up';
-                                            const cap = firstSch.maxVolunteers || act.maxVolunteers;
-                                            const isFull = cap > 0 && (firstSch._count?.signups ?? 0) >= cap;
-                                            const busy = signupLoading === firstSch.id;
-                                            const multiSessions = act.schedules.length > 1;
-                                            const accentColor = isSignedUp ? '#48c78e' : isFull ? '#f14668' : '#3273dc';
-                                            return (
-                                                <div key={act.id} style={{
-                                                    borderRadius: 12,
-                                                    background: 'var(--bg-card)',
-                                                    borderLeft: `3px solid ${accentColor}`,
-                                                    overflow: 'hidden',
-                                                }}>
-                                                    {/* Row 1: title + CTA button */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 8px' }}>
-                                                        <div
-                                                            style={{ flex: 1, cursor: 'pointer' }}
-                                                            onClick={() => openActivity(act.id)}
-                                                            role="button" tabIndex={0}
-                                                            onKeyDown={(e) => e.key === 'Enter' && openActivity(act.id)}
-                                                        >
-                                                            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.3 }}>{act.title}</div>
-                                                            {act.recurrenceNote && (
-                                                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>🔁 {act.recurrenceNote}</div>
-                                                            )}
-                                                        </div>
-                                                        {isSignedUp ? (
-                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-                                                                <span style={{ fontSize: 12, fontWeight: 700, color: '#48c78e', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-                                                                    Joined
-                                                                </span>
-                                                                <button type="button" className="btn btn--ghost vol-btn-cancel" style={{ fontSize: 11, padding: '3px 10px' }} disabled={busy} onClick={() => quickCancel(act.id, firstSch.id)}>
-                                                                    {busy ? '…' : 'Cancel'}
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button type="button" className="btn btn--cta" style={{ fontSize: 13, padding: '7px 16px', animation: 'none', flexShrink: 0 }} disabled={busy || isFull} onClick={() => quickSignUp(act.id, firstSch.id)}>
-                                                                {busy ? '…' : isFull ? 'Full' : 'Join →'}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {/* Row 2: date + location + micro capacity dots */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px 10px', flexWrap: 'wrap' }}>
-                                                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <CalIcon size={11} />{fmtDate(firstSch.scheduledAt)}
+                                        return (
+                                            <div key={act.id} className={`vol-browse-card${isSignedUp ? ' vol-browse-card--joined' : isFull ? ' vol-browse-card--full' : ''}`}>
+                                                <div className="vol-browse-info" role="button" tabIndex={0} onClick={() => openActivity(act.id)} onKeyDown={(e) => e.key === 'Enter' && openActivity(act.id)}>
+                                                    <div className="vol-browse-title">{act.title}</div>
+                                                    <div className="vol-browse-meta">
+                                                        <span className="vol-browse-metaitem">
+                                                            <CalIcon size={11} />
+                                                            {fmtDateShort(firstSch.scheduledAt)}, {fmtTime(firstSch.scheduledAt)}
                                                         </span>
                                                         {firstSch.location && (
-                                                            <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <span className="vol-browse-metaitem">
                                                                 <PinIcon size={11} />{firstSch.location}
                                                             </span>
                                                         )}
-                                                        {multiSessions && (
-                                                            <button type="button" className="btn btn--ghost" style={{ fontSize: 11, padding: '1px 6px' }}
-                                                                onClick={(e) => { e.stopPropagation(); openActivity(act.id); }}>
-                                                                +{act.schedules.length - 1} more sessions
-                                                            </button>
+                                                        {(cap > 0 || filled > 0) && (
+                                                            <span className={`vol-browse-metaitem${isFull ? ' vol-browse-metaitem--full' : ''}`}>
+                                                                <UsersIcon size={11} />
+                                                                {cap > 0 ? `${filled}/${cap} spots` : `${filled} joined`}
+                                                            </span>
                                                         )}
-                                                        <div style={{ marginLeft: 'auto' }}>
-                                                            <CapacitySlots filled={firstSch._count?.signups ?? 0} cap={cap} maxShow={7} size={22} mySignup={mySignup} donorName={donorName} />
-                                                        </div>
+                                                        {act.schedules.length > 1 && (
+                                                            <span className="vol-browse-more">+{act.schedules.length - 1} {t.moreSchedules}</span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                                                <div className="vol-browse-cta">
+                                                    {isSignedUp ? (
+                                                        <>
+                                                            <span className="vol-joined-badge vol-joined-badge--sm"><CheckIcon size={10} /> {t.joined}</span>
+                                                            <button type="button" className="vol-btn-leave vol-btn-leave--sm" disabled={busy} onClick={() => quickCancel(act.id, firstSch.id)}>
+                                                                {busy ? '\u2026' : t.leave}
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <button type="button" className="vol-btn-join" disabled={busy || isFull} onClick={() => quickSignUp(act.id, firstSch.id)}>
+                                                            {busy ? '\u2026' : isFull ? t.full : `${t.signUp} \u2192`}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
 
-                                {/* Collapsible: activities without upcoming sessions */}
                                 {volShowUnscheduled && withoutUpcoming.length > 0 && (
-                                    <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                                        <button
-                                            type="button"
-                                            className="btn btn--ghost"
-                                            style={{ fontSize: 13, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}
-                                            onClick={() => setShowUnscheduled((v) => !v)}
-                                        >
-                                            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform .2s', transform: showUnscheduled ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+                                    <div className="vol-unscheduled">
+                                        <button type="button" className="vol-unscheduled-toggle" onClick={() => setShowUnscheduled((v) => !v)}>
+                                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform .2s', transform: showUnscheduled ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }} aria-hidden="true">
                                                 <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
-                                            Not Yet Scheduled
-                                            <span style={{ fontSize: 11, fontWeight: 600, background: 'var(--bg-card-alt)', borderRadius: 999, padding: '1px 7px' }}>{withoutUpcoming.length}</span>
+                                            Coming Soon
+                                            <span className="vol-unscheduled-count">{withoutUpcoming.length}</span>
                                         </button>
                                         {showUnscheduled && (
-                                            <div className="vol-activity-list" style={{ marginTop: 12 }}>
+                                            <div className="vol-unscheduled-list">
                                                 {withoutUpcoming.map((act) => (
-                                                    <button
-                                                        key={act.id}
-                                                        type="button"
-                                                        className="vol-activity-row"
-                                                        onClick={() => openActivity(act.id)}
-                                                    >
-                                                        <div className="vol-activity-info">
-                                                            <div className="vol-activity-title">{act.title}</div>
-                                                            <div className="cell-muted" style={{ fontSize: 13, marginTop: 3 }}>
-                                                                {act.recurrenceNote || act.recurrenceType}
-                                                                {' '}<span className="vol-status vol-status--inactive" style={{ fontSize: '0.68rem' }}>No sessions yet</span>
-                                                            </div>
-                                                        </div>
+                                                    <button key={act.id} type="button" className="vol-unscheduled-row" onClick={() => openActivity(act.id)}>
+                                                        <span className="vol-unscheduled-title">{act.title}</span>
+                                                        <span className="vol-status vol-status--inactive" style={{ fontSize: '0.68rem' }}>{t.tbd}</span>
                                                         <span className="vol-arrow">›</span>
                                                     </button>
                                                 ))}
@@ -730,121 +836,75 @@ export default function VolunteeringTab({ donorId, donorName, ui: pageUi, volSet
                                         )}
                                     </div>
                                 )}
+
+                                {volShowHistory && (
+                                    <div className="vol-history-wrap">
+                                        <button type="button" className="vol-history-toggle" onClick={toggleHistory}>
+                                            {showHistory ? t.hideHistory : t.showHistory}
+                                        </button>
+                                        {showHistory && (
+                                            historyLoading ? (
+                                                <div className="empty-state" style={{ padding: '20px' }}>
+                                                    <VolIcon size={28} /><p style={{ fontSize: 13 }}>{t.loading}</p>
+                                                </div>
+                                            ) : history.length === 0 ? (
+                                                <p className="vol-history-empty">{t.noHistory}</p>
+                                            ) : (
+                                                <div className="vol-history-list">
+                                                    {history.map((act) => (
+                                                        <button key={act.id} type="button" className="vol-history-row" onClick={() => openActivity(act.id, true)}>
+                                                            <span className="vol-history-title">{act.title}</span>
+                                                            <span className="vol-status vol-status--inactive" style={{ fontSize: '0.69rem' }}>{t.pastLabel}</span>
+                                                            <span className="vol-arrow">›</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                )}
                             </>
                         );
                     })()}
-
-                    {/* History toggle */}
-                    {volShowHistory && (
-                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-                        <button
-                            type="button"
-                            className="btn btn--ghost"
-                            style={{ fontSize: 13, padding: '7px 14px' }}
-                            onClick={toggleHistory}
-                        >
-                            {showHistory ? ui.hideHistory : ui.showHistory}
-                        </button>
-                    </div>
-                    )}
-
-                    {volShowHistory && showHistory && (
-                        <div style={{ marginTop: 16 }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 12 }}>
-                                {ui.historyTitle}
-                            </p>
-                            {historyLoading ? (
-                                <div className="empty-state" style={{ padding: '22px 20px' }}>
-                                    <VolIcon size={32} />
-                                    <p style={{ fontSize: 14 }}>{ui.loading}</p>
-                                </div>
-                            ) : history.length === 0 ? (
-                                <div className="empty-state" style={{ padding: '22px 20px' }}>
-                                    <VolIcon size={32} />
-                                    <p style={{ fontSize: 14 }}>{ui.noHistory}</p>
-                                </div>
-                            ) : (
-                                <div className="vol-activity-list">
-                                    {history.map((act) => (
-                                        <button
-                                            key={act.id}
-                                            type="button"
-                                            className="vol-activity-row vol-activity-row--history"
-                                            onClick={() => openActivity(act.id, true)}
-                                        >
-                                            <div className="vol-activity-info">
-                                                <div className="vol-activity-title">{act.title}</div>
-                                                <div className="cell-muted" style={{ fontSize: 13, marginTop: 3 }}>
-                                                    {act.recurrenceNote || act.recurrenceType}
-                                                    {' '}
-                                                    <span className="vol-status vol-status--inactive" style={{ fontSize: '0.69rem' }}>Past</span>
-                                                </div>
-                                            </div>
-                                            <span className="vol-arrow">›</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </>
+                </div>
             )}
 
             {view === 'mySignups' && (
-                <>
+                <div className="vol-mysignups">
                     {mySignupsLoading ? (
-                        <div className="empty-state">
-                            <VolIcon size={40} />
-                            <p>{ui.loading}</p>
+                        <div className="vol-skeleton-list">
+                            <div className="vol-skeleton vol-skeleton--card" />
+                            <div className="vol-skeleton vol-skeleton--card" />
                         </div>
                     ) : mySignups.length === 0 ? (
                         <div className="empty-state">
                             <VolIcon size={48} />
-                            <p>{ui.noSignups}</p>
+                            <p>{t.noSignups}</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {mySignups.map((s) => {
-                                const statusColor = s.status === 'signed_up' ? '#48c78e' : s.status === 'cancelled' ? '#f14668' : 'rgba(160,170,200,.3)';
-                                return (
-                                    <div
-                                        key={s.id}
-                                        role="button" tabIndex={0}
-                                        onClick={() => openActivity(s.activity?.id)}
-                                        onKeyDown={(e) => e.key === 'Enter' && openActivity(s.activity?.id)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: 12,
-                                            padding: '12px 16px', borderRadius: 12,
-                                            background: 'var(--bg-card)',
-                                            borderLeft: `3px solid ${statusColor}`,
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {s.activity?.title}
-                                            </div>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <CalIcon size={11} />{fmtDate(s.schedule?.scheduledAt)}
-                                                </span>
-                                                {s.schedule?.location && (
-                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <PinIcon size={11} />{s.schedule.location}
-                                                    </span>
-                                                )}
-                                            </div>
+                        <div className="vol-mysignups-list">
+                            {mySignups.map((s) => (
+                                <button key={s.id} type="button" className={`vol-mysignup-row vol-mysignup-row--${s.status}`} onClick={() => openActivity(s.activity?.id)}>
+                                    <div className="vol-mysignup-body">
+                                        <div className="vol-mysignup-title">{s.activity?.title}</div>
+                                        <div className="vol-mysignup-meta">
+                                            {s.schedule?.scheduledAt && (
+                                                <span><CalIcon size={11} />{fmtDateShort(s.schedule.scheduledAt)}</span>
+                                            )}
+                                            {s.schedule?.location && (
+                                                <span><PinIcon size={11} />{s.schedule.location}</span>
+                                            )}
                                         </div>
-                                        <span className={`vol-status vol-status--${s.status}`} style={{ flexShrink: 0 }}>
-                                            {s.status.replace('_', ' ')}
-                                        </span>
-                                        <span style={{ color: 'var(--text-muted)', fontSize: 18, flexShrink: 0 }}>›</span>
                                     </div>
-                                );
-                            })}
+                                    <div className="vol-mysignup-right">
+                                        <span className={`vol-status vol-status--${s.status}`}>{s.status.replace('_', ' ')}</span>
+                                        <span className="vol-arrow">›</span>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
                     )}
-                </>
+                </div>
             )}
         </section>
     );

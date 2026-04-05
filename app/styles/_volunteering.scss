@@ -373,132 +373,1057 @@
     padding-top: 6px;
 }
 
-// ── Donor: volunteering tab ───────────────────────────────────────────────────
+// ── Donor: tabs ──────────────────────────────────────────────────────────────
 
-.vol-tab {
-    margin-top: 24px;
-}
-
-.vol-tab-header {
+.vol-tabs {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 3px;
+    border-radius: 10px;
 }
 
-.vol-tab-nav {
-    display: flex;
-    gap: 6px;
-    margin-left: auto;
-    flex-wrap: wrap;
-}
-
-.vol-tab-btn--active {
-    font-weight: 700;
-    color: var(--accent, #64a0ff) !important;
-    border-bottom: 2px solid var(--accent, #64a0ff);
-    border-radius: 0;
-}
-
-.vol-detail-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.vol-detail-desc {
+.vol-tab-pill {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.6;
-    margin-bottom: 12px;
-    white-space: pre-wrap;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+
+    &:hover { color: var(--text-primary); }
+
+    &--active {
+        background: var(--bg-card, rgba(255, 255, 255, 0.1));
+        color: var(--text-primary);
+        font-weight: 700;
+    }
 }
 
-// ── Donor: schedule cards ─────────────────────────────────────────────────────
+// ── Donor: detail sub-tabs ───────────────────────────────────────────────────
 
-.vol-schedules {
+.vol-detail-header {
+    margin-bottom: 4px;
+}
+
+.vol-detail-tabs {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    gap: 0;
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.1));
+    margin: 16px 0 20px;
 }
 
-.vol-sch-card {
+.vol-dtab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted, #888);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+
+    &:hover { color: var(--text-secondary); }
+
+    &--active {
+        color: var(--text-primary);
+        font-weight: 700;
+        border-bottom-color: var(--accent, #3273dc);
+        background: rgba(100, 160, 255, 0.07);
+        border-radius: 6px 6px 0 0;
+    }
+}
+
+.vol-dtab-badge {
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(100, 160, 255, 0.15);
+    color: var(--accent, #64a0ff);
+    padding: 1px 6px;
+    border-radius: 999px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.vol-tab-panel {
+    padding-top: 2px;
+}
+
+.vol-about {
+    .vol-hero-desc {
+        margin-bottom: 14px;
+    }
+    .vol-about-empty {
+        color: var(--text-muted, #888);
+        font-style: italic;
+        font-size: 14px;
+    }
+}
+
+// ── Donor: detail view ───────────────────────────────────────────────────────
+
+.vol-back-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 14px 16px;
+    margin-bottom: 20px;
+}
+
+.vol-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.12s;
+    &:hover { color: var(--text-primary); }
+}
+
+.vol-closed-badge {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #e8a44a;
+    background: rgba(232, 164, 74, 0.12);
+    border: 1px solid rgba(232, 164, 74, 0.28);
+    padding: 3px 10px;
+    border-radius: 999px;
+}
+
+.vol-hero {
+    margin-bottom: 20px;
+}
+
+.vol-hero-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.vol-hero-desc {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin-bottom: 12px;
+}
+
+.vol-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.vol-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: rgba(100, 160, 255, 0.08);
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(100, 160, 255, 0.18);
+}
+
+.vol-empty-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 36px 20px;
+    color: var(--text-muted);
+    p { font-size: 14px; margin: 0; }
+}
+
+// ── Donor: sessions ──────────────────────────────────────────────────────────
+
+.vol-sessions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.vol-section-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.vol-section-count {
+    background: rgba(100, 160, 255, 0.12);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent, #64a0ff);
+}
+
+.vol-session-card {
+    padding: 16px;
     border-radius: 12px;
     border: 1px solid var(--border);
-    flex-wrap: wrap;
+    background: var(--bg-card, transparent);
+    transition: border-color 0.15s;
 
-    &--completed {
-        opacity: 0.6;
-    }
-    &--cancelled {
-        opacity: 0.45;
-        text-decoration: line-through;
+    &--joined {
+        border-color: rgba(72, 199, 142, 0.45);
+        border-left: 3px solid #48c78e;
+        background: rgba(72, 199, 142, 0.04);
     }
 }
 
-.vol-sch-info {
+.vol-session-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.vol-session-datetime {
     display: flex;
     flex-direction: column;
+    gap: 2px;
+}
+
+.vol-session-date {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.vol-session-time {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.vol-joined-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #48c78e;
+    background: rgba(72, 199, 142, 0.12);
+    border: 1px solid rgba(72, 199, 142, 0.28);
+    padding: 3px 9px;
+    border-radius: 999px;
+    flex-shrink: 0;
+
+    &--sm {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 7px;
+    }
+}
+
+.vol-session-loc {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.vol-session-notes {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    line-height: 1.5;
+    margin-top: 0;
+}
+
+.vol-session-cta {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+// ── Donor: spots bar ─────────────────────────────────────────────────────────
+
+.vol-spots {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin: 8px 0;
+}
+
+.vol-spots-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    strong { color: var(--text-primary); font-weight: 700; }
+}
+
+.vol-spots-full { color: #f14668; }
+
+.vol-spots-track {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(160, 170, 200, 0.18);
+    overflow: hidden;
+}
+
+.vol-spots-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+// ── Donor: buttons ───────────────────────────────────────────────────────────
+
+.vol-btn-join {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 22px;
+    border-radius: 8px;
+    background: var(--accent, #3273dc);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(50, 115, 220, 0.35);
+    transition: opacity 0.12s, transform 0.1s, box-shadow 0.12s;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(50, 115, 220, 0.45); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+}
+
+.vol-btn-leave {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid rgba(160, 170, 200, 0.25);
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) { color: #f14668; border-color: rgba(241, 70, 104, 0.3); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    &--sm { font-size: 11px; padding: 3px 9px; }
+}
+
+// ── Donor: task checklist ────────────────────────────────────────────────────
+
+.vol-task-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+.vol-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.vol-task-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+}
+
+.vol-task-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    &--done { color: #48c78e; }
+}
+
+.vol-task-track {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(160, 170, 200, 0.18);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.vol-task-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.vol-task-items {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.vol-task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 6px;
+    transition: background 0.1s;
+
+    &:hover { background: rgba(255, 255, 255, 0.03); }
+
+    &--done .vol-task-text {
+        text-decoration: line-through;
+        color: var(--text-muted);
+    }
+}
+
+.vol-task-checkbox {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: var(--accent, #3273dc);
+    cursor: pointer;
+}
+
+.vol-task-text {
+    font-size: 15px;
+    color: var(--text-primary);
+    transition: color 0.15s;
+    line-height: 1.4;
+}
+
+// ── Donor: past sessions ─────────────────────────────────────────────────────
+
+.vol-past-sessions {
+    margin-top: 4px;
+}
+
+.vol-past-summary {
+    cursor: pointer;
+    list-style: none;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 7px 4px;
+    user-select: none;
+    &::-webkit-details-marker { display: none; }
+}
+
+.vol-past-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 8px 4px 4px;
+}
+
+.vol-past-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.vol-past-date {
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 110px;
+}
+
+.vol-past-loc {
+    display: flex;
+    align-items: center;
     gap: 4px;
     flex: 1;
 }
 
-.vol-sch-date {
+.vol-past-attended {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #48c78e;
     font-weight: 600;
+    font-size: 12px;
+}
+
+// ── Donor: discussion ────────────────────────────────────────────────────────
+
+.vol-discussion-section {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    margin-top: 4px;
+}
+
+.vol-discussion-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.vol-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 6px;
+    transition: background 0.12s, color 0.12s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-secondary);
+    }
+}
+
+.vol-chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 14px;
+}
+
+.vol-chat-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 28px 20px;
+    color: var(--text-muted);
+    p { font-size: 13px; margin: 0; }
+}
+
+.vol-chat-msg {
+    display: flex;
+    gap: 10px;
+
+    &--admin {
+        .vol-chat-avatar {
+            background: rgba(255, 180, 50, 0.18);
+            color: #f0a500;
+        }
+        .vol-chat-body {
+            background: rgba(255, 180, 50, 0.05);
+            border: 1px solid rgba(255, 180, 50, 0.12);
+            border-radius: 2px 10px 10px 10px;
+            padding: 8px 12px;
+        }
+    }
+
+    &--donor {
+        .vol-chat-avatar {
+            background: rgba(100, 160, 255, 0.15);
+            color: var(--accent, #64a0ff);
+        }
+        .vol-chat-body {
+            background: rgba(100, 160, 255, 0.05);
+            border: 1px solid rgba(100, 160, 255, 0.1);
+            border-radius: 2px 10px 10px 10px;
+            padding: 8px 12px;
+        }
+    }
+}
+
+.vol-chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.vol-chat-body { flex: 1; min-width: 0; }
+
+.vol-chat-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+    strong { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+}
+
+.vol-chat-time {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.vol-chat-text {
+    font-size: 15px;
+    line-height: 1.6;
     color: var(--text-primary);
+    white-space: pre-wrap;
+    margin: 0;
 }
 
-.vol-sch-loc {
-    font-size: 0.87rem;
-    color: var(--text-secondary);
-}
-
-.vol-sch-capacity {
-    font-size: 0.8rem;
-    color: var(--text-muted, #888);
-}
-
-.vol-sch-actions {
+.vol-chat-form {
     display: flex;
     gap: 8px;
 }
 
-.vol-btn-signup {
-    min-width: 90px;
-}
+.vol-chat-input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
 
-.vol-btn-cancel {
-    min-width: 90px;
-    color: #dc3545 !important;
-    border-color: rgba(220, 80, 80, 0.35) !important;
-
-    &:hover {
-        background: rgba(220, 80, 80, 0.07) !important;
+    &:focus {
+        outline: none;
+        border-color: var(--accent, #64a0ff);
     }
 }
 
-// ── Donor: my signups ──────────────────────────────────────────────────────────
+.vol-chat-send {
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: var(--accent, #3273dc);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
 
-.vol-my-signups {
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+// ── Donor: browse list ───────────────────────────────────────────────────────
+
+.vol-browse {
+    margin-top: 4px;
+}
+
+.vol-browse-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.vol-my-signup-row {
+.vol-browse-card {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card, transparent);
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover:not(.vol-browse-card--full) {
+        border-color: rgba(100, 160, 255, 0.3);
+        background: rgba(100, 160, 255, 0.03);
+    }
+
+    &--joined {
+        border-color: rgba(72, 199, 142, 0.45);
+        border-left: 3px solid #48c78e;
+        background: rgba(72, 199, 142, 0.03);
+    }
+    &--full { opacity: 0.75; }
+}
+
+.vol-browse-info {
+    flex: 1;
+    cursor: pointer;
+    min-width: 0;
+
+    &:hover .vol-browse-title { color: var(--accent, #64a0ff); }
+}
+
+.vol-browse-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+    transition: color 0.12s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vol-browse-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.vol-browse-metaitem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+
+    &--full { color: #f14668; font-weight: 600; }
+}
+
+.vol-browse-more {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(100, 160, 255, 0.1);
+    color: var(--accent, #64a0ff);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.vol-browse-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+// ── Donor: unscheduled & history ─────────────────────────────────────────────
+
+.vol-unscheduled {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.vol-unscheduled-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 4px;
+    &:hover { color: var(--text-primary); }
+}
+
+.vol-unscheduled-count {
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 7px;
+    border-radius: 999px;
+    color: var(--text-secondary);
+}
+
+.vol-unscheduled-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vol-unscheduled-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
     border-radius: 10px;
     border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    text-align: start;
+    width: 100%;
+    color: inherit;
+    &:hover { background: rgba(255, 255, 255, 0.03); }
+}
+
+.vol-unscheduled-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vol-history-wrap {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.vol-history-toggle {
+    font-size: 13px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    &:hover { color: var(--text-secondary); text-decoration: underline; }
+}
+
+.vol-history-empty {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    padding: 0 2px;
+}
+
+.vol-history-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vol-history-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    text-align: start;
+    width: 100%;
+    color: inherit;
+    opacity: 0.7;
+    &:hover { opacity: 1; background: rgba(255, 255, 255, 0.03); }
+}
+
+.vol-history-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// ── Donor: my sign-ups ───────────────────────────────────────────────────────
+
+.vol-mysignups {
+    margin-top: 4px;
+}
+
+.vol-mysignups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vol-mysignup-row {
+    display: flex;
+    align-items: center;
     gap: 12px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card, transparent);
+    cursor: pointer;
+    text-align: start;
+    width: 100%;
+    transition: border-color 0.12s, background 0.12s;
+
+    &:hover {
+        border-color: var(--accent, #64a0ff);
+        background: rgba(100, 160, 255, 0.03);
+    }
+
+    &--signed_up { border-left: 3px solid #48c78e; }
+    &--cancelled  { border-left: 3px solid rgba(241, 70, 104, 0.4); opacity: 0.7; }
+}
+
+.vol-mysignup-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.vol-mysignup-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vol-mysignup-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
     flex-wrap: wrap;
+
+    span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+}
+
+.vol-mysignup-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+// ── Donor: skeleton loading ──────────────────────────────────────────────────
+
+@keyframes vol-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+
+.vol-skeleton {
+    border-radius: 8px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 25%,
+        rgba(255, 255, 255, 0.09) 50%,
+        rgba(255, 255, 255, 0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: vol-shimmer 1.6s infinite;
+
+    &--title { height: 24px; width: 55%; margin-bottom: 12px; }
+    &--body  { height: 14px; width: 100%; margin-bottom: 8px; }
+    &--short { width: 70%; }
+    &--card  { height: 70px; margin-bottom: 8px; border-radius: 12px; }
+}
+
+.vol-skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+// ── Donor: mobile responsive ─────────────────────────────────────────────────
+
+@media (max-width: 640px) {
+
+    // Sub-tab nav scrolls horizontally instead of wrapping
+    .vol-detail-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        &::-webkit-scrollbar { display: none; }
+    }
+
+    .vol-dtab { flex-shrink: 0; padding: 9px 12px; }
+
+    // Browse card stacks icon+info above CTA on very small screens
+    .vol-browse-card { flex-wrap: wrap; }
+
+    .vol-browse-cta {
+        flex-direction: row;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    // Full-width sign-up / leave buttons inside session cards
+    .vol-session-cta {
+        justify-content: stretch;
+        .vol-btn-join,
+        .vol-btn-leave { flex: 1; justify-content: center; }
+    }
+
+    // My sign-up rows can wrap badges below the title
+    .vol-mysignup-row { flex-wrap: wrap; gap: 8px; }
+    .vol-mysignup-right { width: 100%; flex-direction: row; justify-content: flex-end; }
+
+    // Past sessions rows wrap date/loc/status
+    .vol-past-row { flex-wrap: wrap; gap: 6px; }
+
+    // Unscheduled + history row titles truncate less aggressively
+    .vol-unscheduled-title,
+    .vol-history-title { white-space: normal; }
+
+    // Chat form stacks on very small screens
+    .vol-chat-form { flex-direction: column; }
+    .vol-chat-send { width: 100%; justify-content: center; display: flex; }
+
+    // Reduce card internal padding (dashboard already reduces .card to 18px 16px at 660px)
+    .vol-sessions { gap: 8px; }
+    .vol-session-card { padding: 14px 12px; }
+}
+
+@media (max-width: 400px) {
+    .vol-browse-title { font-size: 14px; }
+    .vol-session-date { font-size: 14px; }
+    .vol-detail-tabs { margin: 12px 0 16px; }
+    .vol-dtab { font-size: 13px; padding: 8px 10px; }
+}
+
+// ── Admin: checklist items ────────────────────────────────────────────────────
+
+.vol-checklist-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vol-checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    transition: background 0.15s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+}
+
+.vol-checklist-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 18px;
+    flex-shrink: 0;
+}
+
+.vol-checklist-title {
+    font-size: 14px;
+    color: var(--text-primary);
+    flex: 1;
 }

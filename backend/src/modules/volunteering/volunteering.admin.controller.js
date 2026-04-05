@@ -113,6 +113,30 @@ const postDiscussion = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Checklist items ──────────────────────────────────────────────────────────────────────────────────────
+
+const addChecklistItem = async (req, res, next) => {
+  try {
+    const { title, order } = req.body;
+    const data = await service.addChecklistItem(req.params.id, title, order);
+    sendSuccess(res, data, 'Checklist item added', 201);
+  } catch (err) { next(err); }
+};
+
+const updateChecklistItem = async (req, res, next) => {
+  try {
+    const data = await service.updateChecklistItem(req.params.id, req.params.itemId, req.body);
+    sendSuccess(res, data, 'Checklist item updated');
+  } catch (err) { next(err); }
+};
+
+const deleteChecklistItem = async (req, res, next) => {
+  try {
+    await service.deleteChecklistItem(req.params.id, req.params.itemId);
+    sendSuccess(res, null, 'Checklist item deleted');
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   listActivities,
   getActivity,
@@ -127,4 +151,7 @@ module.exports = {
   removeSignup,
   preAssignVolunteer,
   postDiscussion,
+  addChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem,
 };
