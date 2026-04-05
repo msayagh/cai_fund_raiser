@@ -89,40 +89,8 @@ export default function StatisticsScreen({
                 <div className="statistics-screen-grid">
                     <section className="statistics-panel statistics-panel--metrics">
                         <div className="statistics-metrics-stack">
-                            <div className="statistics-metrics-group">
-                                <div className="statistics-section-title">{t.statisticsGlobalGoal || 'Global goal'}</div>
-                                <div className="statistics-metrics-grid">
-                                    <StatCard
-                                        label={t.collectedFundsLabel || 'Collected funds'}
-                                        value={languageCurrency(totalRaised, currencyFirst)}
-                                        tone="gold"
-                                    />
-                                    <StatCard
-                                        label={t.remainingGoalLabel || 'Remaining goal'}
-                                        value={languageCurrency(globalRemaining, currencyFirst)}
-                                    />
-                                    <StatCard
-                                        label={t.donorsList || 'List of donors'}
-                                        value={donorCount.toLocaleString(language)}
-                                    />
-                                    <StatCard
-                                        label={t.goal || 'Goal'}
-                                        value={`${globalCompletionPct}%`}
-                                        tone="accent"
-                                    />
-                                    <StatCard
-                                        label={t.bricks || 'Bricks'}
-                                        value={`${fundedBricks}/${totalBricks}`}
-                                    />
-                                    <StatCard
-                                        label={t.averageSupport || 'Avg. support'}
-                                        value={languageCurrency(averageDonation, currencyFirst)}
-                                    />
-                                </div>
-                            </div>
 
                             <div className="statistics-metrics-group">
-                                <div className="statistics-section-title">{t.statisticsCurrentGoal || 'Current goal'}</div>
                                 <div className="statistics-metrics-grid">
                                     <StatCard
                                         label={t.collectedFundsLabel || 'Collected funds'}
