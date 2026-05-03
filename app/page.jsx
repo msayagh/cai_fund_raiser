@@ -131,7 +131,7 @@ export default function MosqueDonation() {
   const pct = Math.round((sel.funded / sel.total) * 100);
   const remaining = sel.total - sel.funded;
 
-  const totalRaised = donations.reduce((sum, donation) => sum + parseInt(donation["montant total"]), 0) + PRE_RAISED;
+  const totalRaised = ramadanRaised + PRE_RAISED;
   const totalGoal = localizedTiers.reduce((sum, tier) => sum + tier.total * tier.amount, 0);
 
   const currencyFirst = language === "en";

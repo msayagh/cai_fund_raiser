@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loadTranslation, INITIAL_TRANSLATION, INITIAL_LANGUAGE, AVAILABLE_LANGUAGE_CODES } from '@/lib/translationUtils.js';
-import { fetchCampaignSnapshot, fetchFundedFromSheet, fetchDonationsFromSheet, hasFundedSheetConfig } from '@/lib/dataFetching.js';
+import { fetchCampaignSnapshot } from '@/lib/dataFetching.js';
 import { getCachedValue, setCachedValue } from '@/lib/clientCache.js';
 import { captureException, captureMessage } from '@/lib/monitoring.js';
-import { INITIAL_TIERS, MOBILE_BREAKPOINT, TIER_CONFIG } from '@/constants/config.js';
+import { INITIAL_TIERS, MOBILE_BREAKPOINT } from '@/constants/config.js';
 
 const TIERS_CACHE_KEY = 'tiers:funded';
 const TIERS_CACHE_TTL = 1000 * 60 * 5;
@@ -170,59 +170,49 @@ export function useTiers() {
     }, []);
 
     useEffect(() => {
-        const pollFunded = async ({ background = false } = {}) => {
-            if (!background) {
-                setIsLoading(true);
-            }
+        const TIER_NAME_TO_KEY = {
+            mutasaddiq: 'foundation',
+            kareem: 'walls',
+            jawaad: 'arches',
+            sabbaq: 'dome',
+        };
 
+        const computeFundedFromPayments = (payments) => {
+            const counts = { foundation: 0, walls: 0, arches: 0, dome: 0 };
+            for (const payment of payments) {
+                const key = TIER_NAME_TO_KEY[String(payment?.tier || '').toLowerCase()];
+                if (!key) continue;
+                counts[key] += Number(payment.quantity) || 1;
+            }
+            return counts;
+        };
+
+        const pollFunded = async ({ background = false } = {}) => {
             const cachedFunded = getCachedValue(TIERS_CACHE_KEY, { maxAgeMs: TIERS_CACHE_TTL });
             if (cachedFunded) {
                 updateFundedTiers(cachedFunded);
-                if (!background) {
-                    setIsLoading(false);
-                }
+                setIsLoading(false);
             }
 
             try {
-                const snapshot = await fetchCampaignSnapshot();
-                const fundedFromApi = snapshot?.funded;
-                const hasApiFundedData = fundedFromApi && Object.values(fundedFromApi).some((value) => Number(value) > 0);
-
-                if (hasApiFundedData) {
-                    updateFundedTiers(fundedFromApi);
-                    setCachedValue(TIERS_CACHE_KEY, fundedFromApi);
-                    setError(null);
+                const payments = await fetchCampaignSnapshot();
+                if (!Array.isArray(payments)) {
+                    if (!cachedFunded) {
+                        captureMessage('Tier progress fetch returned no data', { level: 'error', source: 'useTiers' });
+                    }
                     return;
                 }
 
-                let funded = hasFundedSheetConfig() ? await fetchFundedFromSheet() : null;
-                if (!funded) {
-                    setError('Unable to load tier progress right now.');
-                    captureMessage('Tier progress fetch returned no data from API or sheet', { level: 'error', source: 'useTiers' });
-                    return;
-                }
-
-                // Update funded tiers with the API data
-                const foundation = snapshot.filter(donation => donation.tier === 'mutasaddiq').length;
-                const arches = snapshot.filter(donation => donation.tier === 'kareem').length;
-                const walls = snapshot.filter(donation => donation.tier === 'jawaad').length;
-                const dome = snapshot.filter(donation => donation.tier === 'sabbaq').length;
-                funded = {
-                    ...funded,
-                    foundation: funded.foundation + foundation,
-                    arches: funded.arches + arches,
-                    walls: funded.walls + walls,
-                    dome: funded.dome + dome,
-                };
-
+                const funded = computeFundedFromPayments(payments);
                 updateFundedTiers(funded);
                 setCachedValue(TIERS_CACHE_KEY, funded);
                 setError(null);
-            } catch (error) {
-                setError('Unable to load tier progress right now.');
-                captureException(error, { source: 'useTiers' });
-            } finally {
                 setIsLoading(false);
+            } catch (error) {
+                if (!cachedFunded) {
+                    setError('Unable to load tier progress right now.');
+                }
+                captureException(error, { source: 'useTiers' });
             }
         };
 
@@ -248,50 +238,6 @@ export function useDonations() {
 
     useEffect(() => {
         setIsMounted(true);
-    }, []);
-
-    const getTotalsByEmail = useCallback((donations) => {
-        const summary = {};
-
-        donations.forEach((donation) => {
-            const email = donation["courriel"];
-            let tier = String(donation["tier"]);
-            const price = parseInt(donation["montant total"]);
-            const donorLabel = String(donation["donorLabel"] || "").trim();
-            const details = String(donation["détails"]);
-            if (!tier) {
-                tier = ["sabbaq", "mutasaddiq", "kareem", "jawaad"].find((t) => details.toLowerCase().includes(t.toLowerCase())) || "unknown";
-                if (!tier) {
-                    tier = "unknown";
-                }
-            }
-            const quantity = parseInt(details.match(/(\d+)x/)?.[1]) || 1;
-
-            const ID = email + "_" + tier + "_" + donorLabel;
-
-            if (!summary[ID]) {
-                summary[ID] = {
-                    email: email,
-                    details: details,
-                    donorLabel: donorLabel,
-                    tier: tier,
-                    totalDonated: 0,
-                    ticketCount: quantity || 0,
-                };
-            }
-
-            if (!summary[ID].tier && tier) {
-                summary[ID].tier = tier;
-            }
-
-            summary[ID].totalDonated += price;
-
-            if (!summary[ID].donorLabel && donorLabel) {
-                summary[ID].donorLabel = donorLabel;
-            }
-        });
-
-        return summary;
     }, []);
 
     const getTotalsByEmailApi = useCallback((donations) => {
@@ -321,15 +267,6 @@ export function useDonations() {
         return summary;
     }, []);
 
-    const getRamadanRaised = useCallback((donations) => {
-        const total = donations.reduce((sum, donation) => {
-            const amount = parseInt(donation["montant total"], 10) || 0;
-            return sum + amount;
-        }, 0);
-        console.log(`[getRamadanRaised] Calculated total from ${donations.length} donations: ${total}`);
-        return total;
-    }, []);
-
     const getRamadanRaisedApi = useCallback((donations) => {
         const total = donations.reduce((sum, donation) => {
             const amount = parseInt(donation.amount, 10) || 0;
@@ -352,98 +289,51 @@ export function useDonations() {
 
         // 2. Reduce the object values into a single sum
         return Object.values(totalsByEmail).reduce((acc, donor) => {
-            // Normalize tier name to lowercase to match our map
             const tierKey = donor.tier.toLowerCase();
             const unitValue = TIER_VALUES[tierKey] || 0;
-            
-            // Engagement = Unit Value * Number of Tickets
             return acc + (unitValue * donor.ticketCount);
         }, 0);
-    }, [totalsByEmail]);
+    }, []);
 
     useEffect(() => {
-        const pollDonations = async ({ background = false } = {}) => {
-            if (!background) {
-                setIsLoading(true);
-            }
-
-            const cachedRows = getCachedValue(DONATIONS_CACHE_KEY, { maxAgeMs: DONATIONS_CACHE_TTL });
-            if (Array.isArray(cachedRows) && cachedRows.length > 0) {
-                setDonations(cachedRows);
-                setTotalsByEmail(getTotalsByEmail(cachedRows));
-                setRamadanRaised(getRamadanRaisedApi(cachedRows));
-                setEngagementAmount(getEngagementAmount(getTotalsByEmail(cachedRows)));
-                if (!background) {
-                    setIsLoading(false);
+        const applySnapshot = (snapshot) => {
+            const totals = getTotalsByEmailApi(snapshot);
+            setDonations((prev) => {
+                if (prev.length === snapshot.length && prev.every((d, i) => d.id === snapshot[i].id && d.amount === snapshot[i].amount)) {
+                    return prev;
                 }
+                return snapshot;
+            });
+            setTotalsByEmail(totals);
+            setRamadanRaised(getRamadanRaisedApi(snapshot));
+            setEngagementAmount(getEngagementAmount(totals));
+        };
+
+        const pollDonations = async ({ background = false } = {}) => {
+            const cachedRows = getCachedValue(DONATIONS_CACHE_KEY, { maxAgeMs: DONATIONS_CACHE_TTL });
+            if (Array.isArray(cachedRows)) {
+                applySnapshot(cachedRows);
+                setIsLoading(false);
             }
 
             try {
                 const snapshot = await fetchCampaignSnapshot();
-                const hasApiDonationData = Array.isArray(snapshot) && (snapshot.length > 0);
-
-                if (hasApiDonationData) {
-                    setDonations((prev) => {
-                        if (prev.length === snapshot.length && prev.every((d, i) => d.id === snapshot[i].id && d.amount === snapshot[i].amount)) {
-                            return prev;
-                        }
-                        return snapshot;
-                    });
-                    const totalsByEmail = getTotalsByEmailApi(snapshot);
-                    setCachedValue(DONATIONS_CACHE_KEY, snapshot);
-                    setTotalsByEmail(totalsByEmail);
-                    setRamadanRaised(getRamadanRaisedApi(snapshot));
-                    setEngagementAmount(getEngagementAmount(totalsByEmail));
-                    setError(null);
-                    return;
-                }
-
-                const rows = await fetchDonationsFromSheet();
-                if (!Array.isArray(rows)) {
-                    setError('Unable to load donations right now.');
-                    captureMessage('Donations fetch returned a non-array payload', { level: 'error', source: 'useDonations' });
-                    return;
-                }
-
-                console.log('[useDonations] Fetched donations:', rows.length);
-                setDonations((prev) => {
-                    if (prev.length === rows.length && prev.every((d, i) => d.id === rows[i].id && d.donated === rows[i].donated)) {
-                        return prev;
+                if (!Array.isArray(snapshot)) {
+                    if (!cachedRows) {
+                        captureMessage('Donations fetch returned no data', { level: 'error', source: 'useDonations' });
                     }
-                    return rows;
-                });
-                setCachedValue(DONATIONS_CACHE_KEY, rows);
-                setTotalsByEmail(getTotalsByEmail(rows));
-                setRamadanRaised(getRamadanRaised(rows));
-                setEngagementAmount(getEngagementAmount(getTotalsByEmail(rows)));
+                    return;
+                }
+
+                applySnapshot(snapshot);
+                setCachedValue(DONATIONS_CACHE_KEY, snapshot);
                 setError(null);
-            } catch (error) {
-                try {
-                    const rows = await fetchDonationsFromSheet();
-                    if (!Array.isArray(rows)) {
-                        setError('Unable to load donations right now.');
-                        captureMessage('Donations fetch returned a non-array payload', { level: 'error', source: 'useDonations' });
-                        return;
-                    }
-
-                    console.log('[useDonations] Fetched donations:', rows.length);
-                    setDonations((prev) => {
-                        if (prev.length === rows.length && prev.every((d, i) => d.id === rows[i].id && d.donated === rows[i].donated)) {
-                            return prev;
-                        }
-                        return rows;
-                    });
-                    setCachedValue(DONATIONS_CACHE_KEY, rows);
-                    setTotalsByEmail(getTotalsByEmail(rows));
-                    setRamadanRaised(getRamadanRaised(rows));
-                    setEngagementAmount(getEngagementAmount(getTotalsByEmail(rows)));
-                    setError(null);
-                } catch (error) {
-                    setError('Unable to load donations right now.');
-                    captureException(error, { source: 'useDonations' });
-                }
-            } finally {
                 setIsLoading(false);
+            } catch (error) {
+                if (!cachedRows) {
+                    setError('Unable to load donations right now.');
+                }
+                captureException(error, { source: 'useDonations' });
             }
         };
 
@@ -453,7 +343,7 @@ export function useDonations() {
         return () => {
             clearInterval(donationsIntervalId);
         };
-    }, [getRamadanRaised]);
+    }, [getRamadanRaisedApi, getTotalsByEmailApi, getEngagementAmount]);
 
     return {
         donations,
