@@ -11,7 +11,6 @@ const createRequestSchema = z.object({
 });
 
 const approveAccountCreationSchema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters'),
   pledgeAmount: z.number().positive().optional(),
 });
 

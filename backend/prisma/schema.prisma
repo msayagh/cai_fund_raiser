@@ -13,7 +13,6 @@ model Donor {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
-  passwordHash String
   accountCreated Boolean @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -30,7 +29,6 @@ model Admin {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
-  passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   addedById    String?

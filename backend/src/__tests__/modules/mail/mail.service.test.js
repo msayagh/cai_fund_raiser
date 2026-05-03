@@ -6,14 +6,15 @@
 //   getTransporter          — lazy singleton accessor (both truthy/falsy cache paths)
 //   sendEmail               — core send with try/catch (success, text param, failure)
 //   sendRegistrationConfirmation
-//   sendPasswordReset
 //   sendPaymentConfirmation
 //   sendRequestStatusUpdate
-//   sendAdminAccountCreation
-//   sendDonorAccountCreation
+//   sendAdminAccountCreation       — (email, name) — passwordless OTP login
+//   sendDonorAccountCreation       — (email, name) — passwordless OTP login
 //   sendDonorDeactivationNotice (with and without reason param)
 //   sendAdminActionNotification
 //   sendEngagementConfirmation
+//
+// Note: sendPasswordReset has been removed alongside passwordless OTP login.
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -26,7 +27,6 @@ jest.mock('nodemailer', () => ({
 
 jest.mock('../../../modules/mail/mail.templates', () => ({
   registrationConfirmationTemplate: jest.fn(() => '<html>registration</html>'),
-  passwordResetTemplate:            jest.fn(() => '<html>reset</html>'),
   paymentConfirmationTemplate:      jest.fn(() => '<html>payment</html>'),
   requestStatusTemplate:            jest.fn(() => '<html>request</html>'),
   adminAccountTemplate:             jest.fn(() => '<html>admin</html>'),
@@ -49,7 +49,6 @@ const {
   initializeTransporter,
   getTransporter,
   sendRegistrationConfirmation,
-  sendPasswordReset,
   sendPaymentConfirmation,
   sendRequestStatusUpdate,
   sendAdminAccountCreation,
@@ -129,14 +128,6 @@ describe('sendRegistrationConfirmation', () => {
   });
 });
 
-describe('sendPasswordReset', () => {
-  it('calls sendEmail with the password reset template', async () => {
-    mockSendMail.mockResolvedValueOnce({ messageId: 'x', response: 'ok' });
-    const result = await sendPasswordReset('user@test.com', 'Alice', 'https://reset.link/token');
-    expect(result.success).toBe(true);
-  });
-});
-
 describe('sendPaymentConfirmation', () => {
   it('calls sendEmail with the payment confirmation template', async () => {
     mockSendMail.mockResolvedValueOnce({ messageId: 'x', response: 'ok' });
@@ -158,17 +149,17 @@ describe('sendRequestStatusUpdate', () => {
 });
 
 describe('sendAdminAccountCreation', () => {
-  it('calls sendEmail with the admin account template', async () => {
+  it('calls sendEmail with the admin account template using (email, name)', async () => {
     mockSendMail.mockResolvedValueOnce({ messageId: 'x', response: 'ok' });
-    const result = await sendAdminAccountCreation('admin@test.com', 'Admin One', 'TempPass123');
+    const result = await sendAdminAccountCreation('admin@test.com', 'Admin One');
     expect(result.success).toBe(true);
   });
 });
 
 describe('sendDonorAccountCreation', () => {
-  it('calls sendEmail with the donor account creation template', async () => {
+  it('calls sendEmail with the donor account creation template using (email, name)', async () => {
     mockSendMail.mockResolvedValueOnce({ messageId: 'x', response: 'ok' });
-    const result = await sendDonorAccountCreation('donor@test.com', 'Bob', 'TempPass!1');
+    const result = await sendDonorAccountCreation('donor@test.com', 'Bob');
     expect(result.success).toBe(true);
   });
 });

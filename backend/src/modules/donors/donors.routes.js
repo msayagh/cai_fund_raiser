@@ -7,7 +7,6 @@ const validate = require('../../middleware/validate');
 const ctrl = require('./donors.controller');
 const {
   updateProfileSchema,
-  updatePasswordSchema,
   createEngagementSchema,
   updateEngagementSchema,
   upsertDonorPaymentSchema,
@@ -20,7 +19,6 @@ const router = Router();
 // ─── Donor self-service (/api/donors) ─────────────────────────────────────────
 router.get('/me', requireDonor, ctrl.getMe);
 router.put('/me', requireDonor, validate(updateProfileSchema), ctrl.updateMe);
-router.put('/me/password', requireDonor, validate(updatePasswordSchema), ctrl.updateMyPassword);
 router.get('/me/engagement', requireDonor, ctrl.getMyEngagement);
 router.post('/me/engagement', requireDonor, validate(createEngagementSchema), ctrl.createEngagement);
 router.put('/me/engagement', requireDonor, validate(updateEngagementSchema), ctrl.updateEngagement);
@@ -30,10 +28,6 @@ router.get('/me/requests', requireDonor, ctrl.getMyRequests);
 module.exports = router;
 
 // ─── Admin donor routes (mounted separately at /api/admin/donors) ──────────────
-const adminDonorPasswordSchema = z.object({
-  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
-});
-
 const adminPaymentSchema = z.object({
   amount: z.number().positive(),
   date: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format'),
@@ -56,7 +50,6 @@ const adminCreateDonorSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
   accountCreated: z.boolean().optional(),
-  password: z.string().min(8).optional(),
   pledgeAmount: z.number().positive().optional(),
 });
 
@@ -101,7 +94,6 @@ adminDonorRouter.get('/:id/payments/:paymentId/confirmation', requireAdminOrApiK
 adminDonorRouter.put('/:id/engagement', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminEngagementSchema), ctrl.adminSetEngagement);
 adminDonorRouter.put('/:id/deactivate', requireAdminOrApiKey, requireCapability('admin.donors.deactivate'), ctrl.adminDeactivate);
 adminDonorRouter.put('/:id/reactivate', requireAdminOrApiKey, requireCapability('admin.donors.deactivate'), ctrl.adminReactivate);
-adminDonorRouter.put('/:id/password', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminDonorPasswordSchema), ctrl.adminUpdatePassword);
 adminDonorRouter.put('/:id', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminUpdateDonorSchema), ctrl.adminUpdate);
 adminDonorRouter.delete('/:id', requireAdminOrApiKey, requireCapability('admin.donors.delete'), ctrl.adminDelete);
 adminDonorRouter.post('/:id/payments', requireAdminOrApiKey, requireCapability('admin.donors.edit'), validate(adminPaymentSchema), ctrl.adminAddPayment);

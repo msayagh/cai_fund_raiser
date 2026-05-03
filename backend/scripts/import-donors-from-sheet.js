@@ -4,11 +4,8 @@ const path = require('node:path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
 const { resolveDatabaseConfig } = require('../src/config/database');
 
-const BCRYPT_ROUNDS = 12;
-const DEFAULT_PASSWORD = process.env.DONOR_IMPORT_DEFAULT_PASSWORD || 'demo123';
 const PILLAR_ENGAGEMENT_AMOUNTS = {
   foundation: 500,
   walls: 1000,
@@ -171,7 +168,6 @@ function toDonorRecord(row) {
   const lastNameRaw = getFirstColumnValue(row, ['last name', 'nom']);
   const fullNameRaw = getFirstColumnValue(row, ['name', 'full name', 'donor name', 'prenom nom']);
   const nameRaw = fullNameRaw || `${firstNameRaw} ${lastNameRaw}`.trim();
-  const passwordRaw = getFirstColumnValue(row, ['password', 'mot de passe']);
   const accountCreatedRaw = getFirstColumnValue(row, ['account created', 'accountcreated', 'has account']);
   const pledgeRaw = getFirstColumnValue(row, ['total pledge', 'pledge', 'engagement', 'montant engagement']);
   const startDateRaw = getFirstColumnValue(row, ['start date', 'engagement start', 'start']);
@@ -219,7 +215,6 @@ function toDonorRecord(row) {
   return {
     email,
     name: nameRaw || sanitizeNameFromEmail(email),
-    password: passwordRaw || DEFAULT_PASSWORD,
     accountCreated: parseBool(accountCreatedRaw, true),
     explicitPledge: totalPledge && totalPledge > 0 ? totalPledge : null,
     explicitStartDate: startDate,
@@ -238,7 +233,6 @@ function aggregateDonors(records) {
       byEmail.set(record.email, {
         email: record.email,
         name: record.name,
-        password: record.password,
         accountCreated: record.accountCreated,
         explicitPledge: record.explicitPledge,
         explicitStartDate: record.explicitStartDate,
@@ -282,7 +276,6 @@ function aggregateDonors(records) {
     return {
       email: donor.email,
       name: donor.name,
-      password: donor.password,
       accountCreated: donor.accountCreated,
       payments: donor.payments,
       engagement: totalPledge && totalPledge > 0
@@ -400,12 +393,10 @@ async function main() {
       await wipeDonorData(tx);
 
       for (const donor of uniqueDonors) {
-        const passwordHash = await bcrypt.hash(donor.password, BCRYPT_ROUNDS);
         await tx.donor.create({
           data: {
             name: donor.name,
             email: donor.email,
-            passwordHash,
             accountCreated: donor.accountCreated,
             engagement: donor.engagement
               ? {

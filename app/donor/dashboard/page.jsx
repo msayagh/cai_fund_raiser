@@ -17,7 +17,7 @@ import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
 import {
     createEngagement, getMe, getMyPayments, getMyRequests,
-    updateEngagement, updateMe, updateMyPassword,
+    updateEngagement, updateMe,
 } from '@/lib/donorApi.js';
 import { createRequest, uploadRequestAttachments } from '@/lib/requestsApi.js';
 import { clearTokens, tryAutoLogin } from '@/lib/auth.js';
@@ -111,11 +111,6 @@ export default function DonorDashboardPage() {
     const [success, setSuccess] = useState('');
     const [profileError, setProfileError] = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
-    const [passwordError, setPasswordError] = useState('');
-    const [passwordSuccess, setPasswordSuccess] = useState('');
-    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isSidenavCollapsed, setIsSidenavCollapsed] = useState(false);
 
     // ── Active modal: null | 'settings' | 'engagement' | 'payment' | 'contact' ──
@@ -124,7 +119,6 @@ export default function DonorDashboardPage() {
 
     // ── Form state ──
     const [profileForm, setProfileForm] = useState({ name: '', email: '' });
-    const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [engForm, setEngForm] = useState({ totalPledge: '', endDate: '' });
     const [contactForm, setContactForm] = useState({ type: 'other', message: '' });
     const [cashForm, setCashForm] = useState({ amount: '', adminNote: '', personalNote: '' });
@@ -133,7 +127,6 @@ export default function DonorDashboardPage() {
     const [pendingPayments, setPendingPayments] = useState([]);
     const [editingPendingId, setEditingPendingId] = useState(null);
     const profileMessageRef = useRef(null);
-    const passwordMessageRef = useRef(null);
     // receipt cache: { "100.00": [{id, requestId, filename, mimeType}] }
     // populated when a pending payment transitions to confirmed so the link survives
     const [paymentReceipts, setPaymentReceipts] = useState({});
@@ -141,11 +134,6 @@ export default function DonorDashboardPage() {
     const appReady = tMounted && themeMounted;
     const { shouldShowPreloader, isResolved: preloaderResolved } = useFirstVisitPreloader(appReady);
     const hasOpenModal = modal !== null;
-    const canSubmitPassword = Boolean(
-        passwordForm.currentPassword.trim() &&
-        passwordForm.newPassword.trim() &&
-        passwordForm.confirmPassword.trim()
-    );
 
     // ── SEO ──
     const siteUrl = getSiteUrl();
@@ -348,8 +336,6 @@ export default function DonorDashboardPage() {
         setSuccess('');
         setProfileError('');
         setProfileSuccess('');
-        setPasswordError('');
-        setPasswordSuccess('');
         setEditingPendingId(null);
         setPayStep(null);
     }
@@ -357,8 +343,6 @@ export default function DonorDashboardPage() {
     function openSettings() {
         setProfileError('');
         setProfileSuccess('');
-        setPasswordError('');
-        setPasswordSuccess('');
         setModal('settings');
     }
     function openContact(type = 'other') { setContactForm(p => ({ ...p, type })); setModal('contact'); }
@@ -393,27 +377,6 @@ export default function DonorDashboardPage() {
         } catch (err) {
             setProfileError(err?.message || ui.errUpdateProfile);
             scrollToMessage(profileMessageRef);
-        }
-    }
-
-    async function onPasswordSave(e) {
-        e.preventDefault();
-        setPasswordError('');
-        setPasswordSuccess('');
-        if (!canSubmitPassword) return;
-        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-            setPasswordError(ui.pwdMismatch);
-            scrollToMessage(passwordMessageRef);
-            return;
-        }
-        try {
-            await updateMyPassword({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
-            setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-            setPasswordSuccess(ui.passwordUpdated);
-            scrollToMessage(passwordMessageRef);
-        } catch (err) {
-            setPasswordError(err?.message || ui.errUpdatePassword);
-            scrollToMessage(passwordMessageRef);
         }
     }
 
@@ -1000,58 +963,6 @@ export default function DonorDashboardPage() {
                         </form>
                     </fieldset>
 
-                    <fieldset className="fset">
-                        <legend className="fset-legend">{ui.password}</legend>
-                        <form className="mform" onSubmit={onPasswordSave}>
-                            <div ref={passwordMessageRef} tabIndex={-1}>
-                                {passwordError ? <div className="banner banner--error" role="alert">{passwordError}</div> : null}
-                                {passwordSuccess ? <div className="banner banner--success" role="status">{passwordSuccess}</div> : null}
-                            </div>
-                            <label className="flabel">
-                                {ui.curPwd}
-                                <div style={{ position: 'relative' }}>
-                                    <input className="finput" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.currentPassword}
-                                        onChange={e => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowCurrentPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showCurrentPassword ? ui.hidePassword : ui.showPassword}>
-                                        {showCurrentPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                        )}
-                                    </button>
-                                </div>
-                            </label>
-                            <label className="flabel">
-                                {ui.newPwd}
-                                <div style={{ position: 'relative' }}>
-                                    <input className="finput" type={showNewPassword ? 'text' : 'password'} value={passwordForm.newPassword}
-                                        onChange={e => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowNewPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewPassword ? ui.hidePassword : ui.showPassword}>
-                                        {showNewPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                        )}
-                                    </button>
-                                </div>
-                            </label>
-                            <label className="flabel">
-                                {ui.confPwd}
-                                <div style={{ position: 'relative' }}>
-                                    <input className="finput" type={showConfirmPassword ? 'text' : 'password'} value={passwordForm.confirmPassword}
-                                        onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))} style={{ paddingRight: '42px' }} />
-                                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showConfirmPassword ? ui.hidePassword : ui.showPassword}>
-                                        {showConfirmPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                        )}
-                                    </button>
-                                </div>
-                            </label>
-                            <button type="submit" className="btn btn--primary" disabled={!canSubmitPassword} aria-disabled={!canSubmitPassword}>{ui.updatePwd}</button>
-                        </form>
-                    </fieldset>
                 </Modal>
             )}
 

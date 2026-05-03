@@ -17,11 +17,6 @@ const updateProfileSchema = z.object({
   message: 'At least one field required'
 });
 
-const updatePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
-});
-
 const createEngagementSchema = z.object({
   totalPledge: z.number().positive('Pledge amount must be positive').optional(),
   pillars: z.record(z.string(), z.number().nonnegative()).optional(),
@@ -50,7 +45,6 @@ const upsertDonorPaymentSchema = z.object({
     name: z.string().trim().min(2, 'Donor name must be at least 2 characters').max(100, 'Donor name must be 100 characters or fewer'),
     email: z.string().email('Valid donor email is required'),
     accountCreated: z.boolean().optional(),
-    password: z.string().min(8, 'Password must be at least 8 characters').optional(),
     pledgeAmount: z.number().positive('Pledge amount must be greater than 0').optional(),
   }),
   payment: z.object({
@@ -72,7 +66,6 @@ const upsertDonorPaymentSchema = z.object({
 
 module.exports = {
   updateProfileSchema,
-  updatePasswordSchema,
   createEngagementSchema,
   updateEngagementSchema,
   upsertDonorPaymentSchema,

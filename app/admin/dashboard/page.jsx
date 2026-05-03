@@ -27,7 +27,6 @@ import {
     listAdmins,
     listDonors,
     listRequests,
-    resetDonorPassword,
     setDonorEngagement,
     updateDonor,
     addPayment,
@@ -303,8 +302,6 @@ export default function AdminDashboardPage() {
     const [selectedDonorId, setSelectedDonorId] = useState(null);
     const [selectedDonor, setSelectedDonor] = useState(null);
     const [selectedDonorForm, setSelectedDonorForm] = useState({ name: '', email: '', accountCreated: true });
-    const [selectedDonorPassword, setSelectedDonorPassword] = useState('');
-    const [selectedDonorPasswordConfirm, setSelectedDonorPasswordConfirm] = useState('');
     const [selectedDonorEngagementForm, setSelectedDonorEngagementForm] = useState({ totalPledge: '' });
     const [selectedDonorLoading, setSelectedDonorLoading] = useState(false);
     const [selectedDonorSaving, setSelectedDonorSaving] = useState(false);
@@ -321,7 +318,7 @@ export default function AdminDashboardPage() {
             localStorage.setItem('adminActiveTab', tab);
         }
     };
-    const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '' });
+    const [newAdmin, setNewAdmin] = useState({ name: '', email: '' });
     const [requestDecisionModal, setRequestDecisionModal] = useState({ open: false, request: null, approving: false, declining: false, holding: false });
     const [donorFilter, setDonorFilter] = useState({ nameQuery: '', emailQuery: '', engagementQuery: '' });
     const [requestFilter, setRequestFilter] = useState({ query: '', status: '', type: '' });
@@ -333,7 +330,7 @@ export default function AdminDashboardPage() {
     const [logsPage, setLogsPage] = useState(1);
     const [message, setMessage] = useState('');
     const [isAddDonorModalOpen, setIsAddDonorModalOpen] = useState(false);
-    const [newDonorForm, setNewDonorForm] = useState({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
+    const [newDonorForm, setNewDonorForm] = useState({ name: '', email: '', pledgeAmount: '', accountCreated: true });
     const [newDonorSaving, setNewDonorSaving] = useState(false);
     const [topDonorsPerPage, setTopDonorsPerPage] = useState(8);
     const [processingRequestId, setProcessingRequestId] = useState(null);
@@ -370,17 +367,11 @@ export default function AdminDashboardPage() {
     const [exportPaymentsByDonor, setExportPaymentsByDonor] = useState({});
     const [exportLoading, setExportLoading] = useState(false);
     const [exportMessage, setExportMessage] = useState('');
-    const [showNewDonorPassword, setShowNewDonorPassword] = useState(false);
-    const [showNewDonorConfirmPassword, setShowNewDonorConfirmPassword] = useState(false);
-    const [showSelectedDonorPassword, setShowSelectedDonorPassword] = useState(false);
-    const [showSelectedDonorConfirmPassword, setShowSelectedDonorConfirmPassword] = useState(false);
-    const [showNewAdminPassword, setShowNewAdminPassword] = useState(false);
     const [isCreateAdminModalOpen, setIsCreateAdminModalOpen] = useState(false);
     const [isCurrentAdminProfileModalOpen, setIsCurrentAdminProfileModalOpen] = useState(false);
     const [currentAdminTarget, setCurrentAdminTarget] = useState(null);
-    const [currentAdminForm, setCurrentAdminForm] = useState({ name: '', email: '', password: '' });
+    const [currentAdminForm, setCurrentAdminForm] = useState({ name: '', email: '' });
     const [currentAdminSaving, setCurrentAdminSaving] = useState(false);
-    const [showCurrentAdminPassword, setShowCurrentAdminPassword] = useState(false);
     const [creatingAdmin, setCreatingAdmin] = useState(false);
     const hasOpenModal =
         isAddDonorModalOpen
@@ -771,7 +762,6 @@ export default function AdminDashboardPage() {
 
         const name = newAdmin.name.trim();
         const email = newAdmin.email.trim().toLowerCase();
-        const password = newAdmin.password.trim();
 
         if (!name || !email) {
             const errMsg = adminText.errorSaving || 'Error saving';
@@ -782,12 +772,8 @@ export default function AdminDashboardPage() {
 
         setCreatingAdmin(true);
         try {
-            await createAdmin({
-                name,
-                email,
-                ...(password && { password }),
-            });
-            setNewAdmin({ name: '', email: '', password: '' });
+            await createAdmin({ name, email });
+            setNewAdmin({ name: '', email: '' });
 
             try {
                 await loadAllData();
@@ -811,9 +797,7 @@ export default function AdminDashboardPage() {
         setCurrentAdminForm({
             name: currentAdmin?.name || '',
             email: currentAdmin?.email || '',
-            password: '',
         });
-        setShowCurrentAdminPassword(false);
         setModalError('');
         setModalMessage('');
         setIsCurrentAdminProfileModalOpen(true);
@@ -824,9 +808,7 @@ export default function AdminDashboardPage() {
         setCurrentAdminForm({
             name: admin?.name || '',
             email: admin?.email || '',
-            password: '',
         });
-        setShowCurrentAdminPassword(false);
         setModalError('');
         setModalMessage('');
         setIsCurrentAdminProfileModalOpen(true);
@@ -845,12 +827,10 @@ export default function AdminDashboardPage() {
 
         const nextName = currentAdminForm.name.trim();
         const nextEmail = currentAdminForm.email.trim().toLowerCase();
-        const nextPassword = currentAdminForm.password.trim();
         const payload = {};
 
         if (nextName && nextName !== targetAdmin.name) payload.name = nextName;
         if (nextEmail && nextEmail !== targetAdmin.email) payload.email = nextEmail;
-        if (nextPassword) payload.password = nextPassword;
 
         if (Object.keys(payload).length === 0) {
             const msg = adminText.savedSuccessfully || 'Saved successfully';
@@ -985,13 +965,6 @@ export default function AdminDashboardPage() {
         setRequestDecisionModal((prev) => ({ ...prev, open: false, request: null, approving: false, declining: false, holding: false }));
     }
 
-    function generateTempPassword() {
-        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
-        let pwd = '';
-        for (let i = 0; i < 12; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-        return pwd;
-    }
-
     function parsePaymentAmount(message) {
         const match = (message || '').match(/Amount:\s*\$?([\d,]+(?:\.\d{1,2})?)/i);
         return match ? parseFloat(match[1].replace(/,/g, '')) : null;
@@ -1017,10 +990,6 @@ export default function AdminDashboardPage() {
                 return null;
             }
             return { amount, method: 'cash', date: new Date().toISOString().split('T')[0] };
-        }
-
-        if (request?.type === 'account_creation') {
-            return { password: generateTempPassword() };
         }
 
         return {};
@@ -1101,46 +1070,18 @@ export default function AdminDashboardPage() {
                 email: selectedDonorForm.email.trim().toLowerCase(),
                 accountCreated: Boolean(selectedDonorForm.accountCreated),
             };
-            const nextPassword = selectedDonorPassword.trim();
             const hasProfileChanges = Boolean(updatePayload.name) && Boolean(updatePayload.email);
-            const hasPasswordChange = nextPassword.length > 0;
-            const isActivatingAccount = selectedDonor?.accountCreated === false && updatePayload.accountCreated === true;
 
-            if (hasPasswordChange && nextPassword.length < 8) {
-                throw new Error(adminText.passwordMinEight);
-            }
-            if (hasPasswordChange && nextPassword !== selectedDonorPasswordConfirm.trim()) {
-                throw new Error(adminText.passwordsDoNotMatch);
-            }
-            if (isActivatingAccount && !hasPasswordChange) {
-                throw new Error(adminText.setPasswordWhenActivating);
-            }
-
-            let updated = selectedDonor;
             if (hasProfileChanges) {
-                updated = await updateDonor(selectedDonorId, updatePayload);
+                const updated = await updateDonor(selectedDonorId, updatePayload);
                 setSelectedDonor((prev) => prev ? { ...prev, ...updated } : updated);
                 setDonors((prev) => prev.map((donor) => (
                     donor.id === selectedDonorId ? { ...donor, ...updated } : donor
                 )));
             }
 
-            if (hasPasswordChange) {
-                await resetDonorPassword(selectedDonorId, { newPassword: nextPassword });
-                setSelectedDonorPassword('');
-                setSelectedDonorPasswordConfirm('');
-            }
-
-            if (hasProfileChanges && hasPasswordChange) {
-                setModalMessage(adminText.donorProfilePasswordUpdated);
-                setMessage(adminText.donorProfilePasswordUpdated);
-            } else if (hasPasswordChange) {
-                setModalMessage(adminText.donorPasswordUpdated);
-                setMessage(adminText.donorPasswordUpdated);
-            } else {
-                setModalMessage(adminText.donorProfileUpdated);
-                setMessage(adminText.donorProfileUpdated);
-            }
+            setModalMessage(adminText.donorProfileUpdated);
+            setMessage(adminText.donorProfileUpdated);
         } catch (err) {
             setModalError(err?.message || adminText.unableUpdateDonor);
             setError(err?.message || adminText.unableUpdateDonor);
@@ -1159,8 +1100,6 @@ export default function AdminDashboardPage() {
         setIsProfileModalOpen(false);
         setModalError('');
         setModalMessage('');
-        setSelectedDonorPassword('');
-        setSelectedDonorPasswordConfirm('');
     }
 
     function closeEngagementModal() {
@@ -1194,8 +1133,6 @@ export default function AdminDashboardPage() {
                 email: donor.email || '',
                 accountCreated: donor.accountCreated !== false,
             });
-            setSelectedDonorPassword('');
-            setSelectedDonorPasswordConfirm('');
             setSelectedDonorEngagementForm({ totalPledge: String(donor.engagement?.totalPledge || '') });
             return { donor, payments };
         } catch (err) {
@@ -1370,19 +1307,6 @@ export default function AdminDashboardPage() {
     async function handleAddNewDonor(event) {
         event.preventDefault();
         const creatingActiveAccount = Boolean(newDonorForm.accountCreated);
-        const hasManualPassword = Boolean(newDonorForm.password.trim() || newDonorForm.passwordConfirm.trim());
-
-        if (hasManualPassword && newDonorForm.password.length < 8) {
-            setError(adminText.passwordMinEight);
-            setModalError(adminText.passwordMinEight);
-            return;
-        }
-
-        if (hasManualPassword && newDonorForm.password !== newDonorForm.passwordConfirm) {
-            setError(adminText.passwordsDoNotMatch);
-            setModalError(adminText.passwordsDoNotMatch);
-            return;
-        }
 
         setNewDonorSaving(true);
         setError('');
@@ -1395,10 +1319,9 @@ export default function AdminDashboardPage() {
                 name: newDonorForm.name.trim(),
                 email: newDonorForm.email.trim().toLowerCase(),
                 accountCreated: creatingActiveAccount,
-                ...(newDonorForm.password.trim() && { password: newDonorForm.password }),
                 ...(newDonorForm.pledgeAmount && { pledgeAmount: Number(newDonorForm.pledgeAmount) }),
             });
-            setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
+            setNewDonorForm({ name: '', email: '', pledgeAmount: '', accountCreated: true });
             setIsAddDonorModalOpen(false);
             await loadAllData();
             setMessage(
@@ -1777,7 +1700,7 @@ export default function AdminDashboardPage() {
                                         className="admin-button secondary"
                                         onClick={() => {
                                             setIsAddDonorModalOpen(false);
-                                            setNewDonorForm({ name: '', email: '', password: '', passwordConfirm: '', pledgeAmount: '', accountCreated: true });
+                                            setNewDonorForm({ name: '', email: '', pledgeAmount: '', accountCreated: true });
                                         }}
                                     >
                                         ✕ {adminText.close}
@@ -1820,50 +1743,6 @@ export default function AdminDashboardPage() {
                                             />
                                             {adminText.createActiveAccount}
                                         </label>
-                                    </div>
-                                    <div>
-                                        <label className="admin-label">🔒 {adminText.passwordMinChars}</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                className="admin-input"
-                                                type={showNewDonorPassword ? 'text' : 'password'}
-                                                placeholder={newDonorForm.accountCreated ? adminText.donorPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
-                                                value={newDonorForm.password}
-                                                onChange={(e) => setNewDonorForm((p) => ({ ...p, password: e.target.value }))}
-                                                disabled={newDonorSaving}
-                                                minLength={8}
-                                                style={{ paddingRight: '42px' }}
-                                            />
-                                            <button type="button" onClick={() => setShowNewDonorPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewDonorPassword ? 'Hide password' : 'Show password'}>
-                                                {showNewDonorPassword ? (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                                ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="admin-label">🔒 {adminText.confirmPasswordLabel}</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                className="admin-input"
-                                                type={showNewDonorConfirmPassword ? 'text' : 'password'}
-                                                placeholder={newDonorForm.accountCreated ? adminText.donorConfirmPasswordPlaceholder : adminText.donorPasswordPlaceholderInactive}
-                                                value={newDonorForm.passwordConfirm}
-                                                onChange={(e) => setNewDonorForm((p) => ({ ...p, passwordConfirm: e.target.value }))}
-                                                disabled={newDonorSaving}
-                                                minLength={8}
-                                                style={{ paddingRight: '42px' }}
-                                            />
-                                            <button type="button" onClick={() => setShowNewDonorConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showNewDonorConfirmPassword ? 'Hide password' : 'Show password'}>
-                                                {showNewDonorConfirmPassword ? (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                                ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                                )}
-                                            </button>
-                                        </div>
                                     </div>
                                     <div>
                                         <label className="admin-label">{adminText.pledgeAmountOptional}</label>
@@ -1925,28 +1804,6 @@ export default function AdminDashboardPage() {
                                         value={newAdmin.email}
                                         onChange={(e) => setNewAdmin((prev) => ({ ...prev, email: e.target.value }))}
                                     />
-                                    <div style={{ position: 'relative' }}>
-                                        <input
-                                            className="admin-input"
-                                            type={showNewAdminPassword ? 'text' : 'password'}
-                                            placeholder={adminText.passwordPlaceholder}
-                                            value={newAdmin.password}
-                                            onChange={(e) => setNewAdmin((prev) => ({ ...prev, password: e.target.value }))}
-                                            style={{ paddingRight: '42px' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowNewAdminPassword((v) => !v)}
-                                            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }}
-                                            aria-label={showNewAdminPassword ? 'Hide password' : 'Show password'}
-                                        >
-                                            {showNewAdminPassword ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                            ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                            )}
-                                        </button>
-                                    </div>
                                     <button type="submit" className="admin-button" disabled={creatingAdmin}>
                                         {creatingAdmin ? (adminText.creating || 'Creating...') : adminText.createAdminButton}
                                     </button>
@@ -2000,29 +1857,6 @@ export default function AdminDashboardPage() {
                                             value={currentAdminForm.email}
                                             onChange={(e) => setCurrentAdminForm((prev) => ({ ...prev, email: e.target.value }))}
                                         />
-                                    </div>
-                                    <div style={{ position: 'relative' }}>
-                                        <label className="admin-label">{adminText.passwordPlaceholder}</label>
-                                        <input
-                                            className="admin-input"
-                                            type={showCurrentAdminPassword ? 'text' : 'password'}
-                                            value={currentAdminForm.password}
-                                            onChange={(e) => setCurrentAdminForm((prev) => ({ ...prev, password: e.target.value }))}
-                                            placeholder={adminText.passwordPlaceholder}
-                                            style={{ paddingRight: '42px' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowCurrentAdminPassword((v) => !v)}
-                                            style={{ position: 'absolute', right: '12px', top: '70%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }}
-                                            aria-label={showCurrentAdminPassword ? 'Hide password' : 'Show password'}
-                                        >
-                                            {showCurrentAdminPassword ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                            ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                            )}
-                                        </button>
                                     </div>
                                     <button type="submit" className="admin-button" disabled={currentAdminSaving}>
                                         {currentAdminSaving ? (adminText.saving || 'Saving...') : (adminText.saveChanges || 'Save Changes')}
@@ -2093,48 +1927,6 @@ export default function AdminDashboardPage() {
                                                     </label>
                                                     <div className="admin-field-help">
                                                         {adminText.enablingPlaceholderHelp}
-                                                    </div>
-                                                </div>
-                                                <div className="admin-divider-top">
-                                                    <div className="admin-section-title admin-section-title--sm">🔒 {adminText.changePasswordOptional}</div>
-                                                    <div className="admin-stack">
-                                                        <div style={{ position: 'relative' }}>
-                                                            <input
-                                                                className="admin-input"
-                                                                type={showSelectedDonorPassword ? 'text' : 'password'}
-                                                                placeholder={`${adminText.newPassword} (min 8 chars)`}
-                                                                value={selectedDonorPassword}
-                                                                onChange={(e) => setSelectedDonorPassword(e.target.value)}
-                                                                disabled={selectedDonorSaving}
-                                                                minLength={8}
-                                                                style={{ paddingRight: '42px' }}
-                                                            />
-                                                            <button type="button" onClick={() => setShowSelectedDonorPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showSelectedDonorPassword ? 'Hide password' : 'Show password'}>
-                                                                {showSelectedDonorPassword ? (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                                                ) : (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                                                )}
-                                                            </button>
-                                                        </div>
-                                                        <div style={{ position: 'relative' }}>
-                                                            <input
-                                                                className="admin-input"
-                                                                type={showSelectedDonorConfirmPassword ? 'text' : 'password'}
-                                                                placeholder={adminText.confirmNewPassword}
-                                                                value={selectedDonorPasswordConfirm}
-                                                                onChange={(e) => setSelectedDonorPasswordConfirm(e.target.value)}
-                                                                disabled={selectedDonorSaving}
-                                                                style={{ paddingRight: '42px' }}
-                                                            />
-                                                            <button type="button" onClick={() => setShowSelectedDonorConfirmPassword(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', lineHeight: 0 }} aria-label={showSelectedDonorConfirmPassword ? 'Hide password' : 'Show password'}>
-                                                                {showSelectedDonorConfirmPassword ? (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                                                ) : (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                                                )}
-                                                            </button>
-                                                        </div>
                                                     </div>
                                                 </div>
                                                 <button type="submit" className="admin-button" disabled={selectedDonorSaving}>

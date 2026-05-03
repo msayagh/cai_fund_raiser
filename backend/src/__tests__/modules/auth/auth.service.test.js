@@ -39,10 +39,6 @@ jest.mock('../../../db/client', () => ({
 
 jest.mock('../../../utils/email', () => ({ sendOtpEmail: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../../modules/logs/logs.service', () => ({ createLog: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('bcryptjs', () => ({
-  hash:    jest.fn().mockResolvedValue('$hashed'),
-  compare: jest.fn(),
-}));
 
 const prisma = require('../../../db/client');
 const {
@@ -67,7 +63,6 @@ const stubDonor = (overrides = {}) => ({
   id: 'donor-1',
   name: 'Alice',
   email: 'alice@test.com',
-  passwordHash: '$hashed',
   accountCreated: true,
   ...overrides,
 });
@@ -76,7 +71,6 @@ const stubAdmin = (overrides = {}) => ({
   id: 'admin-1',
   name: 'Bob',
   email: 'bob@test.com',
-  passwordHash: '$hashed',
   ...overrides,
 });
 
@@ -127,7 +121,7 @@ describe('donorVerifyLoginOtp', () => {
     prisma.refreshToken.create.mockResolvedValue({});
   });
 
-  it('returns tokens and donor (without passwordHash) on valid OTP', async () => {
+  it('returns tokens and donor on valid OTP', async () => {
     prisma.donor.findUnique.mockResolvedValue(stubDonor());
     prisma.otpCode.findFirst.mockResolvedValue({
       id: 'otp-1',
@@ -140,7 +134,6 @@ describe('donorVerifyLoginOtp', () => {
     const result = await donorVerifyLoginOtp('alice@test.com', code);
     expect(result).toHaveProperty('tokens.accessToken');
     expect(result).toHaveProperty('tokens.refreshToken');
-    expect(result.donor).not.toHaveProperty('passwordHash');
     expect(result.donor.email).toBe('alice@test.com');
   });
 
@@ -269,7 +262,6 @@ describe('donorCompleteRegistration', () => {
       name:  'Alice',
     });
     expect(result).toHaveProperty('tokens.accessToken');
-    expect(result.donor).not.toHaveProperty('passwordHash');
   });
 
   it('creates engagement inside $transaction when pledge provided for placeholder donor', async () => {
@@ -397,7 +389,7 @@ describe('adminVerifyLoginOtp', () => {
     prisma.refreshToken.create.mockResolvedValue({});
   });
 
-  it('returns tokens and admin (without passwordHash) on valid OTP', async () => {
+  it('returns tokens and admin on valid OTP', async () => {
     prisma.admin.findUnique.mockResolvedValue(stubAdmin());
     prisma.otpCode.findFirst.mockResolvedValue({
       id: 'otp-admin-1',
@@ -409,7 +401,6 @@ describe('adminVerifyLoginOtp', () => {
 
     const result = await adminVerifyLoginOtp('bob@test.com', code);
     expect(result).toHaveProperty('tokens.accessToken');
-    expect(result.admin).not.toHaveProperty('passwordHash');
   });
 
   it('throws ADMIN_ACCOUNT_NOT_FOUND when admin missing', async () => {
@@ -456,17 +447,15 @@ describe('bootstrapInitialAdmin', () => {
     const result = await bootstrapInitialAdmin({
       name: 'Bob',
       email: 'bob@test.com',
-      password: 'SuperSecret123!',
     });
 
     expect(result).toHaveProperty('tokens.accessToken');
-    expect(result.admin).not.toHaveProperty('passwordHash');
   });
 
   it('throws BOOTSTRAP_CLOSED when admin already exists', async () => {
     prisma.admin.count.mockResolvedValue(1);
     await expect(
-      bootstrapInitialAdmin({ name: 'Bob', email: 'bob@test.com', password: 'pw' })
+      bootstrapInitialAdmin({ name: 'Bob', email: 'bob@test.com' })
     ).rejects.toMatchObject({ code: 'BOOTSTRAP_CLOSED', statusCode: 409 });
   });
 });

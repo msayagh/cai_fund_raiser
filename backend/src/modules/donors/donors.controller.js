@@ -20,13 +20,6 @@ const updateMe = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-const updateMyPassword = async (req, res, next) => {
-  try {
-    await service.updateMyPassword(req.donor.id, req.body);
-    sendSuccess(res, null, 'Password updated');
-  } catch (err) { next(err); }
-};
-
 const getMyEngagement = async (req, res, next) => {
   try {
     const data = await service.getMyEngagement(req.donor.id);
@@ -92,15 +85,6 @@ const adminDelete = async (req, res, next) => {
     const actor = getRequestActor(req);
     await service.adminDeleteDonor(actor.id, actor.name, req.params.id);
     sendSuccess(res, null, 'Donor deleted');
-  } catch (err) { next(err); }
-};
-
-const adminUpdatePassword = async (req, res, next) => {
-  try {
-    const { newPassword } = req.body;
-    const actor = getRequestActor(req);
-    await service.adminUpdateDonorPassword(actor.id, actor.name, req.params.id, newPassword);
-    sendSuccess(res, null, 'Password updated');
   } catch (err) { next(err); }
 };
 
@@ -214,9 +198,9 @@ const downloadPaymentConfirmation = async (req, res, next) => {
 };
 
 module.exports = {
-  getMe, updateMe, updateMyPassword,
+  getMe, updateMe,
   getMyEngagement, createEngagement, updateEngagement,
   getMyPayments, getMyRequests,
-  list, getById, adminUpdate, adminDelete, adminUpdatePassword, adminGetPayments, adminAddPayment, adminUpdatePayment, adminDeletePayment, adminCreate, adminDeactivate, adminReactivate, adminSetEngagement, adminGetPaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
+  list, getById, adminUpdate, adminDelete, adminGetPayments, adminAddPayment, adminUpdatePayment, adminDeletePayment, adminCreate, adminDeactivate, adminReactivate, adminSetEngagement, adminGetPaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
   adminImportPaymentsCsv, adminUpsertDonorPayment,
 };

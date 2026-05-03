@@ -5,7 +5,6 @@ const path = require('node:path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
 const { resolveDatabaseConfig } = require('../src/config/database');
 
 try {
@@ -19,7 +18,6 @@ try {
 }
 
 const prisma = new PrismaClient();
-const BCRYPT_ROUNDS = 12;
 
 async function main() {
   console.log('🌱 Seeding database…');
@@ -47,12 +45,10 @@ async function main() {
 
 
   // ─── Admin ──────────────────────────────────────────────────────────────────
-  const adminHash = await bcrypt.hash('admin123', BCRYPT_ROUNDS);
   const admin = await prisma.admin.create({
     data: {
       name: 'Imam Abdallah',
       email: 'qasim.engr@yahoo.com',
-      passwordHash: adminHash,
     },
   });
   console.log(`  ✓ Admin: ${admin.email}`);

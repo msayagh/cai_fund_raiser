@@ -100,20 +100,6 @@ async function sendRegistrationConfirmation(email, name) {
 }
 
 /**
- * Send password reset email
- */
-async function sendPasswordReset(email, name, resetLink) {
-    const { passwordResetTemplate } = require('./mail.templates');
-    const html = passwordResetTemplate({ email, name, resetLink });
-
-    return sendEmail(
-        email,
-        'Reset Your Password - Centre Zad Al-Imane',
-        html
-    );
-}
-
-/**
  * Send payment confirmation email
  */
 async function sendPaymentConfirmation(email, name, paymentDetails) {
@@ -144,9 +130,9 @@ async function sendRequestStatusUpdate(email, name, requestDetails) {
 /**
  * Send admin account creation email
  */
-async function sendAdminAccountCreation(email, name, password) {
+async function sendAdminAccountCreation(email, name) {
     const { adminAccountTemplate } = require('./mail.templates');
-    const html = adminAccountTemplate({ email, name, password });
+    const html = adminAccountTemplate({ email, name });
 
     return sendEmail(
         email,
@@ -156,11 +142,11 @@ async function sendAdminAccountCreation(email, name, password) {
 }
 
 /**
- * Send donor account creation email with temporary password
+ * Send donor account creation email
  */
-async function sendDonorAccountCreation(email, name, password) {
+async function sendDonorAccountCreation(email, name) {
     const { donorAccountCreationTemplate } = require('./mail.templates');
-    const html = donorAccountCreationTemplate({ email, name, password });
+    const html = donorAccountCreationTemplate({ email, name });
 
     return sendEmail(
         email,
@@ -214,7 +200,6 @@ async function sendEngagementConfirmation(email, name, engagement) {
 module.exports = {
     sendEmail,
     sendRegistrationConfirmation,
-    sendPasswordReset,
     sendPaymentConfirmation,
     sendRequestStatusUpdate,
     sendAdminAccountCreation,

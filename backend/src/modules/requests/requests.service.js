@@ -1,12 +1,9 @@
 'use strict';
 
-const bcrypt = require('bcryptjs');
 const prisma = require('../../db/client');
 const AppError = require('../../utils/AppError');
 const { createLog } = require('../logs/logs.service');
 const mailService = require('../mail/mail.service');
-
-const BCRYPT_ROUNDS = 12;
 
 const listRequests = async ({ status, type, page = 1, limit = 20 } = {}) => {
   const safeLimit = Math.min(Number(limit) || 20, 100);
@@ -90,18 +87,15 @@ const approveRequest = async (adminId, adminName, id, body) => {
   let extraData = null;
 
   if (request.type === 'account_creation') {
-    const { password, pledgeAmount } = body;
-    if (!password) throw new AppError('Password is required to approve account_creation', 400, 'VALIDATION_ERROR');
+    const { pledgeAmount } = body;
 
     const existing = await prisma.donor.findUnique({ where: { email: request.email } });
     if (existing) throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
 
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const donor = await prisma.donor.create({
       data: {
         name: request.name,
         email: request.email,
-        passwordHash,
         ...(pledgeAmount && {
           engagement: {
             create: { totalPledge: pledgeAmount, startDate: new Date() },
@@ -123,9 +117,8 @@ const approveRequest = async (adminId, adminName, id, body) => {
       adminId,
     });
 
-    // Send account creation email with temporary password
     try {
-      await mailService.sendDonorAccountCreation(donor.email, donor.name, password);
+      await mailService.sendDonorAccountCreation(donor.email, donor.name);
     } catch (error) {
       console.error('Failed to send donor account creation email:', error);
     }

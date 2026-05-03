@@ -10,12 +10,14 @@
 //   normalizePaymentMethod — validates and normalises payment method strings
 //
 // Donor self-service (requires donor to be logged in):
-//   getMe                 — returns own profile without passwordHash
+//   getMe                 — returns own profile
 //   updateMe              — updates profile; guards EMAIL_TAKEN
-//   updateMyPassword      — verifies current password before setting new one
 //   getMyEngagement       — returns engagement or throws NOT_FOUND
 //   createEngagement      — throws CONFLICT if one already exists
 //   updateEngagement      — updates pledge/dates
+//
+// Note: passwordless OTP login is in effect — there are no longer
+// updateMyPassword or adminUpdateDonorPassword endpoints to test.
 //
 // Admin donor management:
 //   listDonors            — paginated list with search
@@ -68,11 +70,6 @@ jest.mock('../../../modules/mail/mail.service', () => ({
   sendDonorAccountCreation:     jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('bcryptjs', () => ({
-  hash:    jest.fn().mockResolvedValue('$hashed'),
-  compare: jest.fn(),
-}));
-
 // Mock pdfkit so PDF generation does not touch the file system during tests
 jest.mock('pdfkit', () => {
   const mockDoc = {
@@ -88,17 +85,16 @@ jest.mock('pdfkit', () => {
 
 // ── Imports ──────────────────────────────────────────────────────────────────
 
-const bcrypt = require('bcryptjs');
 const prisma  = require('../../../db/client');
 const AppError = require('../../../utils/AppError');
 
 const {
-  getMe, updateMe, updateMyPassword,
+  getMe, updateMe,
   getMyEngagement, createEngagement, updateEngagement,
   getMyPayments, getMyRequests,
   listDonors, getDonorById,
   adminUpdateDonor, adminDeleteDonor,
-  adminUpdateDonorPassword, adminGetDonorPayments, adminSetEngagement,
+  adminGetDonorPayments, adminSetEngagement,
   adminAddPayment, adminUpdatePayment, adminDeletePayment,
   adminImportPaymentsCsv, adminCreateDonor, adminUpsertDonorPayment,
   generatePaymentConfirmation, uploadPaymentReceipt, downloadPaymentConfirmation,
@@ -110,7 +106,6 @@ const stubDonor = (overrides = {}) => ({
   id:             'donor-1',
   name:           'Alice',
   email:          'alice@test.com',
-  passwordHash:   '$hashed',
   accountCreated: true,
   isActive:       true,
   engagement:     null,
@@ -128,29 +123,27 @@ const stubPayment = (overrides = {}) => ({
 });
 
 // ─── getMe ─────────────────────────────────────────────────────────────────
-// getMe(donorId) → donor without passwordHash
+// getMe(donorId) → donor
 
 describe('getMe', () => {
-  it('returns the donor row without passwordHash', async () => {
+  it('returns the donor row', async () => {
     prisma.donor.findUnique.mockResolvedValue(stubDonor());
 
     const result = await getMe('donor-1');
     expect(result.id).toBe('donor-1');
-    expect(result).not.toHaveProperty('passwordHash');  // security requirement
   });
 });
 
 // ─── updateMe ────────────────────────────────────────────────────────────────
-// updateMe(donorId, data) → updated donor without passwordHash
+// updateMe(donorId, data) → updated donor
 
 describe('updateMe', () => {
-  it('updates the donor and returns without passwordHash', async () => {
+  it('updates the donor and returns the row', async () => {
     prisma.donor.findFirst.mockResolvedValue(null);   // no email conflict
     prisma.donor.update.mockResolvedValue(stubDonor({ name: 'Alice Updated' }));
 
     const result = await updateMe('donor-1', { name: 'Alice Updated' });
     expect(result.name).toBe('Alice Updated');
-    expect(result).not.toHaveProperty('passwordHash');
   });
 
   it('throws EMAIL_TAKEN when new email already belongs to another donor', async () => {
@@ -159,31 +152,6 @@ describe('updateMe', () => {
     await expect(
       updateMe('donor-1', { email: 'taken@test.com' })
     ).rejects.toMatchObject({ code: 'EMAIL_TAKEN', statusCode: 409 });
-  });
-});
-
-// ─── updateMyPassword ─────────────────────────────────────────────────────────
-// updateMyPassword(donorId, { currentPassword, newPassword })
-
-describe('updateMyPassword', () => {
-  it('updates the password when currentPassword is correct', async () => {
-    prisma.donor.findUnique.mockResolvedValue(stubDonor());
-    bcrypt.compare.mockResolvedValue(true);   // current password matches
-    prisma.donor.update.mockResolvedValue({});
-
-    await updateMyPassword('donor-1', { currentPassword: 'correct', newPassword: 'newSecure!' });
-    // New password must be stored as a bcrypt hash
-    expect(prisma.donor.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { passwordHash: '$hashed' } })
-    );
-  });
-
-  it('throws INVALID_PASSWORD when currentPassword is wrong', async () => {
-    prisma.donor.findUnique.mockResolvedValue(stubDonor());
-    bcrypt.compare.mockResolvedValue(false);  // wrong password
-    await expect(
-      updateMyPassword('donor-1', { currentPassword: 'wrong', newPassword: 'new' })
-    ).rejects.toMatchObject({ code: 'INVALID_PASSWORD', statusCode: 400 });
   });
 });
 
@@ -273,8 +241,6 @@ describe('listDonors', () => {
     const result = await listDonors();
     expect(result.total).toBe(2);
     expect(result.items).toHaveLength(2);
-    // passwordHash stripped from every item
-    result.items.forEach((d) => expect(d).not.toHaveProperty('passwordHash'));
     // paidAmount computed from payments array
     expect(result.items[0].paidAmount).toBe(100);
   });
@@ -303,7 +269,7 @@ describe('listDonors', () => {
 // ─── getDonorById ─────────────────────────────────────────────────────────────
 
 describe('getDonorById', () => {
-  it('returns full donor record without passwordHash', async () => {
+  it('returns the full donor record', async () => {
     prisma.donor.findUnique.mockResolvedValue({
       ...stubDonor(),
       payments:  [],
@@ -313,7 +279,6 @@ describe('getDonorById', () => {
 
     const result = await getDonorById('donor-1');
     expect(result.id).toBe('donor-1');
-    expect(result).not.toHaveProperty('passwordHash');
   });
 
   it('throws NOT_FOUND when donor does not exist', async () => {
@@ -327,14 +292,13 @@ describe('getDonorById', () => {
 // ─── adminUpdateDonor ─────────────────────────────────────────────────────────
 
 describe('adminUpdateDonor', () => {
-  it('updates donor fields and returns without passwordHash', async () => {
+  it('updates donor fields and returns the row', async () => {
     prisma.donor.findUnique.mockResolvedValue(stubDonor());
     prisma.donor.findFirst.mockResolvedValue(null);  // no email conflict
     prisma.donor.update.mockResolvedValue(stubDonor({ name: 'Updated' }));
 
     const result = await adminUpdateDonor('admin-1', 'Admin', 'donor-1', { name: 'Updated' });
     expect(result.name).toBe('Updated');
-    expect(result).not.toHaveProperty('passwordHash');
   });
 
   it('throws NOT_FOUND when donor does not exist', async () => {
@@ -567,27 +531,6 @@ describe('getMyRequests', () => {
   });
 });
 
-// ─── adminUpdateDonorPassword ─────────────────────────────────────────────────
-
-describe('adminUpdateDonorPassword', () => {
-  it('hashes and stores new password for existing donor', async () => {
-    prisma.donor.findUnique.mockResolvedValue(stubDonor());
-    prisma.donor.update.mockResolvedValue({});
-
-    await adminUpdateDonorPassword('admin-1', 'Admin', 'donor-1', 'NewPass!');
-    expect(prisma.donor.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { passwordHash: '$hashed' } })
-    );
-  });
-
-  it('throws NOT_FOUND when donor does not exist', async () => {
-    prisma.donor.findUnique.mockResolvedValue(null);
-    await expect(
-      adminUpdateDonorPassword('admin-1', 'Admin', 'ghost', 'pass')
-    ).rejects.toMatchObject({ code: 'NOT_FOUND', statusCode: 404 });
-  });
-});
-
 // ─── adminGetDonorPayments ────────────────────────────────────────────────────
 
 describe('adminGetDonorPayments', () => {
@@ -675,33 +618,34 @@ describe('adminSetEngagement', () => {
 });
 
 // ─── adminCreateDonor ─────────────────────────────────────────────────────────
+// adminCreateDonor(adminId, adminName, { name, email, accountCreated, pledgeAmount })
+// Login is passwordless (OTP) — no password is accepted.
 
 describe('adminCreateDonor', () => {
-  it('creates a full account when a valid password is provided', async () => {
+  it('creates a donor account and returns the record', async () => {
     prisma.donor.findUnique.mockResolvedValue(null); // email not taken
     prisma.donor.create.mockResolvedValue({
-      ...stubDonor(), engagement: null, passwordHash: '$hashed',
+      ...stubDonor(), engagement: null,
     });
 
     const result = await adminCreateDonor('admin-1', 'Admin', {
-      name:     'New Donor',
-      email:    'newdonor@test.com',
-      password: 'StrongPass!1',
+      name:  'New Donor',
+      email: 'newdonor@test.com',
     });
-    expect(result).not.toHaveProperty('passwordHash');
+    expect(result.id).toBe('donor-1');
     expect(prisma.donor.create).toHaveBeenCalledTimes(1);
   });
 
-  it('creates a placeholder account when no valid password given', async () => {
+  it('creates a placeholder account when accountCreated is false', async () => {
     prisma.donor.findUnique.mockResolvedValue(null);
     prisma.donor.create.mockResolvedValue({ ...stubDonor(), accountCreated: false, engagement: null });
 
     const result = await adminCreateDonor('admin-1', 'Admin', {
-      name:  'Placeholder',
-      email: 'placeholder@test.com',
-      // no password → placeholder
+      name:           'Placeholder',
+      email:          'placeholder@test.com',
+      accountCreated: false,
     });
-    expect(result).not.toHaveProperty('passwordHash');
+    expect(result.accountCreated).toBe(false);
   });
 
   it('includes pledge engagement when pledgeAmount provided', async () => {
@@ -711,7 +655,6 @@ describe('adminCreateDonor', () => {
     await adminCreateDonor('admin-1', 'Admin', {
       name:          'With Pledge',
       email:         'pledge@test.com',
-      password:      'StrongPass!1',
       pledgeAmount:  2000,
     });
     const { data } = prisma.donor.create.mock.calls[0][0];
@@ -721,7 +664,7 @@ describe('adminCreateDonor', () => {
   it('throws EMAIL_TAKEN when email already in use', async () => {
     prisma.donor.findUnique.mockResolvedValue(stubDonor());
     await expect(
-      adminCreateDonor('admin-1', 'Admin', { name: 'X', email: 'alice@test.com', password: 'pass' })
+      adminCreateDonor('admin-1', 'Admin', { name: 'X', email: 'alice@test.com' })
     ).rejects.toMatchObject({ code: 'EMAIL_TAKEN', statusCode: 409 });
   });
 
@@ -732,8 +675,18 @@ describe('adminCreateDonor', () => {
     mailService.sendDonorAccountCreation.mockRejectedValueOnce(new Error('SMTP'));
 
     await expect(
-      adminCreateDonor('admin-1', 'Admin', { name: 'X', email: 'x@test.com', password: 'StrongPass!1' })
+      adminCreateDonor('admin-1', 'Admin', { name: 'X', email: 'x@test.com' })
     ).resolves.toBeDefined();
+  });
+
+  it('sends donor account creation email with (email, name) only', async () => {
+    const mailService = require('../../../modules/mail/mail.service');
+    mailService.sendDonorAccountCreation.mockClear();
+    prisma.donor.findUnique.mockResolvedValue(null);
+    prisma.donor.create.mockResolvedValue({ ...stubDonor(), engagement: null });
+
+    await adminCreateDonor('admin-1', 'Admin', { name: 'Alice', email: 'alice@test.com' });
+    expect(mailService.sendDonorAccountCreation).toHaveBeenCalledWith('alice@test.com', 'Alice');
   });
 });
 
@@ -764,7 +717,7 @@ describe('adminUpsertDonorPayment', () => {
       .mockResolvedValueOnce(null)           // adminUpsertDonorPayment: email lookup → not found
       .mockResolvedValueOnce(null)           // adminCreateDonor: email taken check → not taken
       .mockResolvedValueOnce(newDonorRecord); // adminAddPayment: donor by id → found
-    prisma.donor.create.mockResolvedValue({ ...newDonorRecord, passwordHash: '$hashed' });
+    prisma.donor.create.mockResolvedValue({ ...newDonorRecord });
     // adminAddPayment inside upsert:
     prisma.payment.create.mockResolvedValue(stubPayment());
     prisma.payment.findMany.mockResolvedValue([stubPayment()]);

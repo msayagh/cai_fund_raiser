@@ -56,27 +56,6 @@ const registrationConfirmationTemplate = ({ email, name }) => baseTemplate(`
   </div>
 `);
 
-const passwordResetTemplate = ({ email, name, resetLink }) => baseTemplate(`
-  <div class="header">
-    <h1>Password Reset Request</h1>
-    <p>Centre Zad Al-Imane</p>
-  </div>
-  <div class="content">
-    <p>Dear ${name},</p>
-    <p>We received a request to reset the password for your account.</p>
-    
-    <p><a href="${resetLink}" class="cta-button">Reset Your Password</a></p>
-    
-    <p>This link will expire in 1 hour.</p>
-    
-    <div class="section">
-      <p>If you did not request this password reset, please ignore this email or contact us immediately at support@centrezadalimane.org</p>
-    </div>
-    
-    <p>Best regards,<br>The Centre Zad Al-Imane Team</p>
-  </div>
-`);
-
 const paymentConfirmationTemplate = ({ email, name, amount, date, method, pledged, totalPaid, remaining }) => baseTemplate(`
   <div class="header">
     <h1>Payment Received</h1>
@@ -132,7 +111,7 @@ const requestStatusTemplate = ({ email, name, status, requestType, message }) =>
   </div>
 `);
 
-const adminAccountTemplate = ({ email, name, password }) => baseTemplate(`
+const adminAccountTemplate = ({ email, name }) => baseTemplate(`
   <div class="header">
     <h1>Admin Account Created</h1>
     <p>Centre Zad Al-Imane</p>
@@ -140,16 +119,14 @@ const adminAccountTemplate = ({ email, name, password }) => baseTemplate(`
   <div class="content">
     <p>Dear ${name},</p>
     <p>An admin account has been created for you.</p>
-    
+
     <div class="section">
       <p><span class="label">Email:</span> ${email}</p>
-      <p><span class="label">Temporary Password:</span> <code>${password}</code></p>
-      <p>Please change your password immediately after your first login.</p>
+      <p>Sign in by requesting a one-time code at the login page.</p>
     </div>
-    
+
     <p><a href="https://centrezadalimane.org/login" class="cta-button">Log In as Admin</a></p>
-    
-    <p>Please keep your login credentials secure and never share them with others.</p>
+
     <p>Best regards,<br>The Centre Zad Al-Imane Team</p>
   </div>
 `);
@@ -215,23 +192,21 @@ const engagementConfirmationTemplate = ({ email, name, totalPledge, startDate, e
   </div>
 `);
 
-const donorAccountCreationTemplate = ({ email, name, password }) => baseTemplate(`
+const donorAccountCreationTemplate = ({ email, name }) => baseTemplate(`
   <div class="header">
     <h1>Welcome to Centre Zad Al-Imane</h1>
     <p>Your donor account has been created</p>
   </div>
   <div class="content">
     <p>Dear ${name},</p>
-    <p>Your donor account has been approved and created. Please use the temporary password below to log in and change it immediately.</p>
-    
+    <p>Your donor account is ready. Sign in by requesting a one-time code at the login page.</p>
+
     <div class="section">
       <p><span class="label">Email:</span> ${email}</p>
-      <p><span class="label">Temporary Password:</span> <code>${password}</code></p>
-      <p style="color: #e6a817; font-weight: bold;">Please change your password immediately after your first login.</p>
     </div>
-    
+
     <p><a href="https://centrezadalimane.org/login" class="cta-button">Log In to Your Account</a></p>
-    
+
     <p>If you did not request this account, please contact us at support@centrezadalimane.org</p>
     <p>Best regards,<br>The Centre Zad Al-Imane Team</p>
   </div>
@@ -239,7 +214,6 @@ const donorAccountCreationTemplate = ({ email, name, password }) => baseTemplate
 
 module.exports = {
     registrationConfirmationTemplate,
-    passwordResetTemplate,
     paymentConfirmationTemplate,
     requestStatusTemplate,
     adminAccountTemplate,

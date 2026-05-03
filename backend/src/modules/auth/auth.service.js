@@ -1,6 +1,5 @@
 'use strict';
 
-const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const config = require('../../config/env');
 const prisma = require('../../db/client');
@@ -9,8 +8,6 @@ const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../..
 const { generateOtp, hashOtp, verifyOtp, otpExpiresAt } = require('../../utils/otp');
 const { sendOtpEmail } = require('../../utils/email');
 const { createLog } = require('../logs/logs.service');
-
-const BCRYPT_ROUNDS = 12;
 
 // ─── Token Helpers ───────────────────────────────────────────────────────────
 
@@ -123,9 +120,6 @@ const validateOtp = async (email, code) => {
 
 // ─── Donor Auth ───────────────────────────────────────────────────────────────
 
-const generatePlaceholderPasswordHash = () =>
-  bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
-
 const donorSendLoginOtp = async (email) => {
   const normalizedEmail = normalizeEmail(email);
   const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
@@ -155,8 +149,7 @@ const donorVerifyLoginOtp = async (email, code) => {
     donorId: donor.id,
   });
 
-  const { passwordHash: _ph, ...safeDonor } = donor;
-  return { tokens, donor: safeDonor };
+  return { tokens, donor };
 };
 
 const donorGoogleLogin = async (credential) => {
@@ -199,15 +192,12 @@ const donorCompleteRegistration = async ({ email, name, pledge, payments }) => {
     throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
   }
 
-  const passwordHash = await generatePlaceholderPasswordHash();
-
   if (existing) {
     const donor = await prisma.$transaction(async (tx) => {
       const updatedDonor = await tx.donor.update({
         where: { id: existing.id },
         data: {
           name,
-          passwordHash,
           accountCreated: true,
         },
       });
@@ -238,15 +228,13 @@ const donorCompleteRegistration = async ({ email, name, pledge, payments }) => {
       donorId: donor.id,
     });
 
-    const { passwordHash: _ph, ...safeDonor } = donor;
-    return { tokens, donor: safeDonor };
+    return { tokens, donor };
   }
 
   const donor = await prisma.donor.create({
     data: {
       name,
       email: normalizedEmail,
-      passwordHash,
       accountCreated: true,
       ...(pledge && {
         engagement: {
@@ -282,8 +270,7 @@ const donorCompleteRegistration = async ({ email, name, pledge, payments }) => {
     donorId: donor.id,
   });
 
-  const { passwordHash: _ph, ...safeDonor } = donor;
-  return { tokens, donor: safeDonor };
+  return { tokens, donor };
 };
 
 // ─── Admin Auth ───────────────────────────────────────────────────────────────
@@ -296,19 +283,17 @@ const getAdminSetupStatus = async () => {
   };
 };
 
-const bootstrapInitialAdmin = async ({ name, email, password }) => {
+const bootstrapInitialAdmin = async ({ name, email }) => {
   const normalizedEmail = normalizeEmail(email);
   const adminCount = await prisma.admin.count();
   if (adminCount > 0) {
     throw new AppError('Initial admin setup is already completed', 409, 'BOOTSTRAP_CLOSED');
   }
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const admin = await prisma.admin.create({
     data: {
       name,
       email: normalizedEmail,
-      passwordHash,
     },
   });
 
@@ -323,8 +308,7 @@ const bootstrapInitialAdmin = async ({ name, email, password }) => {
     adminId: admin.id,
   });
 
-  const { passwordHash: _ph, ...safeAdmin } = admin;
-  return { tokens, admin: safeAdmin };
+  return { tokens, admin };
 };
 
 const adminSendLoginOtp = async (email) => {
@@ -356,8 +340,7 @@ const adminVerifyLoginOtp = async (email, code) => {
     adminId: admin.id,
   });
 
-  const { passwordHash: _ph, ...safeAdmin } = admin;
-  return { tokens, admin: safeAdmin };
+  return { tokens, admin };
 };
 
 const adminGoogleLogin = async (credential) => {

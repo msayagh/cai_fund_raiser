@@ -45,11 +45,6 @@ jest.mock('../../../modules/mail/mail.service', () => ({
   sendPaymentConfirmation:  jest.fn().mockResolvedValue(undefined),
 }));
 
-// bcrypt.hash returns fixed value so assertions are deterministic
-jest.mock('bcryptjs', () => ({
-  hash: jest.fn().mockResolvedValue('$hashed'),
-}));
-
 const prisma       = require('../../../db/client');
 const mailService  = require('../../../modules/mail/mail.service');
 const AppError     = require('../../../utils/AppError');
@@ -178,8 +173,9 @@ describe('createRequest', () => {
 
 // ─── approveRequest ───────────────────────────────────────────────────────────
 // approveRequest(adminId, adminName, requestId, extraData) → { request, extraData }
-// extraData carries type-specific approval inputs (password for account_creation,
-// amount/date/method for payment_upload).
+// extraData carries type-specific approval inputs (pledgeAmount for
+// account_creation; amount/date/method for payment_upload). Login is now
+// passwordless (OTP) so account_creation no longer takes a password.
 
 describe('approveRequest — general type', () => {
   it('sets status to approved for a general pending request', async () => {
@@ -233,21 +229,9 @@ describe('approveRequest — account_creation type', () => {
     prisma.donor.create.mockResolvedValue({ id: 'new-donor', name: 'John Doe', email: 'john@test.com' });
     prisma.request.update.mockResolvedValue({ ...req, status: 'approved', donorId: 'new-donor' });
 
-    const result = await approveRequest('admin-1', 'Admin', 'req-1', {
-      password: 'TempPass123!',  // required for account_creation approval
-    });
+    const result = await approveRequest('admin-1', 'Admin', 'req-1', {});
     // extraData returns the new donor ID so the client can redirect/display it
     expect(result.extraData.donorId).toBe('new-donor');
-  });
-
-  it('throws VALIDATION_ERROR when password is missing for account_creation', async () => {
-    // A donor account cannot be created without a password
-    prisma.request.findUnique.mockResolvedValue(
-      stubRequest({ type: 'account_creation', status: 'pending' })
-    );
-    await expect(
-      approveRequest('admin-1', 'Admin', 'req-1', {}) // no password key
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR', statusCode: 400 });
   });
 
   it('throws EMAIL_TAKEN when donor account already exists', async () => {
@@ -259,8 +243,20 @@ describe('approveRequest — account_creation type', () => {
       id: 'existing', email: 'john@test.com', accountCreated: true,
     });
     await expect(
-      approveRequest('admin-1', 'Admin', 'req-1', { password: 'TempPass!' })
+      approveRequest('admin-1', 'Admin', 'req-1', {})
     ).rejects.toMatchObject({ code: 'EMAIL_TAKEN' });
+  });
+
+  it('calls sendDonorAccountCreation with (email, name) only', async () => {
+    const req = stubRequest({ type: 'account_creation', status: 'pending' });
+    prisma.request.findUnique.mockResolvedValue(req);
+    prisma.donor.findUnique.mockResolvedValue(null);
+    prisma.donor.create.mockResolvedValue({ id: 'new-donor', name: 'John Doe', email: 'john@test.com' });
+    prisma.request.update.mockResolvedValue({ ...req, status: 'approved', donorId: 'new-donor' });
+    mailService.sendDonorAccountCreation.mockClear();
+
+    await approveRequest('admin-1', 'Admin', 'req-1', {});
+    expect(mailService.sendDonorAccountCreation).toHaveBeenCalledWith('john@test.com', 'John Doe');
   });
 });
 
@@ -500,7 +496,7 @@ describe('email send failure resilience', () => {
     mailService.sendDonorAccountCreation.mockRejectedValueOnce(new Error('SMTP down'));
     mailService.sendRequestStatusUpdate.mockRejectedValueOnce(new Error('SMTP down'));
 
-    const result = await approveRequest('admin-1', 'Admin', 'req-1', { password: 'TempPass!' });
+    const result = await approveRequest('admin-1', 'Admin', 'req-1', {});
     expect(result.extraData.donorId).toBe('new-d');
   });
 });
