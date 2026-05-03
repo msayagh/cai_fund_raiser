@@ -1,10 +1,5 @@
 'use client';
 
-// ─────────────────────────────────────────────
-// Login page — rewritten from scratch
-// Backup of previous version: page.jsx.backup2
-// ─────────────────────────────────────────────
-
 import Link from 'next/link';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -16,10 +11,35 @@ import { useFirstVisitPreloader } from '@/hooks/useFirstVisitPreloader.js';
 import { THEMES } from '@/constants/config.js';
 import { setupSEOMetaTags } from '@/lib/seoUtils.js';
 import { DEFAULT_TRANSLATION, getAbsoluteUrl, getSiteUrl, truncateText } from '@/lib/translationUtils.js';
-import { adminLogin, clearTokens, donorLogin, logout, tryAutoLogin } from '@/lib/auth.js';
+import {
+    clearTokens,
+    logout,
+    sendAdminLoginOtp,
+    sendDonorLoginOtp,
+    tryAutoLogin,
+    verifyAdminLoginOtp,
+    verifyDonorLoginOtp,
+} from '@/lib/auth.js';
 import { hasRefreshToken } from '@/lib/apiClient.js';
 import { getStoredSession } from '@/lib/session.js';
 import './page.scss';
+
+function normalizeOtpInput(value) {
+    const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+    const easternArabicIndic = '۰۱۲۳۴۵۶۷۸۹';
+    return String(value || '')
+        .split('')
+        .map((char) => {
+            const ai = arabicIndic.indexOf(char);
+            if (ai >= 0) return String(ai);
+            const eai = easternArabicIndic.indexOf(char);
+            if (eai >= 0) return String(eai);
+            return char;
+        })
+        .join('')
+        .replace(/\D/g, '')
+        .slice(0, 6);
+}
 
 function LoginPageContent() {
     const router = useRouter();
@@ -48,15 +68,14 @@ function LoginPageContent() {
 
     const initialRole = searchParams.get('role') === 'admin' ? 'admin' : 'donor';
     const [activeRole, setActiveRole] = useState(initialRole);
+    const [step, setStep] = useState('email'); // 'email' | 'otp'
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [otpCode, setOtpCode] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
     const [status, setStatus] = useState({ loading: true, error: '', success: '', user: null, role: null });
-    const [submitting, setSubmitting] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const passwordToggleLabel = showPassword ? auth.hidePassword : auth.showPassword;
+    const [sendingOtp, setSendingOtp] = useState(false);
+    const [verifyingOtp, setVerifyingOtp] = useState(false);
 
-    // ── Close language menu on outside click ──
     useEffect(() => {
         if (!languageDropdownRef.current || !showLanguageMenu) return;
         const close = (e) => {
@@ -66,10 +85,13 @@ function LoginPageContent() {
         return () => document.removeEventListener('click', close);
     }, [showLanguageMenu]);
 
-    // ── Sync role from URL param ──
-    useEffect(() => { setActiveRole(initialRole); }, [initialRole]);
+    useEffect(() => {
+        setActiveRole(initialRole);
+        setStep('email');
+        setOtpCode('');
+        setStatus((prev) => ({ ...prev, error: '', success: '' }));
+    }, [initialRole]);
 
-    // ── SEO + remembered email ──
     useEffect(() => {
         if (!isMounted) return;
         setupSEOMetaTags({
@@ -81,7 +103,6 @@ function LoginPageContent() {
         if (saved) { setEmail(saved); setRememberMe(true); }
     }, [isMounted, isRTL, language, locale, logoAlt, pageDescription, pageTitle, pageUrl, siteUrl, socialImageUrl, t]);
 
-    // ── Session hydration ──
     useEffect(() => {
         if (hydratedRef.current) return;
         hydratedRef.current = true;
@@ -123,15 +144,11 @@ function LoginPageContent() {
         return () => { active = false; };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Redirect once session is confirmed ──
     useEffect(() => {
         if (!status.user || status.loading) return;
         router.replace(status.role === 'admin' ? '/admin/dashboard' : '/donor/dashboard');
     }, [router, status.loading, status.role, status.user]);
 
-    // ─────────────────────────────────────────
-    // Preloader
-    // ─────────────────────────────────────────
     if (!appReady && shouldShowPreloader && preloaderResolved) {
         return (
             <div className="login-page-wrapper" data-theme="dark" suppressHydrationWarning>
@@ -140,24 +157,64 @@ function LoginPageContent() {
         );
     }
 
-    // ─────────────────────────────────────────
-    // Form handlers
-    // ─────────────────────────────────────────
-    async function handleSubmit(event) {
-        event.preventDefault();
-        setSubmitting(true);
+    async function handleSendOtp(event) {
+        event?.preventDefault();
+        setSendingOtp(true);
         setStatus((prev) => ({ ...prev, error: '', success: '' }));
 
+        const normalizedEmail = email.trim().toLowerCase();
+
         try {
-            const user = activeRole === 'admin'
-                ? await adminLogin(email.trim().toLowerCase(), password)
-                : await donorLogin(email.trim().toLowerCase(), password);
+            if (activeRole === 'admin') {
+                await sendAdminLoginOtp(normalizedEmail);
+            } else {
+                await sendDonorLoginOtp(normalizedEmail);
+            }
 
             if (rememberMe) {
-                localStorage.setItem('rememberedEmail', email.trim().toLowerCase());
+                localStorage.setItem('rememberedEmail', normalizedEmail);
             } else {
                 localStorage.removeItem('rememberedEmail');
             }
+
+            setStep('otp');
+            setOtpCode('');
+            setStatus((prev) => ({ ...prev, loading: false, success: auth.verificationCodeSent }));
+        } catch (err) {
+            const code = err?.code;
+            if (activeRole === 'donor' && (code === 'ACCOUNT_NOT_FOUND' || err?.status === 404)) {
+                sessionStorage.setItem('registerEmail', normalizedEmail);
+                router.push('/register');
+                return;
+            }
+            setStatus((prev) => ({
+                ...prev,
+                loading: false,
+                error: err?.message || auth.unableToSendCode,
+            }));
+        } finally {
+            setSendingOtp(false);
+        }
+    }
+
+    async function handleVerifyOtp(event) {
+        event.preventDefault();
+        setVerifyingOtp(true);
+        setStatus((prev) => ({ ...prev, error: '', success: '' }));
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedCode = normalizeOtpInput(otpCode);
+
+        if (!/^\d{6}$/.test(normalizedCode)) {
+            setVerifyingOtp(false);
+            setStatus((prev) => ({ ...prev, error: auth.invalidOtpCode }));
+            return;
+        }
+
+        try {
+            const user = activeRole === 'admin'
+                ? await verifyAdminLoginOtp(normalizedEmail, normalizedCode)
+                : await verifyDonorLoginOtp(normalizedEmail, normalizedCode);
 
             setStatus({
                 loading: false,
@@ -166,35 +223,29 @@ function LoginPageContent() {
                 user: { ...user, role: activeRole },
                 role: activeRole,
             });
-            setPassword('');
+            setOtpCode('');
         } catch (err) {
-            const msg = err?.message || auth.unableToSignIn;
-            if (activeRole === 'donor' && msg.toLowerCase().includes('not found')) {
-                sessionStorage.setItem('registerEmail', email.trim().toLowerCase());
-                router.push('/register');
-                return;
-            }
-            setStatus((prev) => ({ ...prev, loading: false, error: msg, success: '' }));
+            setStatus((prev) => ({
+                ...prev,
+                loading: false,
+                error: err?.message || auth.unableToVerifyCode,
+            }));
         } finally {
-            setSubmitting(false);
+            setVerifyingOtp(false);
         }
     }
 
     async function handleLogout() {
         await logout();
         setStatus({ loading: false, error: '', success: auth.signedOut, user: null, role: null });
+        setStep('email');
+        setOtpCode('');
     }
 
-    // ─────────────────────────────────────────
-    // Derived display values
-    // ─────────────────────────────────────────
     const authTitle = activeRole === 'admin' ? auth.adminAccessTitle : auth.donorAccessTitle;
     const authDescription = activeRole === 'admin' ? auth.adminLoginDescription : auth.donorLoginDescription;
     const showcaseSteps = [auth.donorStep1, auth.donorStep2, auth.donorStep3];
 
-    // ─────────────────────────────────────────
-    // RENDER
-    // ─────────────────────────────────────────
     return (
         <div
             className="login-page-wrapper"
@@ -220,9 +271,6 @@ function LoginPageContent() {
             <main className="login-container">
                 <div className="login-shell">
 
-                    {/* ─────────────────────────
-                        LEFT: 3-step showcase
-                    ───────────────────────── */}
                     <section className="login-showcase" aria-label={auth.showcaseKicker}>
                         <div className="login-showcase-card">
                             <p className="login-showcase-kicker">{auth.showcaseKicker}</p>
@@ -240,9 +288,6 @@ function LoginPageContent() {
                         </div>
                     </section>
 
-                    {/* ─────────────────────────
-                        RIGHT: Auth card
-                    ───────────────────────── */}
                     <div className="login-card login-card--wide">
 
                         <div className="login-content">
@@ -251,14 +296,18 @@ function LoginPageContent() {
                             <p className="login-description">{authDescription}</p>
                         </div>
 
-                        {/* Role tabs */}
                         <div className="login-role-switcher" role="tablist" aria-label={auth.roleSwitcherLabel}>
                             <button
                                 type="button"
                                 role="tab"
                                 aria-selected={activeRole === 'donor'}
                                 className={`login-role-button${activeRole === 'donor' ? ' active' : ''}`}
-                                onClick={() => setActiveRole('donor')}
+                                onClick={() => {
+                                    setActiveRole('donor');
+                                    setStep('email');
+                                    setOtpCode('');
+                                    setStatus((prev) => ({ ...prev, error: '', success: '' }));
+                                }}
                             >
                                 {auth.donorTab}
                             </button>
@@ -267,13 +316,17 @@ function LoginPageContent() {
                                 role="tab"
                                 aria-selected={activeRole === 'admin'}
                                 className={`login-role-button${activeRole === 'admin' ? ' active' : ''}`}
-                                onClick={() => setActiveRole('admin')}
+                                onClick={() => {
+                                    setActiveRole('admin');
+                                    setStep('email');
+                                    setOtpCode('');
+                                    setStatus((prev) => ({ ...prev, error: '', success: '' }));
+                                }}
                             >
                                 {auth.adminTab}
                             </button>
                         </div>
 
-                        {/* Feedback banners */}
                         {status.error
                             ? <div className="login-alert login-alert--error" role="alert">{status.error}</div>
                             : null}
@@ -281,7 +334,6 @@ function LoginPageContent() {
                             ? <div className="login-alert login-alert--success" role="status">{status.success}</div>
                             : null}
 
-                        {/* Active session view */}
                         {status.user ? (
                             <div className="login-session-card">
                                 <div>
@@ -297,9 +349,8 @@ function LoginPageContent() {
                                     {auth.signOut}
                                 </button>
                             </div>
-                        ) : (
-                            /* Login form */
-                            <form className="login-form" onSubmit={handleSubmit} noValidate>
+                        ) : step === 'email' ? (
+                            <form className="login-form" onSubmit={handleSendOtp} noValidate>
                                 <label className="login-label">
                                     <span>{auth.emailLabel}</span>
                                     <input
@@ -312,27 +363,6 @@ function LoginPageContent() {
                                     />
                                 </label>
 
-                                <label className="login-label">
-                                    <span>{auth.passwordLabel}</span>
-                                    <div className="login-password-field">
-                                        <input
-                                            className="login-input login-input--with-toggle"
-                                            type={showPassword ? 'text' : 'password'}
-                                            autoComplete="current-password"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            required
-                                        />
-                                        <button type="button" onClick={() => setShowPassword(v => !v)} className="login-password-toggle" aria-label={passwordToggleLabel}>
-                                            {showPassword ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                            ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                            )}
-                                        </button>
-                                    </div>
-                                </label>
-
                                 <div className="login-form-row">
                                     <label className="login-checkbox-label">
                                         <input
@@ -343,24 +373,14 @@ function LoginPageContent() {
                                         />
                                         <span>{auth.rememberMe}</span>
                                     </label>
-                                    <Link
-                                        href={`/forgot-password?role=${activeRole}`}
-                                        className="login-inline-link"
-                                    >
-                                        {auth.forgotPassword}
-                                    </Link>
                                 </div>
 
                                 <button
                                     type="submit"
                                     className="login-primary-button"
-                                    disabled={submitting || status.loading}
+                                    disabled={sendingOtp || status.loading}
                                 >
-                                    {submitting
-                                        ? auth.signingIn
-                                        : activeRole === 'admin'
-                                            ? auth.signInAdmin
-                                            : auth.signInDonor}
+                                    {sendingOtp ? auth.sendingCode : auth.sendVerificationCode}
                                 </button>
 
                                 {activeRole === 'donor' && (
@@ -368,6 +388,56 @@ function LoginPageContent() {
                                         {auth.createDonorAccount}
                                     </Link>
                                 )}
+                            </form>
+                        ) : (
+                            <form className="login-form" onSubmit={handleVerifyOtp} noValidate>
+                                <p className="login-description">
+                                    {auth.verificationCodeSent} <strong>{email}</strong>
+                                </p>
+                                <label className="login-label">
+                                    <span>{auth.verificationCode}</span>
+                                    <input
+                                        className="login-input"
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={6}
+                                        autoComplete="one-time-code"
+                                        value={otpCode}
+                                        onChange={(e) => setOtpCode(normalizeOtpInput(e.target.value))}
+                                        placeholder={auth.otpPlaceholder}
+                                        required
+                                        autoFocus
+                                    />
+                                </label>
+
+                                <div className="register-actions-row">
+                                    <button
+                                        type="submit"
+                                        className="login-primary-button"
+                                        disabled={verifyingOtp || status.loading}
+                                    >
+                                        {verifyingOtp ? auth.verifying : auth.verifyCode}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="login-primary-button login-primary-button--secondary"
+                                        onClick={() => handleSendOtp()}
+                                        disabled={sendingOtp || status.loading}
+                                    >
+                                        {sendingOtp ? auth.resending : auth.resendCode}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="login-primary-button login-primary-button--secondary"
+                                        onClick={() => {
+                                            setStep('email');
+                                            setOtpCode('');
+                                            setStatus((prev) => ({ ...prev, error: '', success: '' }));
+                                        }}
+                                    >
+                                        {auth.back}
+                                    </button>
+                                </div>
                             </form>
                         )}
 

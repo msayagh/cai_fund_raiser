@@ -3,10 +3,16 @@
 const authService = require('./auth.service');
 const { sendSuccess } = require('../../utils/response');
 
-const donorLogin = async (req, res, next) => {
+const donorSendLoginOtp = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    const result = await authService.donorLogin(email, password);
+    await authService.donorSendLoginOtp(req.body.email);
+    sendSuccess(res, null, 'Login code sent to your email address');
+  } catch (err) { next(err); }
+};
+
+const donorVerifyLoginOtp = async (req, res, next) => {
+  try {
+    const result = await authService.donorVerifyLoginOtp(req.body.email, req.body.code);
     sendSuccess(res, result, 'Login successful');
   } catch (err) { next(err); }
 };
@@ -39,33 +45,16 @@ const donorCompleteRegistration = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-const donorSendForgotOtp = async (req, res, next) => {
+const adminSendLoginOtp = async (req, res, next) => {
   try {
-    await authService.donorSendForgotOtp(req.body.email);
-    // Always return same message to prevent user enumeration
-    sendSuccess(res, null, 'If an account exists, a reset code has been sent');
+    await authService.adminSendLoginOtp(req.body.email);
+    sendSuccess(res, null, 'Login code sent to your email address');
   } catch (err) { next(err); }
 };
 
-const donorVerifyForgotOtp = async (req, res, next) => {
+const adminVerifyLoginOtp = async (req, res, next) => {
   try {
-    const result = await authService.donorVerifyForgotOtp(req.body.email, req.body.code);
-    sendSuccess(res, result, 'Code verified');
-  } catch (err) { next(err); }
-};
-
-const donorResetPassword = async (req, res, next) => {
-  try {
-    const { email, code, newPassword } = req.body;
-    await authService.donorResetPassword(email, code, newPassword);
-    sendSuccess(res, null, 'Password reset successfully');
-  } catch (err) { next(err); }
-};
-
-const adminLogin = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    const result = await authService.adminLogin(email, password);
+    const result = await authService.adminVerifyLoginOtp(req.body.email, req.body.code);
     sendSuccess(res, result, 'Login successful');
   } catch (err) { next(err); }
 };
@@ -74,28 +63,6 @@ const adminGoogleLogin = async (req, res, next) => {
   try {
     const result = await authService.adminGoogleLogin(req.body.credential);
     sendSuccess(res, result, 'Login successful');
-  } catch (err) { next(err); }
-};
-
-const adminSendForgotOtp = async (req, res, next) => {
-  try {
-    await authService.adminSendForgotOtp(req.body.email);
-    sendSuccess(res, null, 'Reset code sent to your email address');
-  } catch (err) { next(err); }
-};
-
-const adminVerifyForgotOtp = async (req, res, next) => {
-  try {
-    const result = await authService.adminVerifyForgotOtp(req.body.email, req.body.code);
-    sendSuccess(res, result, 'Code verified');
-  } catch (err) { next(err); }
-};
-
-const adminResetPassword = async (req, res, next) => {
-  try {
-    const { email, code, newPassword } = req.body;
-    await authService.adminResetPassword(email, code, newPassword);
-    sendSuccess(res, null, 'Password reset successfully');
   } catch (err) { next(err); }
 };
 
@@ -128,21 +95,17 @@ const logout = async (req, res, next) => {
 };
 
 module.exports = {
-  donorLogin,
+  donorSendLoginOtp,
+  donorVerifyLoginOtp,
   donorGoogleLogin,
   donorSendOtp,
   donorVerifyOtp,
   donorCompleteRegistration,
-  donorSendForgotOtp,
-  donorVerifyForgotOtp,
-  donorResetPassword,
   adminSetupStatus,
   adminBootstrap,
-  adminLogin,
+  adminSendLoginOtp,
+  adminVerifyLoginOtp,
   adminGoogleLogin,
-  adminSendForgotOtp,
-  adminVerifyForgotOtp,
-  adminResetPassword,
   refresh,
   logout,
 };

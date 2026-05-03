@@ -25,7 +25,8 @@ if (hasSmtp) {
  * Falls back to console logging when SMTP is not configured (dev mode).
  */
 const sendOtpEmail = async (email, otp, purpose = 'verification') => {
-  const purposeLabel = purpose === 'reset' ? 'password reset' : 'email verification';
+  const purposeLabel =
+    purpose === 'login' ? 'sign-in' : purpose === 'reset' ? 'password reset' : 'email verification';
   const subject = `Centre Zad Al-Imane — Your ${purposeLabel} code`;
   const html = `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">

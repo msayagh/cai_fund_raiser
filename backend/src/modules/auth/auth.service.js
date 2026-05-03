@@ -123,16 +123,25 @@ const validateOtp = async (email, code) => {
 
 // ─── Donor Auth ───────────────────────────────────────────────────────────────
 
-const donorLogin = async (email, password) => {
+const generatePlaceholderPasswordHash = () =>
+  bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
+
+const donorSendLoginOtp = async (email) => {
   const normalizedEmail = normalizeEmail(email);
   const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
-  if (!donor) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
-  if (!donor.accountCreated) {
-    throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+  if (!donor || !donor.accountCreated) {
+    throw new AppError('No account exists with this email', 404, 'ACCOUNT_NOT_FOUND');
   }
+  await sendAndStoreOtp(normalizedEmail, 'login');
+};
 
-  const valid = await bcrypt.compare(password, donor.passwordHash);
-  if (!valid) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+const donorVerifyLoginOtp = async (email, code) => {
+  const normalizedEmail = normalizeEmail(email);
+  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
+  if (!donor || !donor.accountCreated) {
+    throw new AppError('No account exists with this email', 404, 'ACCOUNT_NOT_FOUND');
+  }
+  await validateOtp(normalizedEmail, code);
 
   const tokens = buildTokenPair(donor.id, 'donor');
   await storeRefreshToken(tokens.refreshToken, 'donor', donor.id);
@@ -142,12 +151,12 @@ const donorLogin = async (email, password) => {
     actorType: 'donor',
     actorId: donor.id,
     action: 'donor_login',
-    details: `Donor logged in`,
+    details: 'Donor logged in via OTP',
     donorId: donor.id,
   });
 
-  const { passwordHash, ...safedonor } = donor;
-  return { tokens, donor: safedonor };
+  const { passwordHash: _ph, ...safeDonor } = donor;
+  return { tokens, donor: safeDonor };
 };
 
 const donorGoogleLogin = async (credential) => {
@@ -170,7 +179,7 @@ const donorVerifyOtp = async (email, code) => {
   return { verified: true };
 };
 
-const donorCompleteRegistration = async ({ email, name, password, pledge, payments }) => {
+const donorCompleteRegistration = async ({ email, name, pledge, payments }) => {
   const normalizedEmail = normalizeEmail(email);
 
   // Ensure OTP was verified (last OTP for email must be used=true)
@@ -190,7 +199,7 @@ const donorCompleteRegistration = async ({ email, name, password, pledge, paymen
     throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
   }
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const passwordHash = await generatePlaceholderPasswordHash();
 
   if (existing) {
     const donor = await prisma.$transaction(async (tx) => {
@@ -277,54 +286,6 @@ const donorCompleteRegistration = async ({ email, name, password, pledge, paymen
   return { tokens, donor: safeDonor };
 };
 
-const donorSendForgotOtp = async (email) => {
-  const normalizedEmail = normalizeEmail(email);
-  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
-  if (!donor || !donor.accountCreated) {
-    throw new AppError('No account exists with this email', 404, 'ACCOUNT_NOT_FOUND');
-  }
-  await sendAndStoreOtp(normalizedEmail, 'reset');
-};
-
-const donorVerifyForgotOtp = async (email, code) => {
-  const normalizedEmail = normalizeEmail(email);
-  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
-  if (!donor || !donor.accountCreated) {
-    throw new AppError('No account exists with this email', 404, 'ACCOUNT_NOT_FOUND');
-  }
-  await validateOtp(normalizedEmail, code);
-  return { verified: true };
-};
-
-const donorResetPassword = async (email, code, newPassword) => {
-  const normalizedEmail = normalizeEmail(email);
-  const donor = await prisma.donor.findUnique({ where: { email: normalizedEmail } });
-  if (!donor || !donor.accountCreated) {
-    throw new AppError('No account exists with this email', 404, 'ACCOUNT_NOT_FOUND');
-  }
-
-  // Re-validate the exact OTP code used in the previous step.
-  const lastOtp = await prisma.otpCode.findFirst({
-    where: { email: normalizedEmail, used: true },
-    orderBy: { createdAt: 'desc' },
-  });
-  if (!lastOtp || !verifyOtp(code, lastOtp.codeHash)) {
-    throw new AppError('OTP not verified', 400, 'OTP_NOT_VERIFIED');
-  }
-
-  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-  await prisma.donor.update({ where: { email: normalizedEmail }, data: { passwordHash } });
-
-  await createLog({
-    actor: `Donor: ${donor.name}`,
-    actorType: 'donor',
-    actorId: donor.id,
-    action: 'donor_password_reset',
-    details: `Password reset for ${normalizedEmail}`,
-    donorId: donor.id,
-  });
-};
-
 // ─── Admin Auth ───────────────────────────────────────────────────────────────
 
 const getAdminSetupStatus = async () => {
@@ -366,13 +327,22 @@ const bootstrapInitialAdmin = async ({ name, email, password }) => {
   return { tokens, admin: safeAdmin };
 };
 
-const adminLogin = async (email, password) => {
+const adminSendLoginOtp = async (email) => {
   const normalizedEmail = normalizeEmail(email);
   const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
-  if (!admin) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+  if (!admin) {
+    throw new AppError('No admin account exists with this email address', 404, 'ADMIN_ACCOUNT_NOT_FOUND');
+  }
+  await sendAndStoreOtp(normalizedEmail, 'login');
+};
 
-  const valid = await bcrypt.compare(password, admin.passwordHash);
-  if (!valid) throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+const adminVerifyLoginOtp = async (email, code) => {
+  const normalizedEmail = normalizeEmail(email);
+  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
+  if (!admin) {
+    throw new AppError('No admin account exists with this email address', 404, 'ADMIN_ACCOUNT_NOT_FOUND');
+  }
+  await validateOtp(normalizedEmail, code);
 
   const tokens = buildTokenPair(admin.id, 'admin');
   await storeRefreshToken(tokens.refreshToken, 'admin', admin.id);
@@ -382,60 +352,17 @@ const adminLogin = async (email, password) => {
     actorType: 'admin',
     actorId: admin.id,
     action: 'admin_login',
-    details: `Admin logged in`,
+    details: 'Admin logged in via OTP',
     adminId: admin.id,
   });
 
-  const { passwordHash, ...safeAdmin } = admin;
+  const { passwordHash: _ph, ...safeAdmin } = admin;
   return { tokens, admin: safeAdmin };
 };
 
 const adminGoogleLogin = async (credential) => {
   void credential;
   throw new AppError('Google sign-in is disabled', 503, 'GOOGLE_AUTH_DISABLED');
-};
-
-const adminSendForgotOtp = async (email) => {
-  const normalizedEmail = normalizeEmail(email);
-  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
-  if (!admin) {
-    throw new AppError('No admin account exists with this email address', 404, 'ADMIN_ACCOUNT_NOT_FOUND');
-  }
-  await sendAndStoreOtp(normalizedEmail, 'reset');
-};
-
-const adminVerifyForgotOtp = async (email, code) => {
-  const normalizedEmail = normalizeEmail(email);
-  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
-  if (!admin) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
-  await validateOtp(normalizedEmail, code);
-  return { verified: true };
-};
-
-const adminResetPassword = async (email, code, newPassword) => {
-  const normalizedEmail = normalizeEmail(email);
-  const admin = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
-  if (!admin) throw new AppError('Invalid email', 400, 'INVALID_EMAIL');
-
-  const lastOtp = await prisma.otpCode.findFirst({
-    where: { email: normalizedEmail, used: true },
-    orderBy: { createdAt: 'desc' },
-  });
-  if (!lastOtp || !verifyOtp(code, lastOtp.codeHash)) {
-    throw new AppError('OTP not verified', 400, 'OTP_NOT_VERIFIED');
-  }
-
-  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-  await prisma.admin.update({ where: { email: normalizedEmail }, data: { passwordHash } });
-
-  await createLog({
-    actor: `Admin: ${admin.name}`,
-    actorType: 'admin',
-    actorId: admin.id,
-    action: 'admin_password_reset',
-    details: `Password reset for ${normalizedEmail}`,
-    adminId: admin.id,
-  });
 };
 
 // ─── Token Rotation ───────────────────────────────────────────────────────────
@@ -464,21 +391,17 @@ const logout = async (token) => {
 };
 
 module.exports = {
-  donorLogin,
+  donorSendLoginOtp,
+  donorVerifyLoginOtp,
   donorGoogleLogin,
   donorSendOtp,
   donorVerifyOtp,
   donorCompleteRegistration,
-  donorSendForgotOtp,
-  donorVerifyForgotOtp,
-  donorResetPassword,
   getAdminSetupStatus,
   bootstrapInitialAdmin,
-  adminLogin,
+  adminSendLoginOtp,
+  adminVerifyLoginOtp,
   adminGoogleLogin,
-  adminSendForgotOtp,
-  adminVerifyForgotOtp,
-  adminResetPassword,
   refreshTokens,
   logout,
 };
