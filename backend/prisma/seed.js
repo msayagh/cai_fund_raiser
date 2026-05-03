@@ -25,6 +25,14 @@ async function main() {
   console.log('🌱 Seeding database…');
 
   // ─── Clean existing data ────────────────────────────────────────────────────
+  // Order matters: child rows first, then parents (FKs without cascade).
+  await prisma.signupChecklist.deleteMany();
+  await prisma.activitySignup.deleteMany();
+  await prisma.activityChecklistItem.deleteMany();
+  await prisma.activityDiscussion.deleteMany();
+  await prisma.activitySchedule.deleteMany();
+  await prisma.volunteerActivity.deleteMany();
+  await prisma.apiKey.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.requestAttachment.deleteMany();
   await prisma.request.deleteMany();
@@ -33,6 +41,8 @@ async function main() {
   await prisma.refreshToken.deleteMany();
   await prisma.otpCode.deleteMany();
   await prisma.donor.deleteMany();
+  // Break the Admin self-reference (AdminHierarchy) before bulk-delete.
+  await prisma.admin.updateMany({ data: { addedById: null } });
   await prisma.admin.deleteMany();
 
 
